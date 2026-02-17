@@ -3,11 +3,12 @@ body {
     font-family: "Averia Libre", system-ui;
 }
 .top{
-position: static;
+position: sticky;
 width: 100%;
 height: 191px;
 
 background: #D2C9B8;
+align-items:end;
 }
 button:hover{
     color: #76594C;

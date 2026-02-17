@@ -1,0 +1,48 @@
+.candle{
+/* image 3 */
+display: flex;
+width: 203px;
+height: 203px;
+
+background: url(../assets/candle.png);
+
+}
+
+.product-card{
+    width: autofill;
+    margin-bottom: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 279px;
+
+    background: #5C4033;
+    border-radius: 40px;
+}
+
+button{
+
+display: flex;
+position: static;
+width: 120px;
+height: 44px;
+
+background: #D9D9D9;
+justify-content: right;
+
+}
+p{
+
+position: static;
+width: 120px;
+height: 21px;
+
+font-family: 'Averia Libre';
+font-style: normal;
+font-weight: 400;
+font-size: 25px;
+line-height: 30px;
+text-align: center;
+
+color: #FFFFFF;
+}
