@@ -1,13 +1,20 @@
-.create{
+.createyourown{
     width: 100%;
     margin-bottom: 50px;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 370px;
-
-    background: #5C4033;
     border-radius: 40px;
-    font-size: 100px;
+    cursor: pointer;
 
+    background: url(../assets/makeyourowncandle.png);
+    display: inline-block;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+.button{
+    text-decoration: underline;
+    text-decoration-color: transparent;
 }

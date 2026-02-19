@@ -16,9 +16,9 @@ const Products = () => {
         </div>
   <div className="product-list">
           {/* These will now sit 3 in a row */}
-          <div className="product-card">...</div>
-          <div className="product-card">...</div>
-          <div className="product-card">...</div>
+          <ProductCard />
+          <ProductCard />
+          <ProductCard />
         </div>
         </div>
         </div>

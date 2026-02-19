@@ -1,48 +1,53 @@
-.candle{
-/* image 3 */
-display: flex;
-width: 203px;
-height: 203px;
-
-background: url(../assets/candle.png);
-
-}
-
-.product-card{
-    width: autofill;
-    margin-bottom: 50px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 279px;
-
-    background: #5C4033;
+.product-card {
+    width: auto;
+    display: grid; /* Use grid to split the card into columns */
+    grid-template-columns: 2fr 2fr; /* Candle takes 4 parts, Info takes 2 parts */
+    position: relative;
+    background-color: #5c4033; /* Dark brown */
     border-radius: 40px;
+    padding: 15px;
+    /* height: calc(width*5); */
+    text-decoration: none;
+    align-items: center; /* Centers candle and info vertically */
+    overflow: hidden;
 }
 
-button{
-
-display: flex;
-position: static;
-width: 120px;
-height: 44px;
-
-background: #D9D9D9;
-justify-content: right;
-
+.candle-img {
+    width: 100%; 
+    height: 100%;
+    object-fit: contain; /* Keeps the candle from looking stretched */
+    justify-self: start;
+    background-color: aliceblue; /* Sticks it to the left */
 }
-p{
 
-position: static;
-width: 120px;
-height: 21px;
+.card-overlay {
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Pushes content to the bottom */
+    align-items: flex-end;    /* Aligns text and button to the right */
+    height: 100%;
+    padding-bottom: 5px;
+}
 
-font-family: 'Averia Libre';
-font-style: normal;
-font-weight: 400;
-font-size: 25px;
-line-height: 30px;
-text-align: center;
+.price {
+    color: white;
+    font-family: 'Averia Libre', sans-serif;
+    font-size: 14px;
+    margin-bottom: 8px;
+    white-space: nowrap; /* Prevents price from breaking into two lines */
+}
 
-color: #FFFFFF;
+.add-btn {
+    width: 60px;
+    height: 22px;
+    background-color: #d1d1d1; /* Light grey button */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+    justify-content: center;
+}
+
+.add-btn:hover {
+    background-color: #b0b0b0;
 }

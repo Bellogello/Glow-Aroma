@@ -1,0 +1,18 @@
+.navbar{
+    display: flex;
+    background-color: #D2C9B8;
+    justify-content: space-between;
+    align-items: center;
+    border: 20px;
+    width: 100%;
+}
+
+.contact{
+margin-left: 30px;
+margin-right: 30px;
+}
+
+.profile{
+margin-left: 30px;
+margin-right: 30px;
+}
