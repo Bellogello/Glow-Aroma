@@ -9,13 +9,21 @@ const Contact = () => {
       <h1>Contact Us</h1>
       <hr className='hr--small'></hr>
       <div className='inputs'>
-      <input className='name'></input>
-      <input className='number'></input>
-      <input className='email'></input>
-      <input className='message'></input>
-      <button className='send'>Send</button>
+        <div className='top'>
+          <input type="text" className='name' placeholder='Name'></input>
+          <input typr='number' className='number' placeholder='Number'></input>
+        </div>
+        <div className='middle'>
+          <input type='email' className='email' placeholder='email@example.com'></input>
+        </div>
+        <div className='bottom'>
+          <input type="text" className='message' placeholder='Message'></input>
+        </div>
+        <div className='BUTTON'>
+          <button className='send'></button>
+        </div>
       </div>
-    </div>
+      </div>
   );
 };
 

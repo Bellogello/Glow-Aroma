@@ -13,26 +13,62 @@ h1{
     }
 
 .inputs{
-    justify-content: center;
-    /* display: flex; */
-    align-items: center;
-    grid-template-columns:1fr 1fr 1fr 1fr;
-    grid-template-rows: 2fr;
-    border: 20px;
+    display: grid;
+    justify-items: center;
+    width: 100%;
 }
-.name{
-    width: 500px;
+.top{
+    display: flex;
+    justify-content: center;
+    width: 80%;
+    gap: 1%;
     height: 50px;
+    margin-bottom: 2%;
+    background-color: transparent;}
+    
+.name{
+    /* position: relative; */
+    width: 50%;
+    height: 50px;
+    border-radius: 20px;
 }
 .number{
-    width: 500px;
+    /* position: relative; */
+    width: 50%;
     height: 50px;
+    border-radius: 20px;
 }
+.middle{
+    display: flex;
+    justify-content: center;
+    width: 80%;
+    gap: 1%;
+    height: 50px;
+    margin-bottom: 2%;
+    background-color: transparent;}
+
 .email{
-    width: 1000px;
+    
+    width: 100%;
     height: 50px;
+    border-radius: 20px;
 }
+.bottom{
+    display: flex;
+    justify-content: center;
+    width: 80%;
+    gap: 1%;
+    height: 50px;
+    margin-bottom: 2%;
+    background-color: transparent;}
+
 .message{
-    width: 1000px;
-    height: 1000px;
+    display: flex;
+    width: 100%;
+    height: 1000%;
+    border-radius: 20px;
+}
+.send{
+    display: flex;
+    width: 10%;
 }

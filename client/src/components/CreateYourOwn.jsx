@@ -5,7 +5,7 @@ import '../styles/CreateYourOwn.css';
 import Candle from '../assets/candle.png'
 const CreateYourOwn = () => {
   return (
-    <Link to ="/" className='button'>
+    <Link to ="/Create" className='button'>
     <button className='createyourown'></button>
     </Link>
   );

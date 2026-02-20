@@ -5,6 +5,7 @@ import Products from './pages/Products';
 import Cart from './pages/Cart'
 import Profile from './pages/Profile';
 import Contact from './pages/Contact';
+import Create from './pages/Create';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/Cart" element={<Cart />} />
         <Route path="/Profile" element={<Profile />} />
         <Route path="/Contact" element={<Contact />} />        
+        <Route path="/Create" element={<Create />} />        
 
         {/* We can add /cart and /profile here next! */}
       </Routes>
