@@ -1,22 +1,39 @@
-.bg-body-tertiary{
-    display: flex;
-    background-color: #D2C9B8;
-    align-items: center;
-    
-    border: 20px;
-    width: 100%;
+.custom-navbar .container {
+  display: flex;
+  flex-wrap: nowrap;        /* ← stops logo from wrapping to its own row */
+  align-items: center;  
+  justify-content: space-between;    /* ← vertically centers logo + links */
 }
 
-.contact{
-margin-left: 30px;
-margin-right: 30px;
+.custom-navbar {
+  background-color: #D2C9B8;
+  width: 100%;
+  padding: 10px 0;
 }
 
-.profile{
-margin-left: 30px;
-margin-right: 30px;
+.logo {
+  width: 100px;
+  height: auto;
+  display: block;           /* ← removes phantom inline spacing */
 }
-.logo{
-background: url(../assets/logo.png);
-    
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.links .nav-link {
+  color: #5a4a3a;
+  white-space: nowrap;
+  width: 50%;
+}
+.cart{
+    height: 50px;
+    width: 50px;
+background: url(../assets/cart.png);
+object-fit: contain;
+
+
 }

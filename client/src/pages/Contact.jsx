@@ -14,14 +14,12 @@ const Contact = () => {
           <input typr='number' className='number' placeholder='Number'></input>
         </div>
         <div className='middle'>
-          <input type='email' className='email' placeholder='email@example.com'></input>
+          <input type='email' className='contact-email' placeholder='email@example.com'></input>
         </div>
         <div className='bottom'>
           <input type="text" className='message' placeholder='Message'></input>
         </div>
-        <div className='BUTTON'>
           <button className='send'></button>
-        </div>
       </div>
       </div>
   );
