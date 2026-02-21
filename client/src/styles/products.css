@@ -1,9 +1,52 @@
-
-.product-list{
-display: grid;
-    grid-template-columns: repeat(3, 1fr); 
-    gap: 50px; 
+/* --- GLOBAL FIXES --- */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+  max-width: 100vw !important; 
+  overflow-x: hidden !important; 
 }
-.AllProducts{
-    padding :50px;
+
+/* --- PAGE WRAPPER --- */
+.AllProducts {
+  padding: 23px;
+  max-width: 1200px; /* Keeps things from getting too wide on giant monitors */
+  margin: 0 auto; /* Centers the content on large screens */
+  box-sizing: border-box;
+}
+
+h1 {
+  text-align: center;
+  color: #5c4033;
+  margin-top: 30px;
+}
+
+/* --- PRODUCT GRID (DESKTOP) --- */
+.product-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 40px; /* Gives the cards nice breathing room */
+    
+    width: 100%;
+    max-width: 1050px; /* MATCHES THE BANNER EXACTLY */
+    margin: 0 auto; /* Centers the grid under the banner */
+}
+
+/* =========================================
+   MOBILE RESPONSIVENESS (Under 768px)
+========================================= */
+@media (max-width: 768px) {
+  .product-list {
+    grid-template-columns: 1fr; 
+    gap: 30px; 
+    
+    /* THE FIX: Force the cards to be explicitly narrower than the banner */
+    width: 70% !important; 
+    max-width: 300px !important; 
+    margin: 0 auto !important; 
+  }
+  
+  .AllProducts {
+    padding: 15px; 
+  }
 }

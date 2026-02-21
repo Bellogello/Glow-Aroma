@@ -1,20 +1,38 @@
-.createyourown{
+.createyourown {
     width: 100%;
-    margin-bottom: 50px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 370px;
+    max-width: 1050px; 
+    margin: 0 auto 50px auto; 
+    display: block !important; 
+    
+    /* THE FIX: Replaced fixed height with an aspect ratio. 
+       This perfectly mimics the proportions of your wide banner! */
+    aspect-ratio: 1050 / 370; 
+    
     border-radius: 40px;
     cursor: pointer;
-
-    background: url(../assets/makeyourowncandle.png);
-    display: inline-block;
-    background-size: contain;
+    background-image: url('../assets/makeyourowncandle.png');
+    
+    /* Cover will now work perfectly because the box is always the correct shape */
+    background-size: cover; 
     background-position: center;
     background-repeat: no-repeat;
+    
+    border: none;
+    box-shadow: 0 5px 20px rgba(92, 64, 51, 0.15); 
 }
-.button{
+
+.button {
     text-decoration: underline;
     text-decoration-color: transparent;
+}
+
+/* =========================================
+   MOBILE RESPONSIVENESS (Under 768px)
+========================================= */
+@media (max-width: 768px) {
+    .createyourown {
+        /* No height needed here anymore! The aspect-ratio handles it automatically. */
+        border-radius: 20px;
+        margin-bottom: 30px; /* Just a little breathing room under the banner */
+    }
 }

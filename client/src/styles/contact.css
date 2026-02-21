@@ -1,79 +1,102 @@
-h1{
-    color: #5c4033;
-    text-align: center;
-    margin-top: 100px;
-    padding-bottom: 1px;
+/* --- PAGE WRAPPER --- */
+.contact-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
 
+/* --- HEADER & DIVIDER --- */
+h1 {
+  color: #5c4033;
+  text-align: center;
+  margin-top: 40px; 
+  margin-bottom: 10px;
 }
-.hr--small{
-    width: 100px;
-    height: 2px;
-    border: none;
-    background-color: #5c4033;
-    }
 
-.inputs{
-    display: grid;
-    justify-items: center;
-    width: 100%;
+.hr--small {
+  width: 60px;
+  height: 3px;
+  border: none;
+  background-color: #5c4033;
+  margin-bottom: 40px;
+  border-radius: 5px;
 }
-.top{
-    display: flex;
-    justify-content: center;
-    width: 80%;
-    gap: 1%;
-    height: 50px;
-    margin-bottom: 2%;
-    background-color: transparent;}
-    
-.name{
-    font-size: 175%;
-    color: #5c4033;
-    width: 50%;
-    height: 50px;
-    border-radius: 20px;
-}
-.number{
-    font-size: 175%;
-    /* position: relative; */
-    width: 50%;
-    height: 50px;
-    border-radius: 20px;
-}
-.middle{
-    display: flex;
-    justify-content: center;
-    width: 80%;
-    gap: 1%;
-    height: 50px;
-    margin-bottom: 2%;
-    background-color: transparent;}
 
-.contact-email{
-    font-size: 175%;
-    
-    width: 100%;
-    height: 50px;
-    border-radius: 20px;
+/* --- FORM LAYOUT --- */
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 600px; /* Prevents the form from becoming giant on desktop */
 }
-.bottom{
-    display: flex;
-    justify-content: center;
-    width: 80%;
-    gap: 1%;
-    height: 50px;
-    margin-bottom: 2%;
-    background-color: transparent;}
 
-.message{
-    font-size: 175%;
-    display: flex;
-    width: 100%;
-    height: 1000%;
-    border-radius: 20px;
+.input-row {
+  display: flex;
+  gap: 20px;
+  width: 100%;
 }
-.send{
-    display: flex;
-    width: 5%;
-    height: 100%;
+
+/* --- SHARED INPUT STYLES --- */
+.form-input, .form-textarea {
+  width: 100%;
+  padding: 15px 20px; /* Adds breathing room inside the box */
+  font-size: 16px; /* Standard, legible, professional size */
+  font-family: inherit;
+  color: #5c4033;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+
+/* Adds a nice brown glow when the user clicks on a box */
+.form-input:focus, .form-textarea:focus {
+  outline: none;
+  border-color: #5c4033;
+  box-shadow: 0 0 5px rgba(92, 64, 51, 0.3);
+}
+
+/* --- SPECIFIC FIX FOR MESSAGE BOX --- */
+.form-textarea {
+  min-height: 150px; /* Replaces the broken 1000% height */
+  resize: vertical; /* Lets users click and drag to make the box taller */
+}
+
+/* --- BUTTON STYLES --- */
+.send-btn {
+  background-color: #5c4033;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 15px 30px;
+  font-size: 18px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+  align-self: center; /* Centers the button under the form */
+  width: 250px;
+  margin-top: 10px;
+}
+
+.send-btn:hover {
+  background-color: #4a332a;
+}
+
+
+/* =========================================
+   MOBILE RESPONSIVENESS (Under 768px)
+========================================= */
+@media (max-width: 768px) {
+  .input-row {
+    flex-direction: column; /* Stacks Name and Number vertically on phones */
+    gap: 20px;
+  }
+  
+  .send-btn {
+    width: 100%; /* Makes the button full-width on mobile to be easily tappable */
+  }
 }
