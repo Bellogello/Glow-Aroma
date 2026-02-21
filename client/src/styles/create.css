@@ -1,0 +1,32 @@
+.home-container{
+    height: auto;
+}
+.candle-div{
+    display: flex;
+    justify-content: center;
+}
+.candle-preview{
+    width: 50%;
+
+}
+.creation{
+    display: flex;
+    justify-content: space-between;
+    height: 100%;
+}
+.choices{
+    width: 50%;
+    display: grid;
+}
+
+select{
+    width: 80%;
+    height: 27%;
+    margin-bottom:3% ;
+    border-radius: 20px;
+}
+.confirm{
+    width: 80%;
+    height: 27%;
+    border-radius:20px  ;
+}
