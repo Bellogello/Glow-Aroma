@@ -1,39 +1,147 @@
-.custom-navbar .container {
-  display: flex;
-  flex-wrap: nowrap;        /* ← stops logo from wrapping to its own row */
-  align-items: center;  
-  justify-content: space-between;    /* ← vertically centers logo + links */
-}
-
+/* 1. The Main Navbar Background */
 .custom-navbar {
-  background-color: #D2C9B8;
+  background-color: #D2C9B8 !important;
   width: 100%;
   padding: 10px 0;
 }
 
+/* 2. The Logo */
 .logo {
-  width: 100px;
+  width: 160px;
   height: auto;
-  display: block;           /* ← removes phantom inline spacing */
 }
 
-.links {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: nowrap;
+/* 3. Text Links */
+.custom-navbar .nav-link {
+  color: #5a4a3a !important; 
+  font-family: 'Poppins', sans-serif; 
+  font-size: 20px; 
+  font-weight: 500; 
 }
 
-.links .nav-link {
-  color: #5a4a3a;
-  white-space: nowrap;
-  width: 50%;
+/* 4. Cart and Profile Icons - FIXED SIZES */
+.cart, .profile {
+  height: 45px !important; 
+  width: 45px !important;
+  min-width: 45px !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  display: inline-block !important; 
+  padding: 0 !important; 
+  margin: 0 !important;
 }
-.cart{
-    height: 50px;
-    width: 50px;
-background: url(../assets/cart.png);
-object-fit: contain;
 
+.cart { background-image: url('../assets/cart.png'); }
+.profile { background-image: url('../assets/profile.png'); }
 
+/* Remove white gaps around the edges */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+/* --- DESKTOP ONLY LAYOUT (992px and up) --- */
+@media (min-width: 992px) {
+  /* Hide the toggle button completely on Desktop screens */
+  .navbar-toggler {
+    display: none !important;
+  }
+
+  .custom-navbar .container {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important; 
+    align-items: center !important;
+    flex-wrap: nowrap !important; 
+  }
+
+  .custom-navbar .navbar-collapse {
+    display: flex !important;
+    justify-content: flex-end !important;
+    flex-basis: auto !important;
+  }
+
+  .custom-navbar .navbar-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 30px; 
+    margin: 0 !important;
+  }
+  
+  /* Desktop icon spacing */
+  .icon-group {
+    display: flex;
+    flex-direction: row;
+    gap: 30px;
+    align-items: center;
+  }
+}
+
+/* --- MOBILE SPECIFIC FIXES (Under 992px) --- */
+@media (max-width: 991px) {
+  .logo {
+    width: 130px; 
+  }
+
+  /* FIX 1: Force container to spread out logo and button, and let menu wrap */
+  .custom-navbar .container {
+    display: flex !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+
+  /* FIX 2: Ensure the drop-down menu spans full width and drops BELOW the header */
+  .custom-navbar .navbar-collapse {
+    flex-basis: 100% !important; 
+    width: 100% !important;
+  }
+
+  /* FIX 3: Remove the ugly white box from the hamburger menu and force to far right */
+  .custom-navbar .navbar-toggler {
+    border: none !important; 
+    background-color: transparent !important; 
+    box-shadow: none !important; 
+    padding: 0 !important;
+    margin-left: auto !important; /* This fixes the right-side gap! */
+  }
+
+  /* Inject our custom brown icon to match your text */
+  .custom-navbar .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%2890, 74, 58, 1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2.5' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+    width: 35px !important;
+    height: 35px !important;
+    display: inline-block !important;
+  }
+
+  /* FIX 4: Override ms-auto, force links to stack vertically and perfectly center */
+  .custom-navbar .navbar-nav {
+    display: flex !important;
+    flex-direction: column !important; 
+    align-items: center !important; /* Centers horizontally */
+    justify-content: center !important;
+    width: 100% !important; /* Overrides the ms-auto push */
+    gap: 15px !important; 
+    padding: 20px 0 !important; 
+    margin: 0 !important;
+  }
+
+  /* Padding ONLY for text links (Home, Contact, Products) */
+  .custom-navbar .nav-link:not(.cart):not(.profile) {
+    padding: 10px 20px !important; 
+  }
+
+  /* Keep the cart and profile icons grouped side-by-side and centered */
+  .icon-group {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 30px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin-top: 10px;
+    width: 100% !important;
+  }
 }
