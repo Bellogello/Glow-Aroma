@@ -69,7 +69,7 @@ h1 {
 /* --- BUTTON STYLES --- */
 .send-btn {
   background-color: #5c4033;
-  color: white;
+  color: #f5efe1;
   border: none;
   border-radius: 25px;
   padding: 15px 30px;
@@ -84,6 +84,7 @@ h1 {
 
 .send-btn:hover {
   background-color: #4a332a;
+  color: #f5efe1;
 }
 
 

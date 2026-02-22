@@ -1,32 +1,61 @@
+body{
+    height: 100vh;
+}
 .home-container{
-    height: auto;
+    height: 50vh;
 }
-.candle-div{
-    display: flex;
-    justify-content: center;
-}
-.candle-preview{
-    width: 50%;
 
-}
 .creation{
     display: flex;
     justify-content: space-between;
     height: 100%;
+    gap: 1%;
 }
+.candle-div{
+    display: flex;
+    justify-content: center;
+    width: 50%;
+    background-color: brown;
+    border-radius: 40px;
+    margin: 1%;
+}
+.candle-preview{
+    width: 50%; 
+    
+}
+
 .choices{
     width: 50%;
     display: grid;
+    height: 100%;
 }
 
+.selections{
+
+display: flex;
+  flex-direction: column; /* Stacks items vertically */
+  align-items: center;    /* Centers items horizontally */
+  gap: 15px;              /* Adds spacing between the elements */
+  padding: 20px;
+}
 select{
-    width: 80%;
-    height: 27%;
-    margin-bottom:3% ;
+    width: 100%;
+    height: 85%;
     border-radius: 20px;
 }
 .confirm{
+    background-color: #5c4033;
+    color: #f5efe1;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 18px;
     width: 80%;
-    height: 27%;
-    border-radius:20px  ;
+    height: 50%;
+    border-radius:40px;
+    border: none;
+    
+}
+.confirm:hover {
+  background-color: #4a332a;
+  color: #f5efe1;
 }

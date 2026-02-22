@@ -8,15 +8,14 @@ const Create = () => {
     <div className="home-container">
       <Navbar />
       <h1>Create Your Own Page</h1>
-      <p>Welcome to Glow Aroma - Premium Candles</p>
       <div className='creation'>
-        
+
         <div className='candle-div'>
         <img className="candle-preview" src={candle}></img>
       </div>
       <div className='choices'> 
 
-        <div className='selects'>
+        <div className='selections'>
         <select className='cup'>
           <option value="default">Choose Your Cup</option>
         </select>
@@ -29,10 +28,11 @@ const Create = () => {
 
         <select className='color'>
           <option value="default">Choose The Color</option>
-        </select>
+        </select>        
+        <button className='confirm'>Confirm Candle</button>
+
                 </div>
 
-        <button className='confirm'>Confirm Candle</button>
   
 
 </div>
