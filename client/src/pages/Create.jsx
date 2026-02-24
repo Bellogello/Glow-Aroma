@@ -7,7 +7,8 @@ const Create = () => {
   return (
     <div className="home-container">
       <Navbar />
-      <h1>Create Your Own Page</h1>
+        <h1>Create Your Own Candle</h1>
+        <hr className="hr--create" />
       <div className='creation'>
 
         <div className='candle-div'>
@@ -17,11 +18,11 @@ const Create = () => {
 
         <div className='selections'>
         <select className='cup'>
-          <option value="default">Choose Your Cup</option>
+          <option value="default">Choose a Cup</option>
         </select>
 
         <select className='scents'>
-          <option value="default">Select a Scent</option>
+          <option value="default">Choose a Scent</option>
         </select>
 
 

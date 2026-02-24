@@ -39,9 +39,11 @@ display: flex;
   padding: 20px;
 }
 select{
-    width: 100%;
+    width: 85%;
     height: 85%;
     border-radius: 20px;
+    text-align-last: center;
+    font-size: 18px;
 }
 .confirm{
     background-color: #5c4033;
@@ -58,4 +60,12 @@ select{
 .confirm:hover {
   background-color: #4a332a;
   color: #f5efe1;
+}
+.hr--create {
+  width: 15%;
+  height: 3px;
+  border: none;
+  background-color: #5c4033;
+  margin-bottom: 40px;
+  border-radius: 5px;
 }

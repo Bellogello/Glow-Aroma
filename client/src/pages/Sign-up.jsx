@@ -1,23 +1,25 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
-import '../styles/profile.css'
+import '../styles/signup.css'
 
 const Signup = () => {
   return (
     <div className="home-container">
       <Navbar />
         <form>
-        <div class="form-row">
-            <div class="form-group col-md-6">
+           <div className='signup-box'>
+
+            <input type='text' className='signup-name' id="signup-name" placeholder='Name'></input>
+            <input type="text" className='signup-phone' id='signup-phone' placeholder='Phone Number'></input>
+
             <input type="email" class="signup-email" id="signup-email" placeholder="Email"></input>
-            </div>
-            <div class="form-group col-md-6">
             <input type="password" class="signup-password" id="signup-password" placeholder="Password"></input>
-            </div>
-        <button type="submit" class="btn btn-primary">Sign in</button>
+            <input type="password" class="signup-password" id="signup-repeatpassword" placeholder="Repeat Password"></input>
+            <button type="submit" class="btn btn-primary">Create Account</button>
         </div>
-        </form>
-        </div>
+
+      </form>
+    </div>
   );
 };
 

@@ -10,7 +10,7 @@ const Profile = () => {
       <h1>Profile Page</h1>
       <p>Welcome to Glow Aroma - Premium Candles</p>
       <Link to="/Sign-in">Sign-in</Link>
-      <Link to="/Sign-up">Sign-up</Link>
+      <Link to="/Sign-up">Create a New Account</Link>
 
     </div>
   );

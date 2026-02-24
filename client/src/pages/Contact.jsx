@@ -9,7 +9,7 @@ const Contact = () => {
       
       <div className="contact-wrapper">
         <h1>Contact Us</h1>
-        <hr className="hr--small" />
+        <hr className="hr--contact" />
         
         {/* Swapped to a <form> tag for better web standards */}
         <form className="contact-form" onSubmit={(e) => e.preventDefault()}>

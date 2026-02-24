@@ -1,17 +1,21 @@
-/* 1. The Main Navbar Background */
+/* =========================================
+   1. GLOBAL STYLES (Applies to all screens)
+   ========================================= */
+
+/* Main Navbar Background */
 .custom-navbar {
   background-color: #D2C9B8 !important;
   width: 100%;
   padding: 10px 0;
 }
 
-/* 2. The Logo */
+/* Logo */
 .logo {
   width: 160px;
   height: auto;
 }
 
-/* 3. Text Links */
+/* Text Links */
 .custom-navbar .nav-link {
   color: #5a4a3a !important; 
   font-family: 'Poppins', sans-serif; 
@@ -19,7 +23,7 @@
   font-weight: 500; 
 }
 
-/* 4. Cart and Profile Icons - FIXED SIZES */
+/* Cart and Profile Icons - FIXED SIZES */
 .cart, .profile {
   height: 45px !important; 
   width: 45px !important;
@@ -42,9 +46,11 @@ html, body {
   box-sizing: border-box;
 }
 
-/* --- DESKTOP ONLY LAYOUT (992px and up) --- */
+/* =========================================
+   2. DESKTOP LAYOUT (992px and up)
+   ========================================= */
 @media (min-width: 992px) {
-  /* Hide the toggle button completely on Desktop screens */
+  /* Hide the toggle button completely on Desktop */
   .navbar-toggler {
     display: none !important;
   }
@@ -59,8 +65,8 @@ html, body {
 
   .custom-navbar .navbar-collapse {
     display: flex !important;
-    justify-content: flex-end !important;
-    flex-basis: auto !important;
+    justify-content: flex-end;
+    flex-basis: auto;
   }
 
   .custom-navbar .navbar-nav {
@@ -77,16 +83,18 @@ html, body {
     flex-direction: row;
     gap: 30px;
     align-items: center;
+    margin: 10px;
   }
 }
 
-/* --- MOBILE SPECIFIC FIXES (Under 992px) --- */
+/* =========================================
+   3. MOBILE LAYOUT & ANIMATION (Under 992px)
+   ========================================= */
 @media (max-width: 991px) {
-  .logo {
-    width: 130px; 
-  }
+  
+  /* --- A. Layout Fixes --- */
+  .logo { width: 130px; }
 
-  /* FIX 1: Force container to spread out logo and button, and let menu wrap */
   .custom-navbar .container {
     display: flex !important;
     justify-content: space-between !important;
@@ -94,47 +102,94 @@ html, body {
     width: 100% !important;
   }
 
-  /* FIX 2: Ensure the drop-down menu spans full width and drops BELOW the header */
-  .custom-navbar .navbar-collapse {
-    flex-basis: 100% !important; 
-    width: 100% !important;
-  }
-
-  /* FIX 3: Remove the ugly white box from the hamburger menu and force to far right */
   .custom-navbar .navbar-toggler {
     border: none !important; 
     background-color: transparent !important; 
     box-shadow: none !important; 
-    padding: 0 !important;
-    margin-left: auto !important; /* This fixes the right-side gap! */
+    padding: 5px !important;
+    margin-left: auto !important;
   }
 
-  /* Inject our custom brown icon to match your text */
   .custom-navbar .navbar-toggler-icon {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%2890, 74, 58, 1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2.5' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
     width: 35px !important;
     height: 35px !important;
     display: inline-block !important;
+    margin: 10px;
   }
 
-  /* FIX 4: Override ms-auto, force links to stack vertically and perfectly center */
+  /* --- B. Override Bootstrap's collapse behaviour --- */
+
+  /*
+   * We take full control of the collapse container.
+   * Bootstrap toggles .collapsing → .show on open, and .show → .collapsing → (removed) on close.
+   * We animate max-height + opacity so the fade is perfectly smooth in both directions.
+   */
+
+  /* Base state: fully hidden */
+  .custom-navbar .navbar-collapse {
+    display: block !important;       /* keep it in the flow so transitions fire */
+    flex-basis: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+
+    /* Start collapsed */
+    max-height: 0 !important;
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+
+    transition:
+      max-height 0.35s ease,
+      opacity 0.3s ease,
+      transform 0.3s ease !important;
+  }
+
+  /* Open state */
+  .custom-navbar .navbar-collapse.show {
+    max-height: 500px !important;    /* large enough to fit any menu content */
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    pointer-events: auto !important;
+  }
+
+  /*
+   * While Bootstrap adds .collapsing during both open AND close transitions,
+   * we use our 'nav-expanded' class (set in React) to know the intent:
+   *   nav-expanded  + collapsing  →  opening  →  animate to visible
+   *  !nav-expanded  + collapsing  →  closing  →  animate to hidden  (default/base state)
+   */
+  .custom-navbar.nav-expanded .navbar-collapse.collapsing {
+    max-height: 500px !important;
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    pointer-events: auto !important;
+  }
+
+  /* Closing: collapsing without nav-expanded = animate back to zero */
+  .custom-navbar:not(.nav-expanded) .navbar-collapse.collapsing {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    transform: translateY(-10px) !important;
+    pointer-events: none !important;
+  }
+
+  /* --- C. Internal Styling --- */
   .custom-navbar .navbar-nav {
     display: flex !important;
     flex-direction: column !important; 
-    align-items: center !important; /* Centers horizontally */
+    align-items: center !important;
     justify-content: center !important;
-    width: 100% !important; /* Overrides the ms-auto push */
+    width: 100% !important;
     gap: 15px !important; 
     padding: 20px 0 !important; 
     margin: 0 !important;
   }
 
-  /* Padding ONLY for text links (Home, Contact, Products) */
   .custom-navbar .nav-link:not(.cart):not(.profile) {
     padding: 10px 20px !important; 
   }
 
-  /* Keep the cart and profile icons grouped side-by-side and centered */
   .icon-group {
     display: flex !important;
     flex-direction: row !important;
