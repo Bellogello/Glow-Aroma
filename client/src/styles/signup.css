@@ -1,6 +1,7 @@
+@media (min-width: 991px) {
 .signup-box{
     display: flex;
-    width: 30%;
+    width: 25%;
     height: 50vh;
     background-color: #D2C9B8;
     justify-self: center;
@@ -49,4 +50,59 @@
 .btn:hover {
   background-color: #4a332a;
   color: #f5efe1;
+}
+}
+@media (max-width: 991px) {
+    .signup-box{
+    display: flex;
+    width: 80%;
+    height: 50vh;
+    background-color: #D2C9B8;
+    justify-self: center;
+    border-radius: 40px;
+    margin: 10%;
+    padding: 2%;
+    justify-content: space-evenly;
+    align-content: center;
+    flex-wrap: wrap;
+    gap: 2%;
+}
+.signup-box input
+{
+    height: 15%;
+    margin: 2%;
+    text-align: center;
+    border-radius: 20px;
+    border: none;
+}
+.signup-name{
+    width: 40%;
+    justify-self: center;
+
+}
+.signup-phone{
+    width: 40%;
+}
+.signup-email{
+    width: 90%;
+}
+.signup-password{
+    width:90%;
+}
+.btn{
+        background-color: #5c4033;
+    color: #f5efe1;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 18px;
+    width: 80%;
+    height: 10%;
+    border-radius:40px;
+    border: none;
+    
+}
+.btn:hover {
+  background-color: #4a332a;
+  color: #f5efe1;
+}
 }

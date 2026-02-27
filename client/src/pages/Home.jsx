@@ -6,7 +6,7 @@ const Home = () => {
     <div className="home-container">
       <Navbar />
       <h1>Home Page</h1>
-      <p>Welcome to Glow Aroma - Premium Candles</p>
+      <p>2oom wl3lak sham3a!</p>
     </div>
   );
 };
