@@ -28,7 +28,7 @@ h1 {
     gap: 40px; /* Gives the cards nice breathing room */
     
     width: 100%;
-    max-width: 1050px; /* MATCHES THE BANNER EXACTLY */
+    max-width: 250%0; /* MATCHES THE BANNER EXACTLY */
     margin: 0 auto; /* Centers the grid under the banner */
 }
 

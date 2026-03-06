@@ -9,24 +9,26 @@ const Create = () => {
   const [scents, setScents] = useState([]);
   const [colors, setColors] = useState([]);
 
-  // NEW: State to track what cup color the user picked so we can filter sizes
+  // State to track what cup color the user picked so we can filter sizes
   const [selectedCupColor, setSelectedCupColor] = useState("default");
+
+  // State to track the exact IDs the user selects to send to the database
+  const [selectedCupId, setSelectedCupId] = useState("default");
+  const [selectedScentId, setSelectedScentId] = useState("default");
+  const [selectedColorId, setSelectedColorId] = useState("default");
 
   // 2. Fetch the data when the page loads
   useEffect(() => {
-    // Fetch Cups
     fetch('http://localhost:5000/api/cups')
       .then(res => res.json())
       .then(data => setCups(data))
       .catch(err => console.error("Error fetching cups:", err));
 
-    // Fetch Scents
     fetch('http://localhost:5000/api/scents')
       .then(res => res.json())
       .then(data => setScents(data))
       .catch(err => console.error("Error fetching scents:", err));
 
-    // Fetch Colors
     fetch('http://localhost:5000/api/colors')
       .then(res => res.json())
       .then(data => setColors(data))
@@ -35,6 +37,71 @@ const Create = () => {
 
   // 3. Extract unique cup colors so the dropdown doesn't repeat options
   const uniqueCupColors = [...new Set(cups.map(cup => cup.color))].filter(Boolean);
+
+  // 4. The holy grail function that pushes this shit to the cart
+  const handleConfirm = async () => {
+    // Basic idiot-check: did they actually pick everything?
+    if (selectedCupId === "default" || selectedScentId === "default" || selectedColorId === "default") {
+      alert("Bro, you gotta pick a size, scent, and color before confirming!");
+      return;
+    }
+
+    // Grab the user ID from local storage
+    const userId = localStorage.getItem("userId");
+    
+    if (!userId) {
+      alert("You need to be logged in to add stuff to your cart!");
+      return;
+    }
+
+    // Big brain move: calculate the real total price instead of hardcoding $15
+// Big brain move: force them to be real numbers before adding!
+const selectedCup = cups.find(c => c.id.toString() === selectedCupId.toString());
+    const selectedScent = scents.find(s => s.id.toString() === selectedScentId.toString());
+    const selectedColor = colors.find(c => c.id.toString() === selectedColorId.toString());
+
+    // 2. Convert prices to clean numbers so the database doesn't crash
+    const cupPrice = Number(selectedCup?.price || 0);
+    const scentPrice = Number(selectedScent?.price || 0);
+    const colorPrice = Number(selectedColor?.price || 0);
+
+    // 3. Add them up and format to 2 decimal places
+    const totalPrice = Number((cupPrice + scentPrice + colorPrice).toFixed(2));
+
+    // Package the payload
+    const candleData = {
+      userId: userId,
+      cupId: selectedCupId,
+      colorId: selectedColorId,
+      scentId: selectedScentId,
+      totalPrice: totalPrice 
+    };
+
+    try {
+      // Send it to the backend route we just made
+      const response = await fetch('http://localhost:5000/api/cart/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(candleData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("Candle added to cart! 🔥");
+        // Reset the form so they can build another one
+        setSelectedCupColor("default");
+        setSelectedCupId("default");
+        setSelectedScentId("default");
+        setSelectedColorId("default");
+      } else {
+        alert("Error: " + data.error);
+      }
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+      alert("Server is acting up, check the console.");
+    }
+  };
 
   return (
     <div className="home-container">
@@ -50,11 +117,14 @@ const Create = () => {
         <div className='choices'> 
           <div className='selections'>
             
-            {/* 4. Cascading Step 1: Cup Color */}
+            {/* Cascading Step 1: Cup Color */}
             <select 
               className='cup_color'
               value={selectedCupColor}
-              onChange={(e) => setSelectedCupColor(e.target.value)}
+              onChange={(e) => {
+                setSelectedCupColor(e.target.value);
+                setSelectedCupId("default"); // Reset the size if they change the color
+              }}
             >
               <option value="default">Cup Color</option>
               {uniqueCupColors.map((colorName, index) => (
@@ -64,8 +134,13 @@ const Create = () => {
               ))}
             </select>
 
-            {/* 5. Cascading Step 2: Cup Size (Filtered by Color) */}
-            <select className='cup_size' disabled={selectedCupColor === "default"}>
+            {/* Cascading Step 2: Cup Size (Filtered by Color) */}
+            <select 
+              className='cup_size' 
+              value={selectedCupId}
+              onChange={(e) => setSelectedCupId(e.target.value)}
+              disabled={selectedCupColor === "default"}
+            >
               <option value="default">
                 {selectedCupColor === "default" ? "Pick a color first" : "Cup Size"}
               </option>
@@ -73,13 +148,17 @@ const Create = () => {
                 .filter((cup) => cup.color === selectedCupColor)
                 .map((cup) => (
                   <option key={cup.id} value={cup.id}>
-                    {cup.size_ml} ml - ${cup.price}
+                    {cup.size_ml} ml
                   </option>
                 ))}
             </select>
 
-            {/* 6. Scents Dropdown */}
-            <select className='scents'>
+            {/* Scents Dropdown */}
+            <select 
+              className='scents'
+              value={selectedScentId}
+              onChange={(e) => setSelectedScentId(e.target.value)}
+            >
               <option value="default">Scent</option>
               {scents.map((scent) => (
                 <option key={scent.id} value={scent.id}>
@@ -88,17 +167,22 @@ const Create = () => {
               ))}
             </select>
 
-            {/* 7. Candle Colors Dropdown */}
-            <select className='color'>
+            {/* Candle Colors Dropdown */}
+            <select 
+              className='color'
+              value={selectedColorId}
+              onChange={(e) => setSelectedColorId(e.target.value)}
+            >
               <option value="default">Candle Color</option>
               {colors.map((color) => (
                 <option key={color.id} value={color.id}>
-                  {color.name} {/* Fixed to color.name based on DB schema */}
+                  {color.name}
                 </option>
               ))}
             </select>        
             
-            <button className='confirm'>Confirm Candle</button>
+            {/* Attach the confirm handler to the button! */}
+            <button className='confirm' onClick={handleConfirm}>Confirm Candle</button>
           </div>
         </div>
       </div>
