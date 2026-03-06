@@ -1,19 +1,30 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom'; // Imports the redirect tool
+import { Navigate, useNavigate } from 'react-router-dom'; // 1. Import useNavigate
 import Navbar from '../components/Navbar';
 
 const Profile = () => {
-  // 1. Check the browser's memory for the token
-  const token = localStorage.getItem("token");
+  // 2. Setup the navigation tool
+  const navigate = useNavigate(); 
 
-  // 2. THE BOUNCER: If there is no token, stop rendering and redirect instantly
+  // The Bouncer: Checks if they are allowed on the page when it loads
+  const token = localStorage.getItem("token");
   if (!token) {
-    // 'replace' means they can't hit the back button to return to the profile page
     return <Navigate to="/Sign-in" replace />; 
   }
 
-  // 3. If they pass the check, grab their name to display
   const userName = localStorage.getItem("userName");
+
+  // 3. The Instant Logout Function
+  const handleLogout = () => {
+    // Trash the data
+    localStorage.removeItem("token");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userId");
+
+    // 4. THE MAGIC LINE: Instantly push them to the sign-in page
+    // This forces React to change the page without needing a refresh!
+    navigate('/Sign-in'); 
+  };
 
   return (
     <div className="home-container">
@@ -23,9 +34,17 @@ const Profile = () => {
         <hr />
         <h2>Welcome back, {userName}!</h2>
         
-        <p>This is your private profile page. Only signed-in users can see this!</p>
+        <p>This is your private profile page.</p>
         
-        {/* Later, you will map over their previous candle orders here */}
+        {/* 5. Attach the function to your button */}
+        <button 
+          onClick={handleLogout} 
+          className="btn btn-danger"
+          style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: 'red', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+        >
+          Log Out
+        </button>
+
       </div>
     </div>
   );

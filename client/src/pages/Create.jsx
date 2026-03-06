@@ -8,6 +8,7 @@ const Create = () => {
   const [cups, setCups] = useState([]);
   const [scents, setScents] = useState([]);
   const [colors, setColors] = useState([]);
+  const [quantity, setQuantity] = useState(1);
 
   // State to track what cup color the user picked so we can filter sizes
   const [selectedCupColor, setSelectedCupColor] = useState("default");
@@ -40,12 +41,15 @@ const Create = () => {
 
   // 4. The holy grail function that pushes this shit to the cart
   const handleConfirm = async () => {
+    
     // Basic idiot-check: did they actually pick everything?
     if (selectedCupId === "default" || selectedScentId === "default" || selectedColorId === "default") {
       alert("Bro, you gotta pick a size, scent, and color before confirming!");
+      
       return;
     }
 
+    
     // Grab the user ID from local storage
     const userId = localStorage.getItem("userId");
     

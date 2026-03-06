@@ -111,44 +111,102 @@ app.post('/api/users', (req, res) => {
 // --- ADD TO CART ROUTE (POST) ---
 // ==========================================
 app.post('/api/cart/add', (req, res) => {
-  const { userId, cupId, colorId, scentId, totalPrice } = req.body;
+  // 1. ADD 'quantity' TO THE DESTRUCTURING (Default to 1 if missing)
+  const { userId, cupId, colorId, scentId, totalPrice, quantity = 1 } = req.body;
 
   if (!userId) return res.status(401).json({ error: "You must be logged in to add to cart!" });
 
-  // STEP 1: Save the custom candle recipe
-  const sqlCandle = "INSERT INTO custom_candles (cup_id, color_id, scent_id, total_price) VALUES (?, ?, ?, ?)";
-  
-  db.query(sqlCandle, [cupId, colorId, scentId, totalPrice], (err, candleResult) => {
-    if (err) return res.status(500).json({ error: "Candle error: " + err.message });
-    
-    const customCandleId = candleResult.insertId; // The ID of the candle we just built
+  db.query("SELECT id FROM carts WHERE user_id = ?", [userId], (err, cartResults) => {
+    if (err) return res.status(500).json({ error: "Cart error: " + err.message });
 
-    // STEP 2: Find the user's cart (or create one)
-    db.query("SELECT id FROM carts WHERE user_id = ?", [userId], (err, cartResults) => {
-      if (err) return res.status(500).json({ error: "Cart error: " + err.message });
+    if (cartResults.length > 0) {
+      checkAndInsert(cartResults[0].id);
+    } else {
+      db.query("INSERT INTO carts (user_id) VALUES (?)", [userId], (err, newCartResult) => {
+        if (err) return res.status(500).json({ error: "New cart error: " + err.message });
+        checkAndInsert(newCartResult.insertId);
+      });
+    }
 
-      // If they already have a cart, use it. If not, create a new one.
-      if (cartResults.length > 0) {
-        insertIntoCartItems(cartResults[0].id, customCandleId, res);
-      } else {
-        db.query("INSERT INTO carts (user_id) VALUES (?)", [userId], (err, newCartResult) => {
-          if (err) return res.status(500).json({ error: "New cart error: " + err.message });
-          insertIntoCartItems(newCartResult.insertId, customCandleId, res);
-        });
-      }
-    });
+    function checkAndInsert(cartId) {
+      const checkSql = `
+        SELECT ci.id, ci.quantity 
+        FROM cart_items ci
+        JOIN custom_candles cc ON ci.custom_candle_id = cc.id
+        WHERE ci.cart_id = ? AND cc.cup_id = ? AND cc.color_id = ? AND cc.scent_id = ?
+      `;
+      
+      db.query(checkSql, [cartId, cupId, colorId, scentId], (err, existResults) => {
+        if (err) return res.status(500).json({ error: "Check error: " + err.message });
+
+        if (existResults.length > 0) {
+          const existingCartItemId = existResults[0].id;
+          // 2. UPDATE THIS LINE to add the specific quantity instead of just + 1
+          db.query("UPDATE cart_items SET quantity = quantity + ? WHERE id = ?", [quantity, existingCartItemId], (err) => {
+            if (err) return res.status(500).json({ error: "Update error: " + err.message });
+            res.json({ message: "Stacked! Increased quantity of existing candle." });
+          });
+        } else {
+          const sqlCandle = "INSERT INTO custom_candles (cup_id, color_id, scent_id, total_price) VALUES (?, ?, ?, ?)";
+          db.query(sqlCandle, [cupId, colorId, scentId, totalPrice], (err, candleResult) => {
+            if (err) return res.status(500).json({ error: "Candle insert error: " + err.message });
+            
+            // 3. UPDATE THIS LINE to insert the actual quantity instead of a hardcoded 1
+            const sqlItem = "INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)";
+            db.query(sqlItem, [cartId, candleResult.insertId, quantity], (err) => {
+              if (err) return res.status(500).json({ error: "Cart Item error: " + err.message });
+              res.json({ message: "Successfully added new custom candle!" });
+            });
+          });
+        }
+      });
+    }
   });
-
-  // STEP 3: Link the candle to the cart
-  function insertIntoCartItems(cartId, candleId, res) {
-    const sqlItem = "INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, 1)";
-    db.query(sqlItem, [cartId, candleId], (err, result) => {
-      if (err) return res.status(500).json({ error: "Cart Item error: " + err.message });
-      res.json({ message: "Successfully added your custom candle to the cart!" });
-    });
-  }
 });
 
+// ==========================================
+// --- UPDATE QUANTITY ROUTE (PUT) ---
+// ==========================================
+app.put('/api/cart/update/:cartItemId', (req, res) => {
+  const { cartItemId } = req.params;
+  const { action } = req.body; // 'increase' or 'decrease'
+
+  let sql = "";
+  if (action === 'increase') {
+    sql = "UPDATE cart_items SET quantity = quantity + 1 WHERE id = ?";
+  } else if (action === 'decrease') {
+    // GREATEST() ensures the quantity never goes below 1 in the database
+    sql = "UPDATE cart_items SET quantity = GREATEST(quantity - 1, 1) WHERE id = ?";
+  } else {
+    return res.status(400).json({ error: "Invalid action" });
+  }
+
+  db.query(sql, [cartItemId], (err) => {
+    if (err) return res.status(500).json({ error: "Failed to update quantity: " + err.message });
+    res.json({ message: "Quantity updated successfully!" });
+  });
+});
+
+// ==========================================
+// --- REMOVE ITEM FROM CART ROUTE (DELETE) ---
+// ==========================================
+app.delete('/api/cart/remove/:cartItemId', (req, res) => {
+  const { cartItemId } = req.params;
+
+  // We delete the specific row from the cart_items table
+  const sql = "DELETE FROM cart_items WHERE id = ?";
+  
+  db.query(sql, [cartItemId], (err, result) => {
+    if (err) return res.status(500).json({ error: "Failed to delete: " + err.message });
+    
+    // If no rows were affected, the item didn't exist
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Item not found in cart." });
+    }
+
+    res.json({ message: "Item successfully removed from cart!" });
+  });
+});
 
 // ==========================================
 // --- GET USER'S CART ROUTE (GET) ---
@@ -162,7 +220,7 @@ app.get('/api/cart/:userId', (req, res) => {
       ci.id as cart_item_id, 
       ci.quantity,
       cc.total_price, 
-      c.name as cup_name, 
+      c.color as cup_color, 
       c.size_ml, 
       cl.name as color_name, 
       s.name as scent_name 
