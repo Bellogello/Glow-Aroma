@@ -8,6 +8,7 @@ import Contact from './pages/Contact';
 import Create from './pages/Create';
 import SignIn from './pages/Sign-in';
 import Signup from './pages/Sign-up';
+import Dashboard from './pages/Dashboard'; // <--- 1. ADDED IMPORT HERE
 
 function App() {
   return (
@@ -22,8 +23,9 @@ function App() {
         <Route path="/Sign-in" element={<SignIn />} />   
         <Route path="/Sign-up" element={<Signup />} />   
          
+        {/* <--- 2. ADDED THE DASHBOARD ROUTE HERE */}
+        <Route path="/Dashboard" element={<Dashboard />} /> 
 
-        {/* We can add /cart and /profile here next! */}
       </Routes>
     </div>
   );

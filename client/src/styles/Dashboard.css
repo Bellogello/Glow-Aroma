@@ -1,0 +1,178 @@
+/* Overall Page Background */
+.dashboard-bg {
+  background-color: #fdfbf7;
+  min-height: 100vh;
+}
+
+.dashboard-container {
+  padding: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ========================================= */
+/* --- THE FORCED FLEXBOX LAYOUT --- */
+/* ========================================= */
+.dashboard-layout {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important; /* Absolutely prevents stacking */
+  gap: 40px; 
+  align-items: flex-start; 
+}
+
+/* --- SIDEBAR STYLES --- */
+.dashboard-sidebar {
+  width: 280px !important; 
+  min-width: 280px !important; /* Locks the width */
+  max-width: 280px !important;
+  background-color: #D2C9B8; 
+  border-radius: 20px;
+  padding: 30px 20px;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-title {
+  color: #5a4a3a;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 30px;
+  border-bottom: 2px solid rgba(90, 74, 58, 0.1);
+  padding-bottom: 15px;
+}
+
+/* Sidebar Links */
+.custom-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; 
+}
+
+.custom-sidebar-nav .nav-link {
+  color: #5a4a3a !important;
+  font-weight: 600;
+  border-radius: 50px !important; 
+  padding: 12px 20px !important;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-align: left;
+}
+
+.custom-sidebar-nav .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+/* The Active (Selected) Tab */
+.custom-sidebar-nav .nav-link.active {
+  background-color: #5a4a3a !important; 
+  color: #ffffff !important;
+  box-shadow: 0px 4px 10px rgba(90, 74, 58, 0.2);
+}
+
+/* --- MAIN CONTENT AREA --- */
+.dashboard-content-area {
+  flex: 1 !important; /* Takes up exactly the remaining space */
+  min-width: 0 !important; /* Prevents large tables from breaking the layout */
+  width: 100%;
+}
+
+.dashboard-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05);
+  min-height: 60vh;
+}
+
+.dashboard-card h2 {
+  color: #5a4a3a;
+  font-weight: bold;
+  margin-bottom: 0;
+}
+
+.card-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+/* --- CUSTOM TABLE STYLING --- */
+.custom-table {
+  margin-top: 20px;
+  border-collapse: separate;
+  border-spacing: 0 10px; 
+}
+
+.custom-table th {
+  background-color: #fdfbf7;
+  color: #7a6a5a;
+  border: none;
+  padding: 15px;
+  font-weight: 600;
+}
+
+/* Rounded corners for the table headers */
+.custom-table th:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+.custom-table th:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+
+.custom-table td {
+  padding: 20px 15px;
+  vertical-align: middle;
+  color: #5a4a3a;
+  border-top: 1px solid #fdfbf7;
+  border-bottom: 1px solid #fdfbf7;
+}
+
+/* Badges for Order Status */
+.custom-badge {
+  padding: 8px 12px;
+  border-radius: 50px;
+  font-weight: normal;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+/* Action Buttons (View/Edit) */
+.btn-action {
+  background-color: transparent;
+  color: #5a4a3a;
+  border: 1px solid #D2C9B8;
+  border-radius: 50px;
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-action:hover {
+  background-color: #D2C9B8;
+}
+
+/* Small Pill Button for "Add Product" */
+.custom-pill-btn-small {
+  background-color: #5a4a3a !important;
+  border: none !important;
+  color: white;
+  padding: 10px 25px;
+  border-radius: 50px;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.custom-pill-btn-small:hover {
+  background-color: #43362a !important;
+  color: white;
+}
+
+/* Changed to 768px so it only stacks on actual phones/tablets, not laptops */
+@media (max-width: 768px) {
+  .dashboard-layout {
+    flex-direction: column !important;
+  }
+  .dashboard-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}

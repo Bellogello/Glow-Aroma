@@ -3,11 +3,10 @@ body {
     font-family: "Averia Libre", system-ui;
 }
 .top{
-position: static;
-width: 100%;
-height: 191px;
-
-background: #D2C9B8;
+  position: static;
+  width: 100%;
+  height: 191px;
+  background: #D2C9B8;
 }
 button:hover{
     color: #76594C;
@@ -18,13 +17,10 @@ button:hover{
     width: 53px;
     background: url(../assets/cart.png);
     display: inline-block;
-    width: 53px;
-    height: 53px;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
-
 }
 .cart:hover{
     height: 53px;
@@ -40,8 +36,6 @@ button:hover{
     width: 53px;
     background: url(../assets/profile.png);
     display: inline-block;
-    width: 53px;
-    height: 53px;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -54,9 +48,7 @@ button:hover{
     background-image: url(../assets/profile_light.png);
     background-color: transparent;
     border: transparent;
-    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
-
-    
+    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));  
 }
 .home{
     font-family: "Averia Libre", system-ui;
@@ -73,12 +65,10 @@ button:hover{
     font-size: 27px;
     color: #5c4033;
     text-decoration: none;
-
 }
 .contact:hover{
     color: #76594C;
     text-decoration: none;
-
 }
 .products{
     font-family: "Averia Libre", system-ui;
@@ -91,3 +81,125 @@ button:hover{
     text-decoration: none;
 }
 
+/* ========================================= */
+/* --- NEW BEIGE CARD & PILL FORM STYLES --- */
+/* ========================================= */
+
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh; 
+  padding: 20px;
+}
+
+/* The beige box matching your Sign Up page */
+.login-card-beige {
+  background-color: #D2C9B8; /* Brand Beige */
+  padding: 50px 40px;
+  border-radius: 30px; /* Big rounded corners */
+  width: 100%;
+  max-width: 450px; 
+}
+
+.form-group {
+  margin-bottom: 25px;
+}
+
+/* 1. Pill-shaped Input Boxes */
+.custom-pill-input {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 50px; /* Creates the pill shape */
+  font-size: 16px;
+  text-align: center; /* Centers the text perfectly */
+  box-sizing: border-box;
+  color: #5a4a3a;
+  outline: none;
+}
+
+/* Changes the placeholder text color */
+.custom-pill-input::placeholder {
+  color: #7a6a5a;
+}
+
+/* Adds a soft brown glow when typing */
+.custom-pill-input:focus {
+  box-shadow: 0 0 0 3px rgba(90, 74, 58, 0.2); 
+}
+
+/* 2. Pill-shaped Submit Button */
+.custom-pill-btn {
+  background-color: #5a4a3a !important; 
+  border: none !important;
+  color: white;
+  padding: 15px;
+  border-radius: 50px; /* Pill shape */
+  width: 75%; /* Makes the button slightly narrower than the inputs */
+  display: block;
+  margin: 0 auto; /* Centers the button */
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+  margin-top: 15px;
+}
+
+.custom-pill-btn:hover {
+  background-color: #43362a !important; 
+}
+
+/* 3. The Sign Up Link */
+.signup-link-container {
+  text-align: center;
+  margin-top: 25px;
+}
+
+.signup-link {
+  color: #5a4a3a;
+  font-weight: bold;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.signup-link:hover {
+  text-decoration: underline;
+}
+/* --- OR DIVIDER --- */
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #7a6a5a;
+  margin: 20px auto;
+  width: 75%; /* Matches the button width */
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 2px solid #5a4a3a; /* Matches your brand brown */
+  opacity: 0.15; /* Keeps it subtle */
+}
+
+.divider span {
+  padding: 0 15px; /* Space around the text */
+}
+
+/* --- GOOGLE BUTTON --- */
+.google-btn {
+  background-color: #ffffff !important; /* White background */
+  color: #5a4a3a !important; /* Brown text */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px; /* Space between the logo and text */
+}
+
+.google-btn:hover {
+  background-color: #fcfbf9 !important; /* Very subtle off-white on hover */
+}

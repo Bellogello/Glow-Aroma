@@ -91,3 +91,138 @@ button:hover{
     text-decoration: none;
 }
 
+/* --- CART PAGE STYLES --- */
+
+/* Centers the whole cart area */
+.cart-content {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+/* The message when the cart is empty */
+.cart-content h3 {
+  text-align: center;
+  color: #5a4a3a;
+  margin-top: 50px;
+}
+
+/* Individual Cart Item Cards */
+.cart-item {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05); /* Soft premium shadow */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #5a4a3a;
+}
+
+/* Item Title */
+.cart-item h3 {
+  margin: 0;
+  color: #5a4a3a;
+  border-bottom: 2px solid #f5efe1; /* Soft line under the title */
+  padding-bottom: 15px;
+  margin-bottom: 5px;
+}
+
+/* Quantity Controls Area */
+.quantity-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+/* The pill-shaped box holding the + and - buttons */
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  background-color: #fdfbf7;
+  border-radius: 50px;
+  padding: 5px 10px;
+  border: 1px solid #e0dcd3;
+}
+
+/* The + and - buttons */
+.btn-qty {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #5a4a3a;
+  cursor: pointer;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.btn-qty:hover {
+  background-color: #D2C9B8;
+}
+
+.qty-amount {
+  font-weight: bold;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* The Remove Button */
+.btn-remove {
+  align-self: flex-start;
+  background-color: transparent;
+  border: 2px solid #5a4a3a;
+  color: #5a4a3a;
+  padding: 8px 20px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.btn-remove:hover {
+  background-color: #5a4a3a;
+  color: white;
+}
+
+/* The Total / Checkout Box at the bottom */
+.cart-summary {
+  background-color: #D2C9B8;
+  border-radius: 30px;
+  padding: 40px;
+  text-align: center;
+  margin-top: 50px;
+  color: #5a4a3a;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+.cart-summary h2 {
+  margin-bottom: 25px;
+  font-weight: bold;
+}
+
+/* The Checkout Button matching your brand */
+.cart-summary .btn-primary {
+  background-color: #5a4a3a !important;
+  border: none !important;
+  color: white;
+  padding: 15px 30px;
+  border-radius: 50px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+  max-width: 350px;
+}
+
+.cart-summary .btn-primary:hover {
+  background-color: #43362a !important;
+}

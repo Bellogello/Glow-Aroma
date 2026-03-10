@@ -29,21 +29,26 @@ const Profile = () => {
   return (
     <div className="home-container">
       <Navbar />
-      <div style={{ padding: '20px' }}>
-        <h1>My Account</h1>
-        <hr />
-        <h2>Welcome back, {userName}!</h2>
+      
+      {/* Wraps the profile in the centered layout */}
+      <div className="login-wrapper">
         
-        <p>This is your private profile page.</p>
-        
-        {/* 5. Attach the function to your button */}
-        <button 
-          onClick={handleLogout} 
-          className="btn btn-danger"
-          style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: 'red', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
-        >
-          Log Out
-        </button>
+        {/* Uses the rounded beige card style */}
+        <div className="login-card-beige">
+          <h1 className="profile-title">My Account</h1>
+          <hr className="profile-divider" />
+          
+          <h2 className="profile-welcome">Welcome back, {userName}!</h2>
+          <p className="profile-text">This is your private profile page.</p>
+          
+          {/* Using the pill-shaped button to match the rest of the site */}
+          <button 
+            onClick={handleLogout} 
+            className="btn custom-pill-btn logout-btn"
+          >
+            Log Out
+          </button>
+        </div>
 
       </div>
     </div>
