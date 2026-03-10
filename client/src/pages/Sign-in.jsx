@@ -11,6 +11,40 @@ const Signin = () => {
 
   // Standard Email/Password Login
   const handleSignin = async (e) => {
+        e.preventDefault(); // Stop the page refresh
+
+    const loginData = {
+      email: email,
+      password: password
+    };
+
+    try {
+      // 4. Send the credentials to your new backend login route
+      const response = await fetch('http://localhost:5000/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // 5. Save the wristband (JWT token) and their name!
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userName", data.name);
+        localStorage.setItem("userId", data.userId);
+        
+        // 6. Teleport them instantly to the account/profile page
+        navigate('/profile'); 
+      } else {
+        // If the password or email is wrong, show them the error
+        alert("Login failed: " + data.error);
+      }
+    } catch (error) {
+      console.error("Error signing in:", error);
+    }
     e.preventDefault();
     // ... your existing sign-in fetch logic stays exactly the same ...
   };

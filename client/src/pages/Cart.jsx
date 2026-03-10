@@ -14,7 +14,7 @@ const Cart = () => {
       return; 
     }
 
-    fetch(`http://localhost:5000/api/cart/${userId}`)
+    fetch(`http://localhost:5000/cart/${userId}`)
       .then(res => res.json())
       .then(data => {
         if (data.error) {
@@ -35,7 +35,7 @@ const Cart = () => {
   const handleQuantityChange = async (cartItemId, action) => {
     try {
       // 1. Tell the backend to update the database
-      const response = await fetch(`http://localhost:5000/api/cart/update/${cartItemId}`, {
+      const response = await fetch(`http://localhost:5000/cart/update/${cartItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
@@ -59,7 +59,7 @@ const Cart = () => {
   const handleRemove = async (cartItemId) => {
     try {
       // 1. Tell the backend to delete it
-      const response = await fetch(`http://localhost:5000/api/cart/remove/${cartItemId}`, {
+      const response = await fetch(`http://localhost:5000/cart/remove/${cartItemId}`, {
         method: 'DELETE',
       });
 

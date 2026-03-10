@@ -20,17 +20,17 @@ const Create = () => {
 
   // 2. Fetch the data when the page loads
   useEffect(() => {
-    fetch('http://localhost:5000/api/cups')
+    fetch('http://localhost:5000/cups')
       .then(res => res.json())
       .then(data => setCups(data))
       .catch(err => console.error("Error fetching cups:", err));
 
-    fetch('http://localhost:5000/api/scents')
+    fetch('http://localhost:5000/scents')
       .then(res => res.json())
       .then(data => setScents(data))
       .catch(err => console.error("Error fetching scents:", err));
 
-    fetch('http://localhost:5000/api/colors')
+    fetch('http://localhost:5000/colors')
       .then(res => res.json())
       .then(data => setColors(data))
       .catch(err => console.error("Error fetching colors:", err));
@@ -44,7 +44,7 @@ const Create = () => {
     
     // Basic idiot-check: did they actually pick everything?
     if (selectedCupId === "default" || selectedScentId === "default" || selectedColorId === "default") {
-      alert("Bro, you gotta pick a size, scent, and color before confirming!");
+      alert("Make sure you've picked all the options!");
       
       return;
     }
@@ -72,18 +72,18 @@ const selectedCup = cups.find(c => c.id.toString() === selectedCupId.toString())
     // 3. Add them up and format to 2 decimal places
     const totalPrice = Number((cupPrice + scentPrice + colorPrice).toFixed(2));
 
-    // Package the payload
+// Package the payload
     const candleData = {
       userId: userId,
       cupId: selectedCupId,
       colorId: selectedColorId,
       scentId: selectedScentId,
-      totalPrice: totalPrice 
+      totalPrice: totalPrice, 
+      quantity: quantity // <-- ADD THIS LINE
     };
 
     try {
-      // Send it to the backend route we just made
-      const response = await fetch('http://localhost:5000/api/cart/add', {
+      const response = await fetch('http://localhost:5000/cart/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(candleData),
@@ -92,12 +92,11 @@ const selectedCup = cups.find(c => c.id.toString() === selectedCupId.toString())
       const data = await response.json();
 
       if (response.ok) {
-        alert("Candle added to cart! 🔥");
-        // Reset the form so they can build another one
         setSelectedCupColor("default");
         setSelectedCupId("default");
         setSelectedScentId("default");
         setSelectedColorId("default");
+        setQuantity(1); // <-- RESET THE QUANTITY TO 1
       } else {
         alert("Error: " + data.error);
       }
@@ -184,9 +183,25 @@ const selectedCup = cups.find(c => c.id.toString() === selectedCupId.toString())
                 </option>
               ))}
             </select>        
-            
-            {/* Attach the confirm handler to the button! */}
-            <button className='confirm' onClick={handleConfirm}>Confirm Candle</button>
+              <div className="confirmation">
+                {/* Math.max prevents the user from going below 1 */}
+                <button 
+                  className="btn-qty" 
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                >
+                  −
+                </button>
+                <span className="qty-amount">{quantity}</span>
+                <button 
+                  className="btn-qty" 
+                  onClick={() => setQuantity(quantity + 1)}
+                >
+                  +
+                </button>            
+                <button onClick={handleConfirm}>Confirm Candle</button>
+            </div>
+
+
           </div>
         </div>
       </div>

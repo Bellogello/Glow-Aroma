@@ -26,13 +26,13 @@ db.connect((err) => {
 
 
 //Cups
-app.get('/api/cups', (req, res) => {
+app.get('/cups', (req, res) => {
   db.query('SELECT * FROM cups', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
 });
-app.post('/api/cups', (req, res) => {
+app.post('/cups', (req, res) => {
   // 1. Destructure exactly what Postman is sending
   const { color, description, size_ml, price } = req.body;
   
@@ -46,13 +46,13 @@ app.post('/api/cups', (req, res) => {
 });
 
 //Scents
-app.get('/api/scents', (req, res) => {
+app.get('/scents', (req, res) => {
   db.query('SELECT * FROM scents', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
 });
-app.post('/api/scents', (req, res) => {
+app.post('/scents', (req, res) => {
   const { name, scent_family, description, price } = req.body;
   const sql = "INSERT INTO scents (name, scent_family, description, price) VALUES (?, ?, ?, ?)";
   
@@ -63,13 +63,13 @@ app.post('/api/scents', (req, res) => {
 });
 
 //Colors
-app.get('/api/colors', (req, res) => {
+app.get('/colors', (req, res) => {
   db.query('SELECT * FROM colors', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
 });
-app.post('/api/colors', (req, res) => {
+app.post('/colors', (req, res) => {
   const { name, hex_code, price } = req.body;
   const sql = "INSERT INTO colors (name, hex_code, price) VALUES (?, ?, ?)";
   
@@ -82,7 +82,7 @@ app.post('/api/colors', (req, res) => {
 
 
 //Users
-app.get('/api/users', (req, res) => {
+app.get('/users', (req, res) => {
   db.query('SELECT * FROM users', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
@@ -90,7 +90,7 @@ app.get('/api/users', (req, res) => {
 });
 
 
-app.post('/api/users', (req, res) => {
+app.post('/users', (req, res) => {
   const { name, email, phone, password_hash } = req.body;
   const sql = "INSERT INTO users (name, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, 1)";
   
@@ -110,7 +110,7 @@ app.post('/api/users', (req, res) => {
 // ==========================================
 // --- ADD TO CART ROUTE (POST) ---
 // ==========================================
-app.post('/api/cart/add', (req, res) => {
+app.post('/cart/add', (req, res) => {
   // 1. ADD 'quantity' TO THE DESTRUCTURING (Default to 1 if missing)
   const { userId, cupId, colorId, scentId, totalPrice, quantity = 1 } = req.body;
 
@@ -167,7 +167,7 @@ app.post('/api/cart/add', (req, res) => {
 // ==========================================
 // --- UPDATE QUANTITY ROUTE (PUT) ---
 // ==========================================
-app.put('/api/cart/update/:cartItemId', (req, res) => {
+app.put('/cart/update/:cartItemId', (req, res) => {
   const { cartItemId } = req.params;
   const { action } = req.body; // 'increase' or 'decrease'
 
@@ -190,7 +190,7 @@ app.put('/api/cart/update/:cartItemId', (req, res) => {
 // ==========================================
 // --- REMOVE ITEM FROM CART ROUTE (DELETE) ---
 // ==========================================
-app.delete('/api/cart/remove/:cartItemId', (req, res) => {
+app.delete('/cart/remove/:cartItemId', (req, res) => {
   const { cartItemId } = req.params;
 
   // We delete the specific row from the cart_items table
@@ -211,7 +211,7 @@ app.delete('/api/cart/remove/:cartItemId', (req, res) => {
 // ==========================================
 // --- GET USER'S CART ROUTE (GET) ---
 // ==========================================
-app.get('/api/cart/:userId', (req, res) => {
+app.get('/cart/:userId', (req, res) => {
   const { userId } = req.params;
   
   // This SQL query joins 5 fucking tables together so you get the actual names instead of just random ID numbers
@@ -241,7 +241,7 @@ app.get('/api/cart/:userId', (req, res) => {
 
 
 //login
-app.post('/api/login', (req, res) => {
+app.post('/login', (req, res) => {
   const { email, password } = req.body;
 
   const sql = "SELECT * FROM users WHERE email = ?";

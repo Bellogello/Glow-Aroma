@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Nav, Tab, Table, Badge } from 'react-bootstrap'; // Removed 'Container'
 import Navbar from '../components/Navbar';
-import '../styles/dashboard.css';
+import '../styles/Dashboard.css';
 
 const Dashboard = () => {
   const [orders] = useState([
