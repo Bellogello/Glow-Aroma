@@ -20,7 +20,24 @@
   color: #5a4a3a !important; 
   font-family: 'Poppins', sans-serif; 
   font-size: 20px; 
-  font-weight: 500; 
+  font-weight: 500;
+  text-decoration: none; 
+  transition: color 0.3s ease;
+}
+
+/* Hover effect for standard links */
+.custom-navbar .nav-link:hover {
+  color: #3d3126 !important;
+}
+
+/* --- THE NEW ADMIN DASHBOARD LINK --- */
+.custom-navbar .dashboard-link {
+  color: #d4af37 !important; /* Premium Gold */
+  font-weight: 700 !important; /* Bold to stand out */
+}
+
+.custom-navbar .dashboard-link:hover {
+  color: #b5952f !important; /* Slightly darker gold on hover */
 }
 
 /* Cart and Profile Icons - FIXED SIZES */
@@ -34,6 +51,12 @@
   display: inline-block !important; 
   padding: 0 !important; 
   margin: 0 !important;
+  transition: transform 0.2s ease;
+}
+
+/* Little bounce effect on hover for icons */
+.cart:hover, .profile:hover {
+  transform: scale(1.05);
 }
 
 .cart { background-image: url('../assets/cart.png'); }
@@ -119,16 +142,8 @@ html, body {
   }
 
   /* --- B. Override Bootstrap's collapse behaviour --- */
-
-  /*
-   * We take full control of the collapse container.
-   * Bootstrap toggles .collapsing → .show on open, and .show → .collapsing → (removed) on close.
-   * We animate max-height + opacity so the fade is perfectly smooth in both directions.
-   */
-
-  /* Base state: fully hidden */
   .custom-navbar .navbar-collapse {
-    display: block !important;       /* keep it in the flow so transitions fire */
+    display: block !important;       
     flex-basis: 100% !important;
     width: 100% !important;
     overflow: hidden !important;
@@ -147,18 +162,12 @@ html, body {
 
   /* Open state */
   .custom-navbar .navbar-collapse.show {
-    max-height: 500px !important;    /* large enough to fit any menu content */
+    max-height: 500px !important;    
     opacity: 1 !important;
     transform: translateY(0) !important;
     pointer-events: auto !important;
   }
 
-  /*
-   * While Bootstrap adds .collapsing during both open AND close transitions,
-   * we use our 'nav-expanded' class (set in React) to know the intent:
-   *   nav-expanded  + collapsing  →  opening  →  animate to visible
-   *  !nav-expanded  + collapsing  →  closing  →  animate to hidden  (default/base state)
-   */
   .custom-navbar.nav-expanded .navbar-collapse.collapsing {
     max-height: 500px !important;
     opacity: 1 !important;
@@ -166,7 +175,7 @@ html, body {
     pointer-events: auto !important;
   }
 
-  /* Closing: collapsing without nav-expanded = animate back to zero */
+  /* Closing */
   .custom-navbar:not(.nav-expanded) .navbar-collapse.collapsing {
     max-height: 0 !important;
     opacity: 0 !important;
@@ -184,6 +193,7 @@ html, body {
     gap: 15px !important; 
     padding: 20px 0 !important; 
     margin: 0 !important;
+    text-decoration: none;
   }
 
   .custom-navbar .nav-link:not(.cart):not(.profile) {

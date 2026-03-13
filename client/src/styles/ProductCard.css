@@ -1,51 +1,63 @@
 .product-card {
-    width: auto;
-    display: grid; /* Use grid to split the card into columns */
-    grid-template-columns: 2fr 2fr; /* Candle takes 4 parts, Info takes 2 parts */
-    position: relative;
-    background-color: #5c4033; /* Dark brown */
-    border-radius: 40px;
-    padding: 15px;
-    /* height: calc(width*5); */
+    width: 100%;
+    /* Remove 'aspect-ratio: 3 / 4;' entirely if it is there */
+    min-height: 350px; /* Give it a safe minimum height instead */
+    
+    display: flex;
+    flex-direction: column;
+    color: #F5EFE1;
+    background-color: #5c4033;
+    border-radius: 5%; 
+    padding: 5% 5% 8% 5%; /* Added a little extra padding to the bottom so the button has room to breathe */
     text-decoration: none;
-    align-items: center; /* Centers candle and info vertically */
-    overflow: hidden;
+    align-items: center; 
+    box-shadow: 0 4px 1rem rgba(0, 0, 0, 0.2); 
+    transition: transform 0.3s ease; 
+}
+
+.product-card:hover {
+    transform: translateY(-2%); /* Makes the card "pop" up when you hover */
 }
 
 .candle-img {
     width: 100%; 
-    height: 100%;
-    object-fit: contain; /* Keeps the candle from looking stretched */
-    justify-self: start;
-    background-color: aliceblue; /* Sticks it to the left */
+    aspect-ratio: 1 / 1; /* Forces a perfect square so images never stretch! */
+    object-fit: cover; 
+    border-radius: 4%;
+    background-color: aliceblue; 
+    margin-bottom: 5%;
 }
 
 .card-overlay {
     display: flex;
     flex-direction: column;
-    justify-content: center; /* Pushes content to the bottom */
-    align-items: flex-end;    /* Aligns text and button to the right */
-    height: 100%;
-    padding-bottom: 5px;
+    justify-content: center; 
+    align-items: center; /* Centers text and button perfectly */
+    width: 100%;
 }
 
 .price {
     color: white;
     font-family: 'Averia Libre', sans-serif;
-    font-size: 14px;
-    margin-bottom: 8px;
-    white-space: nowrap; /* Prevents price from breaking into two lines */
+    font-size: 1.1rem; /* rem scales automatically with the user's browser settings */
+    margin-bottom: 5%;
+    white-space: nowrap; 
 }
 
 .add-btn {
-    width: 60px;
-    height: 22px;
-    background-color: #d1d1d1; /* Light grey button */
+    width: 80%; /* Button stretches nicely across the bottom */
+    padding: 4% 0; /* Replaces height: 22px so it grows with the text */
+    font-size: 1rem;
+    font-weight: bold;
+    color: #5c4033;
+    background-color: #d1d1d1; 
     border: none;
-    border-radius: 4px;
+    border-radius: 1rem; 
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background-color 0.3s ease;
+    display: flex;
     justify-content: center;
+    align-items: center;
 }
 
 .add-btn:hover {
