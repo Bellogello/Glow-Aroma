@@ -1,0 +1,95 @@
+body {
+    background-color: #f5efe1;
+    font-family: "Averia Libre", system-ui;
+    grid-template-columns: 2fr;
+}
+.top{
+position: absolute;
+width: 100%;
+height: 191px;
+
+background: #D2C9B8;
+
+}
+button:hover{
+    color: #76594C;
+}
+
+.cart{
+    height: 53px;
+    width: 53px;
+    background: url(../assets/cart.png);
+    display: inline-block;
+    width: 53px;
+    height: 53px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
+
+}
+.cart:hover{
+    height: 53px;
+    width: 53px;
+    background-image: url(../assets/cart_light.png);
+    background-size: contain;
+    background-color: transparent;
+    border: transparent;
+    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
+}
+.profile{
+    height: 53px;
+    width: 53px;
+    background: url(../assets/profile.png);
+    display: inline-block;
+    width: 53px;
+    height: 53px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
+}
+.profile:hover{
+    height: 53px;
+    width: 53px;
+    background-size: contain;
+    background-image: url(../assets/profile_light.png);
+    background-color: transparent;
+    border: transparent;
+    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
+
+    
+}
+.home{
+    font-family: "Averia Libre", system-ui;
+    font-size: 27px;
+    color: #5c4033;
+    text-decoration: none;
+}
+.home:hover{
+    color: #76594C;
+    text-decoration: none;
+}
+.contact{
+    font-family: "Averia Libre", system-ui;
+    font-size: 27px;
+    color: #5c4033;
+    text-decoration: none;
+
+}
+.contact:hover{
+    color: #76594C;
+    text-decoration: none;
+
+}
+.products{
+    font-family: "Averia Libre", system-ui;
+    font-size: 27px;
+    color: #5c4033;
+    text-decoration: none;
+}
+.products:hover{
+    color: #76594C;
+    text-decoration: none;
+}
+
