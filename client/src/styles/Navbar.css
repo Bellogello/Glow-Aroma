@@ -209,4 +209,40 @@ html, body {
     margin-top: 10px;
     width: 100% !important;
   }
+}/* 1. Only animate the text links */
+.custom-navbar .nav-link:not(.cart):not(.profile) {
+    color: #4a3728 !important;
+    margin: 0 15px;
+    font-weight: 500;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+/* The sliding underline - only for text links */
+.custom-navbar .nav-link:not(.cart):not(.profile)::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -2px; /* Moves line slightly below text */
+    left: 0;
+    background-color: #8c725a;
+    transition: width 0.3s ease-in-out;
+}
+
+/* Hover state for text links only */
+.custom-navbar .nav-link:not(.cart):not(.profile):hover {
+    color: #8c725a !important;
+    transform: translateY(-2px);
+}
+
+.custom-navbar .nav-link:not(.cart):not(.profile):hover::after {
+    width: 100%;
+}
+
+/* 2. Separate styling for the Icons (No underline, just a soft pop) */
+.icon-group .nav-link:hover {
+    transform: scale(1.1); /* Icons grow but won't have a line */
+    filter: brightness(1.1);
+    transition: transform 0.3s ease;
 }

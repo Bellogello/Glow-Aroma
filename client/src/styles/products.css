@@ -45,4 +45,17 @@ h1 {
   .AllProducts {
     padding: 3vw; 
   }
-}
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+.products-title {
+  font-family: 'Playfair Display', serif; /* Elegant high-end font */
+  font-size: 3rem;
+  color: #4a3728; /* Your dark brown brand color */
+  text-align: center;
+  margin-top: 50px;
+  margin-bottom: 30px;
+  font-weight: 400;
+  letter-spacing: 2px; /* Adds sophisticated breathing room between letters */
+  text-transform: uppercase; /* Optional: makes it look like a boutique label */
+}}
