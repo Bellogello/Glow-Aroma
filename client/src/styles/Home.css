@@ -92,4 +92,54 @@ button:hover{
     color: #76594C;
     text-decoration: none;
 }
+/* Use the parent container to increase priority */
+/* --- INGREDIENTS SECTION FIX --- */
 
+/* This targets the container you added in Home.jsx */
+.ingredients-grid {
+  display: flex !important;
+  flex-direction: row !important; /* This is the "magic" that puts them in a line */
+  justify-content: center;
+  align-items: flex-start;
+  gap: 30px;
+  max-width: 1100px;
+  margin: 60px auto; /* Adds space above and below the section */
+}
+
+.ingredient-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 300px;
+}
+
+/* This fixes the giant icons from your screenshot */
+.ingredient-icon-wrapper img {
+  width: 80px !important; 
+  height: 80px !important;
+  object-fit: contain;
+  margin-bottom: 15px;
+}
+
+.ingredient-card h3 {
+  font-family: "Averia Libre", system-ui; /* Matching your brand font */
+  font-size: 1.5rem;
+  color: #5c4033;
+  margin-top: 10px;
+}
+
+.ingredient-card p {
+  font-size: 0.9rem;
+  color: #76594C;
+  line-height: 1.4;
+}
+
+/* Mobile fix: stacks them vertically only on phones */
+@media (max-width: 768px) {
+  .ingredients-grid {
+    flex-direction: column !important;
+    align-items: center;
+  }
+}

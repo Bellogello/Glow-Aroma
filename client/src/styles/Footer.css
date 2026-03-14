@@ -1,0 +1,85 @@
+/* Add this to your existing Footer.css */
+.main-footer {
+  background-color: #ede4da; /* Slightly darker than your main bg */
+  padding: 60px 20px 20px;
+  color: #4a3728;
+  margin-top: 50px;
+  border-top: 1px solid rgba(74, 55, 40, 0.1);
+}
+
+.footer-container {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-section {
+  flex: 1;
+  min-width: 250px;
+  margin-bottom: 30px;
+}
+
+.footer-section h3, .footer-section h4 {
+  font-family: 'Playfair Display', serif;
+  margin-bottom: 20px;
+}
+
+.footer-section p {
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-section ul li {
+  margin-bottom: 10px;
+}
+
+.footer-section ul li a {
+  text-decoration: none;
+  color: #4a3728;
+  transition: color 0.3s ease;
+}
+
+.footer-section ul li a:hover {
+  color: #8c725a;
+}
+
+.footer-bottom {
+  text-align: center;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(74, 55, 40, 0.1);
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+.social-links {
+  margin-top: 15px;
+}
+
+.instagram-icon {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Space between icon and text */
+  text-decoration: none;
+  color: #4a3728;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.instagram-icon:hover {
+  color: #8c725a; /* That warm brown hover color */
+  transform: translateX(5px); /* Gentle slide to the right */
+}
+
+/* Optional: Make the brand name in the footer look like your logo font */
+.footer-logo-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  letter-spacing: 1px;
+}
