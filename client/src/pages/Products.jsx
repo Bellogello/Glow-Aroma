@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import '../styles/products.css'; 
 import ProductCard from '../components/ProductCard';
 import CreateYourOwn from '../components/CreateYourOwn';
+import '../styles/CreateYourOwn.css';
 
 // ==========================================
 // --- DUMMY DATA FOR UI TESTING ---
@@ -65,7 +66,40 @@ const Products = () => {
       });
   }, []);
   */
+const Products = () => {
+  const navigate = useNavigate();
 
+  return (
+    <div className="products-container">
+      
+      {/* --- THE BANNER START --- */}
+      <div 
+        className="create-your-own-banner" 
+        onClick={() => navigate('/create')}
+      >
+        <div className="banner-inner-content">
+          {/* Your Logo and Text */}
+          <div className="banner-text">
+            <h1 className="cursive-logo">Glow Aroma</h1>
+            <p>Candle Shop</p>
+            <h2 className="main-title">Make Your Own Candle</h2>
+            <button className="explore-btn">Explore Now</button>
+          </div>
+          
+          {/* Your Candle Image */}
+          <div className="banner-image">
+             {/* Use your existing img tag here */}
+          </div>
+        </div>
+      </div>
+      {/* --- THE BANNER END --- */}
+
+      <div className="product-list">
+        {/* ... your products.map code ... */}
+      </div>
+    </div>
+  );
+};
   return (
     <div className="products-container">
       <Navbar />
@@ -97,6 +131,7 @@ const Products = () => {
           </div>
         )}
       </div>
+      
     </div>
   );
 };

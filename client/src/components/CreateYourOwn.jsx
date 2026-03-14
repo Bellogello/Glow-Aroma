@@ -1,12 +1,16 @@
 import React from 'react';
-import { Link } from 'react-router-dom'; 
-import logo from '../assets/logo.png'; 
+import { Link } from 'react-router-dom';
+import BannerImage from '../assets/makeyourowncandle.png'; 
 import '../styles/CreateYourOwn.css';
-import Candle from '../assets/candle.png'
+
 const CreateYourOwn = () => {
   return (
-    <Link to ="/Create" className='button'>
-    <button className='createyourown'></button>
+    <Link to="/Create" className="create-banner-link">
+      <img 
+        src={BannerImage} 
+        alt="Make Your Own Candle" 
+        className="banner-image-only" 
+      />
     </Link>
   );
 };

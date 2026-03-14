@@ -1,38 +1,26 @@
-.createyourown {
-    width: 100%;
-    max-width: 1050px; 
-    margin: 0 auto 50px auto; 
-    display: block !important; 
-    
-    /* THE FIX: Replaced fixed height with an aspect ratio. 
-       This perfectly mimics the proportions of your wide banner! */
-    aspect-ratio: 1050 / 370; 
-    
-    border-radius: 40px;
-    cursor: pointer;
-    background-image: url('../assets/makeyourowncandle.png');
-    
-    /* Cover will now work perfectly because the box is always the correct shape */
-    background-size: cover; 
-    background-position: center;
-    background-repeat: no-repeat;
-    
-    border: none;
-    box-shadow: 0 5px 20px rgba(92, 64, 51, 0.15); 
+.create-banner-link {
+  display: block;
+  width: 100%;
+  max-width: 1000px; /* Adjust based on your layout */
+  margin: 30px auto;
+  text-decoration: none;
+  border-radius: 20px; /* Optional: adds nice rounded corners to your photo */
+  overflow: hidden;
+  
+  /* This prepares the "smoothness" for the hover */
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), 
+              box-shadow 0.4s ease;
 }
 
-.button {
-    text-decoration: underline;
-    text-decoration-color: transparent;
+.banner-image-only {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: pointer;
 }
 
-/* =========================================
-   MOBILE RESPONSIVENESS (Under 768px)
-========================================= */
-@media (max-width: 768px) {
-    .createyourown {
-        /* No height needed here anymore! The aspect-ratio handles it automatically. */
-        border-radius: 20px;
-        margin-bottom: 30px; /* Just a little breathing room under the banner */
-    }
+/* THE HOVER EFFECT */
+.create-banner-link:hover {
+  transform: translateY(-10px) scale(1.01); /* Lifts up and grows 1% */
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15); /* Adds a shadow behind the photo */
 }
