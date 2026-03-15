@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer'; // Ensure this is imported!
 import '../styles/cart.css';
-<<<<<<< HEAD
- import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-=======
-import Footer from '../components/Footer';
->>>>>>> a0d5e1eef2ca00eae1aabf8e2025f374368d16d8
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -39,7 +35,6 @@ const Cart = () => {
       });
   }, []);
 
-  // --- NEW QUANTITY FUNCTION ---
   const handleQuantityChange = async (cartItemId, action) => {
     try {
       const response = await fetch(`http://localhost:5000/cart/update/${cartItemId}`, {
@@ -62,7 +57,6 @@ const Cart = () => {
     }
   };
 
-  // --- THE NEW REMOVE FUNCTION ---
   const handleRemove = async (cartItemId) => {
     try {
       const response = await fetch(`http://localhost:5000/cart/remove/${cartItemId}`, {
@@ -84,12 +78,14 @@ const Cart = () => {
     return (
       <div className="home-container">
         <Navbar />
-        <h2>Loading your cart...</h2>
+        <div className="cart-content">
+          <h2>Loading your cart...</h2>
+        </div>
+        <Footer />
       </div>
     );
   }
 
-  // FIXED: Now looking for item.price instead of item.total_price
   const cartTotal = cartItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
 
   return (
@@ -98,6 +94,7 @@ const Cart = () => {
       
       <div className="cart-content">
         {cartItems.length === 0 ? (
+          /* LUXURY EMPTY STATE */
           <div className="empty-cart-container">
             <div className="floating-icon">
               <ShoppingBag size={80} color="#4a3728" strokeWidth={1} />
@@ -108,71 +105,44 @@ const Cart = () => {
           </div>
         ) : (
           <div className="cart-list">
-        
-            
             {cartItems.map(item => (
               <div key={item.cart_item_id} className="cart-item">
-                
-                {/* FIXED: Now correctly displays the new unified name */}
                 <h3>{item.name}</h3>
                 
-                {/* FIXED: Only shows Color and Scent if it is a Custom Candle */}
                 {item.is_custom ? (
                   <>
                     <p><strong>Color:</strong> {item.color}</p>
                     <p><strong>Scent:</strong> {item.scent}</p>
                   </>
                 ) : (
-                  /* Shows the image if it is a pre-built store candle */
                   item.image && <img src={item.image} alt={item.name} style={{ width: "80px", marginBottom: "10px" }} />
                 )}
                 
                 <div className="quantity-wrapper">
                   <strong>Quantity:</strong> 
                   <div className="quantity-controls">
-                    <button 
-                      className="btn-qty"
-                      onClick={() => handleQuantityChange(item.cart_item_id, 'decrease')}
-                    >
-                      −
-                    </button>
+                    <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'decrease')}>−</button>
                     <span className="qty-amount">{item.quantity}</span>
-                    <button 
-                      className="btn-qty"
-                      onClick={() => handleQuantityChange(item.cart_item_id, 'increase')}
-                    >
-                      +
-                    </button>
+                    <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'increase')}>+</button>
                   </div>
                 </div>                
                 
-                {/* FIXED: Displays item.price and changed to L.E. */}
                 <p><strong>Price:</strong> {Number(item.price).toFixed(2)} L.E.</p>
                 
-                <button 
-                  className="btn-remove" 
-                  onClick={() => handleRemove(item.cart_item_id)}
-                >
-                  Remove
-                </button>
+                <button className="btn-remove" onClick={() => handleRemove(item.cart_item_id)}>Remove</button>
               </div>
             ))}
             
             <div className="cart-summary">
-              {/* FIXED: Correctly pulls the new total and uses L.E. */}
               <h2>Total: {cartTotal.toFixed(2)} L.E.</h2>
               <button className="btn btn-primary">Proceed to Checkout</button>
             </div>
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
-<<<<<<< HEAD
-=======
-        <Footer />
->>>>>>> a0d5e1eef2ca00eae1aabf8e2025f374368d16d8
-
 };
 
 export default Cart;
