@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import '../styles/cart.css';
+ import { ShoppingBag } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -91,9 +94,17 @@ const Cart = () => {
       
       <div className="cart-content">
         {cartItems.length === 0 ? (
-          <h3>Your cart is empty. Head to the Create page to build a candle!</h3>
+          <div className="empty-cart-container">
+            <div className="floating-icon">
+              <ShoppingBag size={80} color="#4a3728" strokeWidth={1} />
+            </div>
+            <h2 className="empty-cart-text">Your cart is feeling a bit light...</h2>
+            <p>Head to the Create page to build your perfect candle!</p>
+            <Link to="/products" className="shop-now-btn">Explore Products</Link>
+          </div>
         ) : (
           <div className="cart-list">
+        
             
             {cartItems.map(item => (
               <div key={item.cart_item_id} className="cart-item">
@@ -153,6 +164,7 @@ const Cart = () => {
       </div>
     </div>
   );
+
 };
 
 export default Cart;

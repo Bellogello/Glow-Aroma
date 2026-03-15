@@ -161,25 +161,3 @@ button:hover{
   transform: translateY(-3px);
   box-shadow: 0 10px 20px rgba(74, 55, 40, 0.2);
 }
-/* This targets the container that wraps your product */
-.product-card {
-  cursor: pointer; /* Changes the mouse to a "hand" icon */
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Smooth "pop" timing */
-  position: relative;
-  overflow: hidden;
-  background: #fdfbf9; /* Light cream background */
-  border: 1px solid rgba(74, 55, 40, 0.1);
-}
-
-/* What happens when the mouse enters the card */
-.product-card:hover {
-  transform: translateY(-8px) scale(1.02); /* Lifts up and grows 2% */
-  box-shadow: 0 20px 40px rgba(74, 55, 40, 0.15); /* Soft brown glow */
-  border-color: rgba(74, 55, 40, 0.3); /* Darkens the border slightly */
-}
-
-/* Optional: Make the image inside the card zoom slightly too */
-.product-card:hover img {
-  transform: scale(1.1);
-  transition: transform 0.6s ease;
-}

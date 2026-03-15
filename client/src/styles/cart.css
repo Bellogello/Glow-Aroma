@@ -226,3 +226,47 @@ button:hover{
 .cart-summary .btn-primary:hover {
   background-color: #43362a !important;
 }
+.empty-cart-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  text-align: center;
+}
+
+/* The Animation */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+
+.floating-icon {
+  font-size: 5rem;
+  margin-bottom: 20px;
+  animation: float 3s ease-in-out infinite; /* Smooth, slow loop */
+  filter: drop-shadow(0 10px 15px rgba(74, 55, 40, 0.2));
+}
+
+.empty-cart-text {
+  font-family: 'Playfair Display', serif;
+  color: #4a3728;
+  font-size: 1.5rem;
+}
+
+.shop-now-btn {
+  margin-top: 25px;
+  padding: 12px 30px;
+  background-color: #4a3728;
+  color: #f5efe1;
+  border: none;
+  border-radius: 25px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.shop-now-btn:hover {
+  background-color: #76594C;
+  transform: scale(1.05);
+}
