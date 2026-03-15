@@ -115,28 +115,42 @@ button:hover{
 /* 3. The New "Glass" Text Box */
 .slideshow-content {
   position: absolute;
-  bottom: 10%; /* Sits near the bottom */
-  left: 5%;   /* Sits near the left */
+  bottom: 10%;
+  left: 5%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   
-  /* Glassmorphism Effect */
   background: rgba(255, 255, 255, 0.1); 
   backdrop-filter: blur(15px); 
   padding: 40px;
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  
   z-index: 10;
   max-width: 450px;
+  width: auto; /* Ensure it stays fluid */
+  box-sizing: border-box; /* Includes padding in width calculation */
 }
 
-.slideshow-content h1 {
-  font-family: 'serif'; /* Makes it look high-end */
-  font-size: 3rem;
-  color: #4a3728;
-  margin-bottom: 8px;
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 768px) {
+  .slideshow-content {
+    left: 5%;
+    right: 5%; /* Forces the box to stay within screen edges */
+    bottom: 5%;
+    padding: 25px; /* Less padding on small screens */
+    max-width: none; /* Allow it to use the full 90% width */
+    align-items: center; /* Optional: centers text for a mobile "hero" look */
+    text-align: center;
+  }
+
+  .slideshow-content h1 {
+    font-size: 2rem; /* Shrinks title so it doesn't wrap awkwardly */
+  }
+
+  .slideshow-content p {
+    font-size: 1rem;
+  }
 }
 
 .slideshow-content p {
