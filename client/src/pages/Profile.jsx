@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom'; // 1. Import useNavigate
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 const Profile = () => {
   // 2. Setup the navigation tool
@@ -15,15 +16,15 @@ const Profile = () => {
   const userName = localStorage.getItem("userName");
 
   // 3. The Instant Logout Function
-  const handleLogout = () => {
-    // Trash the data
+const handleLogout = () => {
+    // 1. Wipe everything out of Local Storage
     localStorage.removeItem("token");
-    localStorage.removeItem("userName");
     localStorage.removeItem("userId");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("roleId");
 
-    // 4. THE MAGIC LINE: Instantly push them to the sign-in page
-    // This forces React to change the page without needing a refresh!
-    navigate('/Sign-in'); 
+    // 2. Force a hard refresh and teleport them to the Home page!
+    window.location.href = "/"; 
   };
 
   return (
@@ -51,6 +52,7 @@ const Profile = () => {
         </div>
 
       </div>
+      <Footer />
     </div>
   );
 };

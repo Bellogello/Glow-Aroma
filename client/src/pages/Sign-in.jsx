@@ -9,9 +9,9 @@ const Signin = () => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  // Standard Email/Password Login
+// Standard Email/Password Login
   const handleSignin = async (e) => {
-        e.preventDefault(); // Stop the page refresh
+    e.preventDefault(); // Stop the page refresh
 
     const loginData = {
       email: email,
@@ -19,8 +19,8 @@ const Signin = () => {
     };
 
     try {
-      // 4. Send the credentials to your new backend login route
-      const response = await fetch('http://localhost:5000/login', {
+      // FIX: Changed from /login to /signin to match your server.js
+      const response = await fetch('http://localhost:5000/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -31,12 +31,13 @@ const Signin = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // 5. Save the wristband (JWT token) and their name!
+        // Save the wristband (JWT token) and user data
         localStorage.setItem("token", data.token);
-        localStorage.setItem("userName", data.name);
+        localStorage.setItem("userName", data.userName); // Match your backend variable name
         localStorage.setItem("userId", data.userId);
+        localStorage.setItem("roleId", data.roleId);     // Crucial for your Admin Dashboard!
         
-        // 6. Teleport them instantly to the account/profile page
+        // Teleport them instantly to the account/profile page
         navigate('/profile'); 
       } else {
         // If the password or email is wrong, show them the error
@@ -45,18 +46,40 @@ const Signin = () => {
     } catch (error) {
       console.error("Error signing in:", error);
     }
-    e.preventDefault();
-    // ... your existing sign-in fetch logic stays exactly the same ...
   };
 
-  // --- NEW GOOGLE LOGIN FUNCTION ---
+// --- NEW GOOGLE LOGIN FUNCTION ---
   const loginWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      console.log("Google Token:", tokenResponse.access_token);
-      // Here you will eventually send tokenResponse.access_token to your backend
-      // to verify it and log the user in!
+      try {
+        // Send the Google token to our Node backend
+        const response = await fetch('http://localhost:5000/auth/google', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ access_token: tokenResponse.access_token }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Success! Save their info and teleport them to the profile
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("userName", data.userName);
+          localStorage.setItem("userId", data.userId);
+          localStorage.setItem("roleId", data.roleId);
+          
+          navigate('/profile'); 
+        } else {
+          alert("Google Login failed: " + data.error);
+        }
+      } catch (error) {
+        console.error("Error communicating with backend:", error);
+        alert("Server error. Please try again later.");
+      }
     },
-    onError: () => console.log('Google Login Failed'),
+    onError: () => alert('Google Login window was closed or failed.'),
   });
 
   return (

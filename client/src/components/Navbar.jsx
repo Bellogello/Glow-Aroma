@@ -13,9 +13,11 @@ function AppNavbar() {
 
   useEffect(() => {
     // Check if they are Admin (2) or Super Admin (3)
-    const roleId = localStorage.getItem("roleId");
-    setIsAdmin(roleId === '2' || roleId === '3');
-  }, [location]); 
+    // const roleId = String(localStorage.getItem('roleId'));
+    // setIsAdmin(roleId === '2' || roleId === '3');
+    
+    setIsAdmin(true); // TEMPORARY: Show link to everyone
+  }, [location]);
 
   return (
     <Navbar 
@@ -49,6 +51,7 @@ function AppNavbar() {
 
             <Nav.Link as={Link} to="/contact" onClick={() => setExpanded(false)}>Contact</Nav.Link>
             <Nav.Link as={Link} to="/products" onClick={() => setExpanded(false)}>Products</Nav.Link>
+            
 
             <div className="icon-group">
               <Nav.Link as={Link} to="/cart" className="cart" onClick={() => setExpanded(false)}></Nav.Link>
