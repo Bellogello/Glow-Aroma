@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/Bellogello/Glow-Aroma#readme",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "bootstrap": "^5.3.8",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",

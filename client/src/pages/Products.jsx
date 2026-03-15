@@ -5,6 +5,7 @@ import '../styles/products.css';
 import ProductCard from '../components/ProductCard';
 import CreateYourOwn from '../components/CreateYourOwn';
 import '../styles/CreateYourOwn.css';
+import Footer from '../components/Footer';
 
 // ==========================================
 // --- DUMMY DATA FOR UI TESTING ---
@@ -98,7 +99,7 @@ const Products = () => {
           </div>
         )}
       </div>
-      
+      <Footer />
     </div>
   );
 };

@@ -1,108 +1,116 @@
-@media (min-width: 991px) {
-.signup-box{
-    display: flex;
-    width: 25%;
-    height: 50vh;
-    background-color: #D2C9B8;
-    justify-self: center;
-    border-radius: 40px;
-    margin: 5%;
-    padding: 2%;
-    justify-content: space-evenly;
-    align-content: center;
-    flex-wrap: wrap;
-    gap: 2%;
+/* Centers the login card on the screen */
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh; 
+  padding: 20px;
 }
-.signup-box input
-{
-    height: 15%;
-    margin: 2%;
-    text-align: center;
-    border-radius: 20px;
-    border: none;
-}
-.signup-name{
-    width: 40%;
-    justify-self: center;
 
+/* The beige box matching your Sign In page */
+.login-card-beige {
+  background-color: #D2C9B8; /* Brand Beige */
+  padding: 50px 40px;
+  border-radius: 30px; 
+  width: 100%;
+  max-width: 450px; 
 }
-.signup-phone{
-    width: 40%;
-}
-.signup-email{
-    width: 90%;
-}
-.signup-password{
-    width:90%;
-}
-.btn{
-        background-color: #5c4033;
-    color: #f5efe1;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 18px;
-    width: 80%;
-    height: 10%;
-    border-radius:40px;
-    border: none;
-    
-}
-.btn:hover {
-  background-color: #4a332a;
-  color: #f5efe1;
-}
-}
-@media (max-width: 991px) {
-    .signup-box{
-    display: flex;
-    width: 80%;
-    height: 50vh;
-    background-color: #D2C9B8;
-    justify-self: center;
-    border-radius: 40px;
-    margin: 10%;
-    padding: 2%;
-    justify-content: space-evenly;
-    align-content: center;
-    flex-wrap: wrap;
-    gap: 2%;
-}
-.signup-box input
-{
-    height: 15%;
-    margin: 2%;
-    text-align: center;
-    border-radius: 20px;
-    border: none;
-}
-.signup-name{
-    width: 40%;
-    justify-self: center;
 
+/* --- THE NEW SIDE-BY-SIDE ROW --- */
+.form-row {
+  display: flex;
+  gap: 15px; /* Space between Name and Phone */
+  margin-bottom: 25px;
 }
-.signup-phone{
-    width: 40%;
+
+/* Makes both inputs in the row share space equally */
+.form-row .custom-pill-input {
+  flex: 1; 
+  width: 100%; 
 }
-.signup-email{
-    width: 90%;
+
+.form-group {
+  margin-bottom: 25px;
 }
-.signup-password{
-    width:90%;
+
+/* 1. Pill-shaped Input Boxes */
+.custom-pill-input {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 50px; 
+  font-size: 16px;
+  text-align: center; 
+  box-sizing: border-box;
+  color: #5a4a3a;
+  outline: none;
 }
-.btn{
-        background-color: #5c4033;
-    color: #f5efe1;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 18px;
-    width: 80%;
-    height: 10%;
-    border-radius:40px;
-    border: none;
-    
+
+.custom-pill-input::placeholder {
+  color: #7a6a5a;
 }
-.btn:hover {
-  background-color: #4a332a;
-  color: #f5efe1;
+
+.custom-pill-input:focus {
+  box-shadow: 0 0 0 3px rgba(90, 74, 58, 0.2); 
 }
+
+/* 2. Pill-shaped Submit Button */
+.custom-pill-btn {
+  background-color: #5a4a3a !important; 
+  border: none !important;
+  color: white;
+  padding: 15px;
+  border-radius: 50px; 
+  width: 75%; 
+  display: block;
+  margin: 0 auto; 
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+  margin-top: 15px;
+}
+
+.custom-pill-btn:hover {
+  background-color: #43362a !important; 
+}
+
+/* 3. The Sign In Link */
+.signup-link-container {
+  text-align: center;
+  margin-top: 25px;
+}
+
+.signup-link {
+  color: #5a4a3a;
+  font-weight: bold;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.signup-link:hover {
+  text-decoration: underline;
+}
+
+/* --- MOBILE RESPONSIVENESS --- */
+/* Stacks the Name and Phone inputs on top of each other on tiny phone screens */
+@media (max-width: 500px) {
+  .form-row {
+    flex-direction: column;
+    gap: 25px; 
+  }
+}
+/* --- GOOGLE BUTTON OVERRIDE --- */
+.google-btn {
+  background-color: #ffffff !important; /* White background */
+  color: #5a4a3a !important; /* Brown text to match your brand */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px; /* Adds space between the Google logo and the text */
+}
+
+/* A soft beige hover effect so it doesn't turn dark brown */
+.google-btn:hover {
+  background-color: #fdfbf7 !important; 
 }

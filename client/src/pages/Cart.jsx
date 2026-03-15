@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import '../styles/cart.css';
+<<<<<<< HEAD
  import { ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+=======
+import Footer from '../components/Footer';
+>>>>>>> a0d5e1eef2ca00eae1aabf8e2025f374368d16d8
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -164,6 +168,10 @@ const Cart = () => {
       </div>
     </div>
   );
+<<<<<<< HEAD
+=======
+        <Footer />
+>>>>>>> a0d5e1eef2ca00eae1aabf8e2025f374368d16d8
 
 };
 

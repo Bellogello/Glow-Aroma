@@ -176,3 +176,76 @@
     max-width: 100% !important;
   }
 }
+/* ========================================= */
+/* --- CUSTOM DIALOG BOX OVERLAY --- */
+/* ========================================= */
+
+.dialog-overlay {
+  position: fixed;
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  bottom: 0;
+  background-color: rgba(90, 74, 58, 0.6); /* Dark brown tint */
+  backdrop-filter: blur(5px); /* Premium blur effect */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Forces it over absolutely everything */
+}
+
+.dialog-box {
+  background-color: #ffffff;
+  width: 100%;
+  max-width: 500px;
+  padding: 35px;
+  border-radius: 20px;
+  box-shadow: 0px 20px 50px rgba(0, 0, 0, 0.2);
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto; /* Adds scroll if the screen is tiny */
+}
+
+@keyframes popIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #fdfbf7;
+  padding-bottom: 15px;
+}
+
+.dialog-header h3 {
+  margin: 0;
+  color: #5a4a3a;
+  font-weight: bold;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #a9a096;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #dc3545; /* Red on hover */
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 2px solid #fdfbf7;
+}
