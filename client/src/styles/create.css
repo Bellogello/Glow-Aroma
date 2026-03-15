@@ -246,3 +246,143 @@ option {
         font-size: 1rem;
     }
 }
+/* --- THE MAIN WRAPPER --- */
+.creation {
+  display: flex;
+  flex-direction: row; 
+  align-items: flex-start;
+  gap: 30px;
+  padding: 20px 5%;
+}
+
+/* --- THE 3D PREVIEW CONTAINER --- */
+.candle-div {
+  flex: 1;
+  /* limit the height so it doesn't eat the whole screen */
+  height: 400px; 
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  position: sticky;
+  top: 80px; /* Stays visible as you scroll choices on desktop */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden; /* Keeps the 3D inside the rounded corners */
+}
+
+/* Ensure the canvas itself doesn't try to be too big */
+.candle-div canvas {
+  max-height: 100% !important;
+  max-width: 100% !important;
+}
+
+/* =========================================
+   MOBILE RESPONSIVENESS
+========================================= */
+@media (max-width: 768px) {
+  .creation {
+    flex-direction: column; /* Stack vertically */
+    padding: 10px;
+  }
+
+  .candle-div {
+    width: 90%; /* Center it a bit better */
+    height: 250px; /* Much smaller on mobile! */
+    position: relative; /* Stop it from being sticky on phones */
+    top: 0;
+    margin: 0 auto 20px auto;
+  }
+  
+  .choices {
+    width: 100%;
+    padding: 15px;
+  }
+}
+/* --- RIGHT SIDE: THE SELECTIONS --- */
+.choices {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: white;
+  padding: 30px;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+
+.selections {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Style your selects to be modern and fluid */
+select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0d7cf;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  background-color: #faf9f8;
+  color: #4a3728;
+}
+
+/* =========================================
+   MOBILE RESPONSIVENESS (Under 900px)
+========================================= */
+@media (max-width: 900px) {
+  .creation {
+    flex-direction: column; /* Stack vertically */
+    align-items: center;
+    gap: 30px;
+    padding: 20px;
+  }
+
+  .candle-div {
+    width: 100%;
+    min-height: 300px; /* Shorter for mobile */
+    position: relative; /* Remove sticky on mobile */
+    top: 0;
+  }
+
+  .choices {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .type-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .radio-label {
+    text-align: center;
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  .confirmation-area {
+    flex-direction: column; /* Stack quantity and button */
+    gap: 20px;
+  }
+
+  .quantity-wrapper {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .confirm {
+    width: 100%; /* Big tap target for mobile */
+  }
+}@media (min-width: 600px) and (max-width: 900px) {
+  .selections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+  .confirmation-area {
+    grid-column: span 2;
+  }
+}
