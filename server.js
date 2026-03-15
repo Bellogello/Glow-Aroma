@@ -163,12 +163,87 @@ app.post('/signin', (req, res) => {
 });
 
 // ==========================================
+// --- GOOGLE SIGN IN ---
+// ==========================================
+
+app.post('/auth/google', async (req, res) => {
+  const { access_token } = req.body;
+
+  if (!access_token) {
+    return res.status(400).json({ error: 'Google token is missing.' });
+  }
+
+  try {
+    // 1. Ask Google's API for the user's profile info using the token
+    const googleResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+    
+    if (!googleResponse.ok) {
+      return res.status(401).json({ error: 'Invalid Google token.' });
+    }
+
+    const googleUser = await googleResponse.json();
+    const { email, name } = googleUser; // Google gives us their real name and email!
+
+    // 2. Check if this email already exists in our MariaDB database
+    db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+      if (err) return res.status(500).json({ error: 'Database error: ' + err.message });
+
+      if (results.length > 0) {
+        // --- RETURNING USER ---
+        const user = results[0];
+        const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
+        
+        return res.json({
+          message: 'Google login successful!',
+          token,
+          userId: user.id,
+          userName: user.name,
+          roleId: user.role_id,
+        });
+      } else {
+        // --- BRAND NEW USER ---
+        // They didn't provide a password, but our DB requires one. 
+        // We generate a random one and hash it so it's safe.
+        const randomPassword = Math.random().toString(36).slice(-10);
+        
+        bcrypt.hash(randomPassword, SALT_ROUNDS, (hashErr, hashed) => {
+          if (hashErr) return res.status(500).json({ error: 'Hashing failed.' });
+
+          // Insert them as a standard Customer (role_id = 1)
+          const sql = 'INSERT INTO users (name, email, password_hash, role_id) VALUES (?, ?, ?, 1)';
+          db.query(sql, [name, email, hashed], (insertErr, result) => {
+            if (insertErr) return res.status(500).json({ error: insertErr.message });
+
+            const newUserId = result.insertId;
+            const token = jwt.sign({ id: newUserId, name }, JWT_SECRET, { expiresIn: '7d' });
+
+            res.status(201).json({
+              message: 'Google account created and logged in!',
+              token,
+              userId: newUserId,
+              userName: name,
+              roleId: 1
+            });
+          });
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Google Auth Error:", error);
+    res.status(500).json({ error: 'Server error during Google authentication.' });
+  }
+});
+
+// ==========================================
 // --- CART: ADD ITEM ---
 // ==========================================
 
 app.post('/cart/add', (req, res) => {
-  const { userId, type, scentId, quantity = 1, prebuiltCandleId, totalPrice = 0 } = req.body;
+  console.log("REACT SENT THIS TO THE CART:", req.body); 
 
+  const { userId, type, scentId, quantity = 1, prebuiltCandleId, totalPrice = 0 } = req.body;
   if (!userId) return res.status(401).json({ error: 'You must be logged in!' });
 
   db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {

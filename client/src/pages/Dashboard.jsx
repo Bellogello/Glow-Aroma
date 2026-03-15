@@ -37,18 +37,31 @@ const Dashboard = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const roleId = localStorage.getItem('roleId');
+    // Force it to a string so it doesn't break if it reads 'null' or 'undefined'
+    const roleId = String(localStorage.getItem('roleId')); 
     const uId = localStorage.getItem('userId');
     
-    if (!roleId || roleId === '1') {
-      alert('Access Denied: Admin permissions required.');
-      navigate('/');
-    } else {
-      setIsAuthorized(true);
-      setUserRole(roleId);
-      setUserId(uId);
-      fetchDashboardData();
-    }
+    // ==========================================
+    // 🚨 TEMPORARILY DISABLED FOR STYLING 🚨
+    // ==========================================
+    // if (roleId !== '2' && roleId !== '3') {
+    //   alert('Access Denied: Admin permissions required.');
+    //   navigate('/');
+    // } else {
+    //   setIsAuthorized(true);
+    //   setUserRole(roleId);
+    //   setUserId(uId);
+    //   fetchDashboardData();
+    // }
+
+    // ==========================================
+    // 🔓 TEMPORARY VIP PASS (DELETE THIS LATER) 🔓
+    // ==========================================
+    setIsAuthorized(true); // Tells React to render the page instead of returning null
+    setUserRole('3');      // Fakes being a Super Admin so you can see the "Manage Staff" tab!
+    setUserId(uId);
+    fetchDashboardData();  // Still fetches the database stuff so it's not empty
+
   }, [navigate]);
 
   const fetchDashboardData = async () => {
