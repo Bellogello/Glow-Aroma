@@ -1,71 +1,248 @@
-body{
-    height: 100vh;
-}
-.home-container{
-    height: 50vh;
+/* =========================================
+   1. GLOBAL PAGE SETUP
+   ========================================= */
+body {
+    margin: 0;
 }
 
-.creation{
-    display: flex;
-    justify-content: space-between;
-    height: 100%;
-    gap: 1%;
+.home-container {
+    min-height: 100vh;
+    padding-bottom: 50px;
+    background-color: #f5efe1; /* Ensure the background flows seamlessly */
 }
-.candle-div{
+
+/* =========================================
+   2. MAIN LAYOUT & RESPONSIVENESS
+   ========================================= */
+.creation {
+    display: flex;
+    flex-direction: column; 
+    align-items: center;    
+    width: 100%;
+    max-width: 1000px;      /* Increased width so it can stretch on desktop */
+    margin: 0 auto;         
+    gap: 40px;
+    padding: 0 20px;        /* Adds safe space on mobile phone edges */
+    box-sizing: border-box; /* Stops padding from breaking screen width */
+}
+
+/* =========================================
+   3. THE WIDE CANDLE BANNER
+   ========================================= */
+.candle-div {
     display: flex;
     justify-content: center;
-    width: 50%;
-    background-color: brown;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;       /* Much wider now! */
+    height: 350px;          
+    background-color: #973434; 
     border-radius: 40px;
-    margin: 1%;
+    box-shadow: 0 8px 25px rgba(151, 52, 52, 0.3); /* Beautiful glowing shadow */
+    transition: all 0.3s ease;
 }
-.candle-preview{
-    width: 50%; 
+
+.candle-preview {
+    height: 75%;            /* Made the candle bigger inside the box */
+    width: auto; 
+    object-fit: contain;
+    filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.2)); /* Gives the candle a 3D float effect */
+}
+
+/* =========================================
+   4. THE CONTROLS & DROPDOWNS
+   ========================================= */
+.choices {
+    width: 100%;
+    max-width: 500px;       
+    display: flex;
+    flex-direction: column;
+}
+
+.selections {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;              /* Slightly more breathing room */
+    width: 100%;
+}
+
+/* --- THE PREMIUM DROPDOWN UPGRADE --- */
+select {
+    width: 100%;            
+    height: 55px;           /* Taller for easier tapping on mobile */
+    border-radius: 15px;    /* Softer, more modern corners */
+    padding: 0 40px 0 20px; /* Space for text and the new arrow */
+    font-size: 16px;
+    font-family: 'Poppins', sans-serif;
+    border: 2px solid #5c4033;
+    background-color: #fff; /* Solid background looks cleaner */
+    color: #5c4033;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.3s ease;
     
-}
+    /* Hide the ugly default browser styling */
+    appearance: none; 
+    -webkit-appearance: none;
+    -moz-appearance: none;
 
-.choices{
-    width: 50%;
-    display: grid;
-    height: 100%;
-}
+    /* Add our own custom sleek arrow using an SVG background */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235c4033' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 18px;
 
-.selections{
-
-display: flex;
-  flex-direction: column; /* Stacks items vertically */
-  align-items: center;    /* Centers items horizontally */
-  gap: 15px;              /* Adds spacing between the elements */
-  padding: 20px;
-}
-select{
-    width: 85%;
-    height: 85%;
-    border-radius: 20px;
+    /* Centers the text */
+    text-align: center;
     text-align-last: center;
-    font-size: 18px;
 }
-.confirm{
+
+select:focus {
+    border-color: #d4af37; /* Gold accent */
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+/* Note: Styling the options inside the dropdown is limited by the OS, 
+   but setting the background color keeps it looking clean. */
+option {
+    background-color: #ffffff;
+    color: #5c4033;
+    font-weight: normal;
+}
+
+/* Indent the mold layers */
+.layer-select {
+    width: 85%;
+}
+
+/* =========================================
+   5. RADIO BUTTONS & UI ELEMENTS
+   ========================================= */
+.type-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.radio-input {
+    display: none; 
+}
+
+.radio-label {
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 12px 30px;
+    border-radius: 30px;
+    border: 2px solid #5c4033;
+    color: #5c4033;
+    background-color: transparent;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    text-align: center;
+    flex: 1; /* Makes the buttons equal width */
+}
+
+.radio-label.active-radio {
+    background-color: #5c4033;
+    color: #f5efe1;
+    box-shadow: 0 4px 10px rgba(92, 64, 51, 0.2);
+}
+
+/* =========================================
+   6. QUANTITY & CONFIRM BUTTON
+   ========================================= */
+.confirmation-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    margin-top: 15px;
+}
+
+.quantity-wrapper {
+    display: flex;
+    flex-direction: row; 
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    background-color: #fff;
+    padding: 5px 20px;
+    border-radius: 30px;
+    border: 2px solid #5c4033;
+}
+
+.btn-qty {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background-color: transparent;
+    border: none;
+    color: #5c4033;
+    font-size: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-qty:hover {
+    background-color: #f5efe1;
+}
+
+.qty-amount {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #5c4033;
+    min-width: 30px;
+    text-align: center;
+}
+
+.confirm {
     background-color: #5c4033;
     color: #f5efe1;
     font-weight: bold;
     cursor: pointer;
-    font-size: 18px;
-    width: 80%;
-    height: 50%;
-    border-radius:40px;
+    font-size: 1.2rem;
+    width: 100%; 
+    height: 60px;
+    border-radius: 30px;
     border: none;
-    
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(92, 64, 51, 0.3);
 }
+
 .confirm:hover {
-  background-color: #4a332a;
-  color: #f5efe1;
+    background-color: #4a332a;
+    transform: translateY(-2px); /* Slight lift effect on hover */
+    box-shadow: 0 6px 15px rgba(92, 64, 51, 0.4);
 }
+
 .hr--create {
-  width: 15%;
-  height: 3px;
-  border: none;
-  background-color: #5c4033;
-  margin-bottom: 40px;
-  border-radius: 5px;
+    width: 60px;
+    height: 4px;
+    border: none;
+    background-color: #5c4033;
+    margin: 10px auto 30px auto; 
+    border-radius: 5px;
+}
+
+/* =========================================
+   7. MOBILE RESPONSIVENESS
+   ========================================= */
+@media (max-width: 600px) {
+    .candle-div {
+        height: 250px; /* Shrink the banner slightly on small phones */
+        border-radius: 25px;
+    }
+    
+    .radio-label {
+        padding: 10px 15px;
+        font-size: 1rem;
+    }
 }

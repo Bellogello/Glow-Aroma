@@ -1,19 +1,26 @@
 const express = require('express');
 const mysql = require('mysql2');
 const jwt = require('jsonwebtoken');
-const cors = require('cors'); 
+const bcrypt = require('bcrypt'); 
+const cors = require('cors');
 
 require('dotenv').config();
+
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Database Connection
+const SALT_ROUNDS = 10;
+const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key'; 
+
+// ==========================================
+// --- DATABASE CONNECTION ---
+// ==========================================
 const db = mysql.createConnection({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD,
-  database: 'glow_aroma_db'
+  database: 'glow_aroma_db',
 });
 
 db.connect((err) => {
@@ -21,62 +28,72 @@ db.connect((err) => {
     console.error('Error connecting to MariaDB:', err.message);
     return;
   }
-  console.log('Connected to the candle_shop database!');
+  console.log('Connected to the glow_aroma_db database!');
 });
 
 // ==========================================
-// --- CUPS, SCENTS, COLORS ---
+// --- CANDLE BUILDER ROUTES ---
 // ==========================================
-app.get('/cups', (req, res) => {
-  db.query('SELECT * FROM cups', (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
-  });
-});
-app.post('/cups', (req, res) => {
-  const { color, description, size_ml, price } = req.body;
-  const sql = "INSERT INTO cups (color, description, size_ml, price) VALUES (?, ?, ?, ?)";
-  db.query(sql, [color, description, size_ml, price], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: "Cup added successfully!", id: result.insertId });
-  });
-});
 
 app.get('/scents', (req, res) => {
-  db.query('SELECT * FROM scents', (err, results) => {
+  db.query('SELECT * FROM scents WHERE is_available = TRUE', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
-  });
-});
-app.post('/scents', (req, res) => {
-  const { name, scent_family, description, price } = req.body;
-  const sql = "INSERT INTO scents (name, scent_family, description, price) VALUES (?, ?, ?, ?)";
-  db.query(sql, [ name, scent_family, description, price], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: "Scent added successfully!", id: result.insertId });
   });
 });
 
 app.get('/colors', (req, res) => {
-  db.query('SELECT * FROM colors', (err, results) => {
+  db.query('SELECT * FROM colors WHERE is_available = TRUE', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
 });
-app.post('/colors', (req, res) => {
-  const { name, hex_code, price } = req.body;
-  const sql = "INSERT INTO colors (name, hex_code, price) VALUES (?, ?, ?)";
-  db.query(sql, [ name, hex_code, price], (err, result) => {
+
+app.get('/cup-shapes', (req, res) => {
+  db.query('SELECT * FROM cup_shapes WHERE is_available = TRUE', (err, result) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: "Color added successfully!", id: result.insertId });
+    res.json(result);
+  });
+});
+
+app.get('/cup-sizes', (req, res) => {
+  db.query('SELECT * FROM cup_sizes', (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(result);
+  });
+});
+
+app.get('/cup-colors', (req, res) => {
+  db.query('SELECT * FROM cup_colors', (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(result);
+  });
+});
+
+app.get('/mold-shapes', (req, res) => {
+  db.query('SELECT * FROM mold_shapes WHERE is_available = TRUE', (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(result);
+  });
+});
+
+// ==========================================
+// --- PRODUCTS (PRE-BUILT CANDLES) ---
+// ==========================================
+
+app.get('/products', (req, res) => {
+  db.query('SELECT * FROM prebuilt_candles ORDER BY id DESC', (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
   });
 });
 
 // ==========================================
 // --- USERS (SIGNUP) ---
 // ==========================================
+
 app.get('/users', (req, res) => {
-  db.query('SELECT * FROM users', (err, results) => {
+  db.query('SELECT id, name, email, phone, role_id FROM users', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
@@ -84,151 +101,202 @@ app.get('/users', (req, res) => {
 
 app.post('/users', (req, res) => {
   const { name, email, phone, password_hash } = req.body;
-  const sql = "INSERT INTO users (name, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, 1)";   
-  db.query(sql, [name, email, phone, password_hash], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    const token = jwt.sign({ id: result.insertId, name: name }, "your_secret_key", { expiresIn: "7d" });
-    res.json({ message: "User added successfully!", token: token, userName: name });
-  });
-});
 
-// ==========================================
-// --- SIGN IN (LOGIN) ROUTE --- 
-// ==========================================
-app.post('/signin', (req, res) => {
-  const { email, password } = req.body;
+  bcrypt.hash(password_hash, SALT_ROUNDS, (hashErr, hashed) => {
+    if (hashErr) return res.status(500).json({ error: 'Hashing failed.' });
 
-  db.query("SELECT * FROM users WHERE email = ?", [email], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    
-    if (results.length === 0) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
+    const sql = 'INSERT INTO users (name, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, 1)';
+    db.query(sql, [name, email, phone, hashed], (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
 
-    const user = results[0];
-
-    // Check if passwords match
-    if (password !== user.password_hash) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
-
-    // Give them a token and send back their ID
-    const token = jwt.sign({ id: user.id, name: user.name }, "your_secret_key", { expiresIn: "7d" });
-    
-    res.json({ 
-      message: "Login successful!", 
-      token: token, 
-      userId: user.id, 
-      userName: user.name,
-      roleId: user.role_id 
+      const token = jwt.sign({ id: result.insertId, name }, JWT_SECRET, { expiresIn: '7d' });
+      res.json({ message: 'User added successfully!', token, userName: name });
     });
   });
 });
 
 // ==========================================
-// --- ADD TO CART ROUTE (POST) ---
+// --- SIGN IN (LOGIN) ---
 // ==========================================
+
+app.post('/signin', (req, res) => {
+  const { email, password } = req.body;
+
+  db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    if (results.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    const user = results[0];
+
+    // --- LEGACY CHECK FIX ---
+    // If the database password doesn't look like a bcrypt hash (starts with $2), check plain text!
+    if (!user.password_hash.startsWith('$2')) {
+      if (password === user.password_hash) {
+        const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
+        return res.json({ message: 'Login successful!', token, userId: user.id, userName: user.name, roleId: user.role_id });
+      } else {
+        return res.status(401).json({ error: 'Invalid email or password.' });
+      }
+    }
+
+    // Otherwise, do the secure bcrypt check
+    bcrypt.compare(password, user.password_hash, (compareErr, isMatch) => {
+      if (compareErr) return res.status(500).json({ error: 'Auth error.' });
+
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Invalid email or password.' });
+      }
+
+      const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
+      res.json({
+        message: 'Login successful!',
+        token,
+        userId: user.id,
+        userName: user.name,
+        roleId: user.role_id,
+      });
+    });
+  });
+});
+
+// ==========================================
+// --- CART: ADD ITEM ---
+// ==========================================
+
 app.post('/cart/add', (req, res) => {
-  const { userId, cupId, colorId, scentId, totalPrice, prebuiltCandleId, quantity = 1 } = req.body;
+  const { userId, type, scentId, quantity = 1, prebuiltCandleId, totalPrice = 0 } = req.body;
 
-  if (!userId) return res.status(401).json({ error: "You must be logged in!" });
+  if (!userId) return res.status(401).json({ error: 'You must be logged in!' });
 
-  db.query("SELECT id FROM carts WHERE user_id = ?", [userId], (err, cartResults) => {
-    if (err) return res.status(500).json({ error: "Cart error: " + err.message });
+  db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
+    if (err) return res.status(500).json({ error: 'Cart error: ' + err.message });
 
     if (cartResults.length > 0) {
       processItem(cartResults[0].id);
     } else {
-      db.query("INSERT INTO carts (user_id) VALUES (?)", [userId], (err, newCart) => {
-        if (err) return res.status(500).json({ error: "New cart error: " + err.message });
+      db.query('INSERT INTO carts (user_id) VALUES (?)', [userId], (err, newCart) => {
+        if (err) return res.status(500).json({ error: 'New cart error: ' + err.message });
         processItem(newCart.insertId);
       });
     }
 
     function processItem(cartId) {
       if (prebuiltCandleId) {
-        const checkSql = "SELECT id FROM cart_items WHERE cart_id = ? AND prebuilt_candle_id = ?";
-        db.query(checkSql, [cartId, prebuiltCandleId], (err, existResults) => {
-          if (err) return res.status(500).json({ error: "Check error: " + err.message });
-
-          if (existResults.length > 0) {
-            db.query("UPDATE cart_items SET quantity = quantity + ? WHERE id = ?", [quantity, existResults[0].id], (err) => {
-              if (err) return res.status(500).json({ error: "Update error: " + err.message });
-              res.json({ message: "Stacked pre-built candle!" });
-            });
-          } else {
-            db.query("INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?)", [cartId, prebuiltCandleId, quantity], (err) => {
-              if (err) return res.status(500).json({ error: "Insert error: " + err.message });
-              res.json({ message: "Added pre-built candle to cart!" });
-            });
+        db.query(
+          'INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?)',
+          [cartId, prebuiltCandleId, quantity],
+          (err) => {
+            if (err) return res.status(500).json({ error: 'Insert error: ' + err.message });
+            res.json({ message: 'Added pre-built candle to cart!' });
           }
-        });
-      } else if (cupId && colorId && scentId) {
-        const checkSql = `
-          SELECT ci.id 
-          FROM cart_items ci
-          JOIN custom_candles cc ON ci.custom_candle_id = cc.id
-          WHERE ci.cart_id = ? AND cc.cup_id = ? AND cc.color_id = ? AND cc.scent_id = ?
-        `;
-        db.query(checkSql, [cartId, cupId, colorId, scentId], (err, existResults) => {
-          if (err) return res.status(500).json({ error: "Check error: " + err.message });
+        );
+      } else if (type === 'cup') {
+        const { cupShapeId, cupSizeId, cupColorId, candleColorId } = req.body;
 
-          if (existResults.length > 0) {
-            db.query("UPDATE cart_items SET quantity = quantity + ? WHERE id = ?", [quantity, existResults[0].id], (err) => {
-              if (err) return res.status(500).json({ error: "Update error: " + err.message });
-              res.json({ message: "Stacked custom candle!" });
-            });
-          } else {
-            const sqlCandle = "INSERT INTO custom_candles (cup_id, color_id, scent_id, total_price) VALUES (?, ?, ?, ?)";
-            db.query(sqlCandle, [cupId, colorId, scentId, totalPrice], (err, candleResult) => {
-              if (err) return res.status(500).json({ error: "Candle error: " + err.message });
-              
-              db.query("INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)", [cartId, candleResult.insertId, quantity], (err) => {
-                if (err) return res.status(500).json({ error: "Insert error: " + err.message });
-                res.json({ message: "Added custom candle to cart!" });
-              });
-            });
+        db.query(
+          "INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size_id, cup_color_id, total_price) VALUES ('cup', ?, ?, ?, ?, ?)",
+          [scentId, cupShapeId, cupSizeId, cupColorId, totalPrice],
+          (err, candleResult) => {
+            if (err) return res.status(500).json({ error: 'Candle error: ' + err.message });
+
+            const customCandleId = candleResult.insertId;
+            db.query(
+              'INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)',
+              [customCandleId, candleColorId],
+              (err) => {
+                if (err) return res.status(500).json({ error: 'Layer error: ' + err.message });
+                db.query(
+                  'INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)',
+                  [cartId, customCandleId, quantity],
+                  (err) => {
+                    if (err) return res.status(500).json({ error: 'Cart link error: ' + err.message });
+                    res.json({ message: 'Added custom cup candle to cart!' });
+                  }
+                );
+              }
+            );
           }
-        });
+        );
+      } else if (type === 'mold') {
+        const { moldShapeId, layers } = req.body;
+
+        db.query(
+          "INSERT INTO custom_candles (type, scent_id, mold_shape_id, total_price) VALUES ('mold', ?, ?, ?)",
+          [scentId, moldShapeId, totalPrice],
+          (err, candleResult) => {
+            if (err) return res.status(500).json({ error: 'Mold error: ' + err.message });
+
+            const customCandleId = candleResult.insertId;
+            const layerValues = layers.map((colorId, index) => [customCandleId, colorId, index + 1]);
+
+            db.query(
+              'INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES ?',
+              [layerValues],
+              (err) => {
+                if (err) return res.status(500).json({ error: 'Layers bulk insert error: ' + err.message });
+                db.query(
+                  'INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)',
+                  [cartId, customCandleId, quantity],
+                  (err) => {
+                    if (err) return res.status(500).json({ error: 'Cart link error: ' + err.message });
+                    res.json({ message: 'Added layered mold candle to cart!' });
+                  }
+                );
+              }
+            );
+          }
+        );
       } else {
-        res.status(400).json({ error: "Invalid product data sent to cart." });
+        res.status(400).json({ error: 'Invalid product type sent.' });
       }
     }
   });
 });
 
 // ==========================================
-// --- GET USER'S CART ROUTE (GET) ---
+// --- CART: GET USER'S CART ---
 // ==========================================
+
 app.get('/cart/:userId', (req, res) => {
   const userId = req.params.userId;
-  
+
   const sql = `
     SELECT 
-      ci.id as cart_item_id, 
+      ci.id AS cart_item_id,
       ci.quantity,
-      cc.total_price as custom_price, 
-      c.color as cup_color, 
-      c.size_ml, 
-      cl.name as color_name, 
-      s.name as scent_name,
-      pc.name as prebuilt_name,
-      pc.price as prebuilt_price,
-      pc.image_url as prebuilt_image
-    FROM cart_items ci 
-    LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id 
-    LEFT JOIN cups c ON cc.cup_id = c.id 
-    LEFT JOIN colors cl ON cc.color_id = cl.id 
-    LEFT JOIN scents s ON cc.scent_id = s.id 
+      cc.type AS candle_type,
+      cc.total_price AS custom_price,
+      cs.name AS cup_shape_name,
+      csz.size_ml,
+      ccol.name AS cup_color_name,
+      ms.name AS mold_shape_name,
+      s.name AS scent_name,
+      GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', ') AS wax_colors,
+      pc.name AS prebuilt_name,
+      pc.price AS prebuilt_price,
+      pc.image_url AS prebuilt_image
+    FROM cart_items ci
+    LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
+    LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
+    LEFT JOIN cup_sizes csz ON cc.cup_size_id = csz.id
+    LEFT JOIN cup_colors ccol ON cc.cup_color_id = ccol.id
+    LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
+    LEFT JOIN scents s ON cc.scent_id = s.id
+    LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
+    LEFT JOIN colors cl ON ccl.color_id = cl.id
     LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
-    JOIN carts ct ON ci.cart_id = ct.id 
+    JOIN carts ct ON ci.cart_id = ct.id
     WHERE ct.user_id = ?
+    GROUP BY ci.id
   `;
-  
+
   db.query(sql, [userId], (err, results) => {
-    if (err) return res.status(500).json({ error: "Failed to load cart: " + err.message });
-    
-    const formattedCart = results.map(item => {
+    if (err) return res.status(500).json({ error: 'Failed to load cart: ' + err.message });
+
+    const formattedCart = results.map((item) => {
       if (item.prebuilt_name) {
         return {
           cart_item_id: item.cart_item_id,
@@ -236,17 +304,27 @@ app.get('/cart/:userId', (req, res) => {
           is_custom: false,
           name: item.prebuilt_name,
           price: item.prebuilt_price,
-          image: item.prebuilt_image
+          image: item.prebuilt_image,
         };
-      } else {
+      } else if (item.candle_type === 'cup') {
         return {
           cart_item_id: item.cart_item_id,
           quantity: item.quantity,
           is_custom: true,
-          name: "Custom Candle",
-          color: item.color_name,
+          name: `${item.cup_shape_name} (${item.size_ml}ml)`,
+          color: `Cup: ${item.cup_color_name} | Wax: ${item.wax_colors}`,
           scent: item.scent_name,
-          price: item.custom_price
+          price: item.custom_price,
+        };
+      } else if (item.candle_type === 'mold') {
+        return {
+          cart_item_id: item.cart_item_id,
+          quantity: item.quantity,
+          is_custom: true,
+          name: `${item.mold_shape_name} Mold`,
+          color: `Layers: ${item.wax_colors}`,
+          scent: item.scent_name,
+          price: item.custom_price,
         };
       }
     });
@@ -256,57 +334,252 @@ app.get('/cart/:userId', (req, res) => {
 });
 
 // ==========================================
-// --- UPDATE QUANTITY ROUTE (PUT) ---
+// --- CART: UPDATE QUANTITY ---
 // ==========================================
+
 app.put('/cart/update/:cartItemId', (req, res) => {
   const { cartItemId } = req.params;
-  const { action } = req.body; 
+  const { action } = req.body;
 
-  let sql = "";
+  let sql = '';
   if (action === 'increase') {
-    sql = "UPDATE cart_items SET quantity = quantity + 1 WHERE id = ?";
+    sql = 'UPDATE cart_items SET quantity = quantity + 1 WHERE id = ?';
   } else if (action === 'decrease') {
-    sql = "UPDATE cart_items SET quantity = GREATEST(quantity - 1, 1) WHERE id = ?";
+    sql = 'UPDATE cart_items SET quantity = GREATEST(quantity - 1, 1) WHERE id = ?';
   } else {
-    return res.status(400).json({ error: "Invalid action" });
+    return res.status(400).json({ error: 'Invalid action' });
   }
 
   db.query(sql, [cartItemId], (err) => {
-    if (err) return res.status(500).json({ error: "Failed to update quantity: " + err.message });
-    res.json({ message: "Quantity updated successfully!" });
+    if (err) return res.status(500).json({ error: 'Failed to update quantity: ' + err.message });
+    res.json({ message: 'Quantity updated successfully!' });
   });
 });
 
 // ==========================================
-// --- REMOVE ITEM FROM CART ROUTE (DELETE) ---
+// --- CART: REMOVE ITEM ---
 // ==========================================
+
 app.delete('/cart/remove/:cartItemId', (req, res) => {
   const { cartItemId } = req.params;
 
-  const sql = "DELETE FROM cart_items WHERE id = ?";
-  
-  db.query(sql, [cartItemId], (err, result) => {
-    if (err) return res.status(500).json({ error: "Failed to delete: " + err.message });
-    
+  db.query('DELETE FROM cart_items WHERE id = ?', [cartItemId], (err, result) => {
+    if (err) return res.status(500).json({ error: 'Failed to delete: ' + err.message });
+
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: "Item not found in cart." });
+      return res.status(404).json({ error: 'Item not found in cart.' });
     }
 
-    res.json({ message: "Item successfully removed from cart!" });
+    res.json({ message: 'Item successfully removed from cart!' });
   });
 });
 
 // ==========================================
-// --- GET ALL PRE-BUILT CANDLES ROUTE ---
+// --- ADMIN: ORDERS ---
 // ==========================================
-app.get('/products', (req, res) => {
-  const sql = "SELECT * FROM prebuilt_candles WHERE is_active = TRUE";
-  
+
+app.get('/admin/orders', (req, res) => {
+  const sql = `
+    SELECT o.id, o.total, o.status_id, o.created_at, u.name AS customer_name
+    FROM orders o
+    JOIN users u ON o.user_id = u.id
+    ORDER BY o.created_at DESC
+  `;
   db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ error: "Failed to fetch: " + err.message });
+    if (err) return res.status(500).json({ error: 'Failed to fetch orders: ' + err.message });
     res.json(results);
   });
 });
+
+app.put('/admin/orders/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status_id } = req.body;
+
+  const validStatuses = [1, 2, 3];
+  if (!status_id || !validStatuses.includes(Number(status_id))) {
+    return res.status(400).json({ message: 'Invalid status_id. Must be 1, 2, or 3.' });
+  }
+
+  db.query('UPDATE orders SET status_id = ? WHERE id = ?', [Number(status_id), id], (err, result) => {
+    if (err) return res.status(500).json({ message: 'Failed to update order: ' + err.message });
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Order not found.' });
+    }
+
+    res.json({ message: 'Order status updated successfully.' });
+  });
+});
+
+// ==========================================
+// --- ADMIN: STAFF ---
+// ==========================================
+
+app.get('/admin/staff', (req, res) => {
+  const sql = `
+    SELECT id, name, email, role_id
+    FROM users
+    WHERE role_id IN (2, 3)
+    ORDER BY role_id DESC
+  `;
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch staff: ' + err.message });
+    res.json(results);
+  });
+});
+
+app.post('/admin/add-staff', (req, res) => {
+  const { name, email, phone, password } = req.body;
+
+  // --- PHONE NUMBER FIX ---
+  if (!name || !email || !password || !phone) {
+    return res.status(400).json({ message: 'Name, email, phone, and password are required.' });
+  }
+
+  db.query('SELECT id FROM users WHERE email = ?', [email], (err, existing) => {
+    if (err) return res.status(500).json({ message: 'DB error: ' + err.message });
+
+    if (existing.length > 0) {
+      return res.status(409).json({ message: 'A user with this email already exists.' });
+    }
+
+    bcrypt.hash(password, SALT_ROUNDS, (hashErr, hashed) => {
+      if (hashErr) return res.status(500).json({ message: 'Hashing failed.' });
+
+      const sql = 'INSERT INTO users (name, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, 2)';
+      db.query(sql, [name, email, phone, hashed], (err, result) => {
+        if (err) return res.status(500).json({ message: 'Failed to add staff: ' + err.message });
+
+        const newStaff = { id: result.insertId, name, email, phone, role_id: 2 };
+        res.status(201).json({ message: 'Staff member added successfully.', newStaff });
+      });
+    });
+  });
+});
+
+app.delete('/admin/staff/:id', (req, res) => {
+  const { id } = req.params;
+
+  db.query('SELECT role_id FROM users WHERE id = ?', [id], (err, rows) => {
+    if (err) return res.status(500).json({ message: 'DB error: ' + err.message });
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Staff member not found.' });
+    }
+    if (rows[0].role_id === 3) {
+      return res.status(403).json({ message: 'Super Admins cannot be removed via this route.' });
+    }
+
+    db.query('DELETE FROM users WHERE id = ? AND role_id = 2', [id], (err) => {
+      if (err) return res.status(500).json({ message: 'Failed to remove staff: ' + err.message });
+      res.json({ message: 'Staff member removed successfully.' });
+    });
+  });
+});
+
+// ==========================================
+// --- ADMIN: PRODUCTS ---
+// ==========================================
+
+app.post('/admin/products', (req, res) => {
+  const { name, price, stock_quantity, description, image_url } = req.body;
+
+  if (!name || price === undefined || stock_quantity === undefined) {
+    return res.status(400).json({ message: 'Name, price, and stock quantity are required.' });
+  }
+
+  const sql = 'INSERT INTO prebuilt_candles (name, price, stock_quantity, description, image_url) VALUES (?, ?, ?, ?, ?)';
+  db.query(
+    sql,
+    [name, parseFloat(price), parseInt(stock_quantity), description || null, image_url || null],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: 'Failed to add product: ' + err.message });
+
+      const newProduct = {
+        id: result.insertId,
+        name,
+        price: parseFloat(price),
+        stock_quantity: parseInt(stock_quantity),
+        description: description || null,
+        image_url: image_url || null,
+      };
+
+      res.status(201).json({ message: 'Product added successfully.', newProduct });
+    }
+  );
+});
+
+// ==========================================
+// --- USER: DELETE ACCOUNT ---
+// ==========================================
+app.delete('/admin/delete-account', (req, res) => {
+  const { userId, password } = req.body;
+
+  if (!userId || !password) {
+    return res.status(400).json({ error: 'User ID and password are required.' });
+  }
+
+  // 1. Fetch the user to verify the password
+  db.query('SELECT password_hash FROM users WHERE id = ?', [userId], (err, results) => {
+    if (err) return res.status(500).json({ error: 'Database error: ' + err.message });
+    if (results.length === 0) return res.status(404).json({ error: 'User not found.' });
+
+    const storedPassword = results[0].password_hash;
+
+    // --- LEGACY CHECK FIX (For manually inserted accounts) ---
+    if (!storedPassword.startsWith('$2')) {
+      if (password === storedPassword) {
+        deleteUser();
+      } else {
+        return res.status(401).json({ error: 'Incorrect password.' });
+      }
+    } else {
+      // Secure bcrypt check
+      bcrypt.compare(password, storedPassword, (compareErr, isMatch) => {
+        if (compareErr) return res.status(500).json({ error: 'Auth error.' });
+        if (!isMatch) return res.status(401).json({ error: 'Incorrect password.' });
+        
+        deleteUser();
+      });
+    }
+
+    // 2. The actual deletion function
+    function deleteUser() {
+      // Because of foreign keys (carts, orders, etc.), a simple delete might fail.
+      // If a user has a cart, we must delete the cart items and the cart first!
+      db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
+        if (err) return res.status(500).json({ error: 'Cart lookup error: ' + err.message });
+
+        if (cartResults.length > 0) {
+          const cartId = cartResults[0].id;
+          // Delete cart items first
+          db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], (err) => {
+            if (err) return res.status(500).json({ error: 'Cart items delete error: ' + err.message });
+            
+            // Delete the cart
+            db.query('DELETE FROM carts WHERE id = ?', [cartId], (err) => {
+              if (err) return res.status(500).json({ error: 'Cart delete error: ' + err.message });
+              executeFinalDelete();
+            });
+          });
+        } else {
+          executeFinalDelete();
+        }
+      });
+    }
+
+    // 3. Delete the user row
+    function executeFinalDelete() {
+      db.query('DELETE FROM users WHERE id = ?', [userId], (err) => {
+        if (err) return res.status(500).json({ error: 'Failed to delete account. You may have existing orders linked to your profile.' });
+        res.json({ message: 'Account deleted successfully.' });
+      });
+    }
+  });
+});
+// ==========================================
+// --- START SERVER ---
+// ==========================================
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

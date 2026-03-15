@@ -15,15 +15,15 @@ const Profile = () => {
   const userName = localStorage.getItem("userName");
 
   // 3. The Instant Logout Function
-const handleLogout = () => {
-    // 1. Wipe everything out of Local Storage
+  const handleLogout = () => {
+    // Trash the data
     localStorage.removeItem("token");
-    localStorage.removeItem("userId");
     localStorage.removeItem("userName");
-    localStorage.removeItem("roleId");
+    localStorage.removeItem("userId");
 
-    // 2. Force a hard refresh and teleport them to the Home page!
-    window.location.href = "/"; 
+    // 4. THE MAGIC LINE: Instantly push them to the sign-in page
+    // This forces React to change the page without needing a refresh!
+    navigate('/Sign-in'); 
   };
 
   return (

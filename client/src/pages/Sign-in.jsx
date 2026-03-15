@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; 
-import { useGoogleLogin } from '@react-oauth/google'; 
+import { useGoogleLogin } from '@react-oauth/google'; // <-- NEW IMPORT
 import Navbar from '../components/Navbar';
 import '../styles/profile.css';
 
@@ -9,43 +9,52 @@ const Signin = () => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  // --- STANDARD EMAIL/PASSWORD LOGIN ---
+  // Standard Email/Password Login
   const handleSignin = async (e) => {
-    e.preventDefault(); 
+        e.preventDefault(); // Stop the page refresh
+
+    const loginData = {
+      email: email,
+      password: password
+    };
 
     try {
-      const response = await fetch('http://localhost:5000/signin', {
+      // 4. Send the credentials to your new backend login route
+      const response = await fetch('http://localhost:5000/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // BUG FIXED: Now correctly saving data.userName so they don't see "Welcome, undefined!"
+        // 5. Save the wristband (JWT token) and their name!
         localStorage.setItem("token", data.token);
-        localStorage.setItem("userName", data.userName); 
+        localStorage.setItem("userName", data.name);
         localStorage.setItem("userId", data.userId);
-        localStorage.setItem("roleId", data.roleId);
         
+        // 6. Teleport them instantly to the account/profile page
         navigate('/profile'); 
       } else {
+        // If the password or email is wrong, show them the error
         alert("Login failed: " + data.error);
       }
     } catch (error) {
       console.error("Error signing in:", error);
     }
+    e.preventDefault();
+    // ... your existing sign-in fetch logic stays exactly the same ...
   };
 
-  // --- GOOGLE LOGIN FUNCTION ---
+  // --- NEW GOOGLE LOGIN FUNCTION ---
   const loginWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       console.log("Google Token:", tokenResponse.access_token);
-      
-      // NEXT STEP: We will build a fetch request right here to send this token
-      // to your backend so the database can log them in!
-      
+      // Here you will eventually send tokenResponse.access_token to your backend
+      // to verify it and log the user in!
     },
     onError: () => console.log('Google Login Failed'),
   });
@@ -82,17 +91,18 @@ const Signin = () => {
           
             <button type="submit" className="btn custom-pill-btn">Sign In</button>
 
-            {/* --- DIVIDER --- */}
+            {/* --- NEW DIVIDER --- */}
             <div className="divider">
               <span>OR</span>
             </div>
 
-            {/* --- GOOGLE BUTTON --- */}
+            {/* --- NEW GOOGLE BUTTON --- */}
             <button 
               type="button" 
               onClick={() => loginWithGoogle()} 
               className="btn custom-pill-btn google-btn"
             >
+              {/* Google SVG Logo */}
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20px" height="20px">
                 <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
                 <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
