@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import candle from "../assets/candle.png";
 import "../styles/create.css";
-
+import CandlePreview3D from '../components/CandlePreview3D';
 const Create = () => {
   // --- CORE DATA STATES (Now completely dynamic!) ---
   const [scents, setScents] = useState([]);
@@ -69,6 +69,10 @@ const Create = () => {
       setMoldLayers([]);
     }
   }, [selectedMoldShape, moldShapes]);
+  useEffect(() => {
+  if (colors.length > 0) console.log('color sample:', colors[0]);
+  if (cupColors.length > 0) console.log('cupColor sample:', cupColors[0]);
+}, [colors, cupColors]);
 
   const handleLayerColorChange = (index, colorId) => {
     const newLayers = [...moldLayers];
@@ -171,7 +175,27 @@ const handleConfirm = async () => {
       
       <div className='creation'>
         <div className='candle-div'>
-          <img className="candle-preview" src={candle} alt="Candle Preview" />
+          <CandlePreview3D
+  cupColor={
+    cupColors.find(c => c.id.toString() === selectedCupColor.toString())?.hex_code
+    ?? '#ffffff'
+  }
+  waxColor={
+    colors.find(c => c.id.toString() === selectedCandleColor.toString())?.hex_code
+    ?? '#ffffff'
+  }
+  cupSize={
+    selectedCupSize === 'default' ? 'medium' :
+    (() => {
+      const s = cupSizes.find(s => s.id.toString() === selectedCupSize.toString());
+      if (!s) return 'medium';
+      const ml = Number(s.size_ml);
+      if (ml <= 200) return 'small';
+      if (ml <= 400) return 'medium';
+      return 'large';
+    })()
+  }
+/>
         </div>
         
         <div className='choices'> 
