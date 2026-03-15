@@ -26,6 +26,7 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.577.0",
-    "mysql2": "^3.18.1"
+    "mysql2": "^3.18.1",
+    "three": "^0.183.2"
   }
 }

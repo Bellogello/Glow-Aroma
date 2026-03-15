@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom'; // Brought in Link for smooth routing
+import { Link, useNavigate } from 'react-router-dom'; // FIX: Brought in useNavigate
 import Navbar from '../components/Navbar';
 import '../styles/signup.css'
 
@@ -9,6 +9,8 @@ const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
+  
+  const navigate = useNavigate(); // FIX: Initialized the navigator
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -26,7 +28,8 @@ const Signup = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/api/users', {
+      // FIX: Removed the sneaky "/api" from the URL to match your backend exactly
+      const response = await fetch('http://localhost:5000/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -34,19 +37,22 @@ const Signup = () => {
         body: JSON.stringify(newUserData), 
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        alert("Account created successfully!");
-        setName('');
-        setPhone('');
-        setEmail('');
-        setPassword('');
-        setRepeatPassword('');
+        // FIX: Auto-Login! Since the backend gives us a token, log them in instantly.
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userName", data.userName);
+        localStorage.setItem("roleId", "1"); // Customers are always role 1
+        
+        // Teleport them straight to their profile
+        navigate('/profile'); 
       } else {
-        const data = await response.json();
-        alert("Error: " + data.error);
+        alert("Error: " + data.error || data.message);
       }
     } catch (error) {
       console.error("Failed to push data:", error);
+      alert("Server error. Please try again later.");
     }
   };
 
