@@ -2,8 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // FIX: Brought in useNavigate
 import Navbar from '../components/Navbar';
 import '../styles/signup.css'
+import useTitle from '../components/useTitles';
+import Footer from '../components/Footer';
 
-const Signup = () => {
+
+  const Signup = () => {
+
+  useTitle("Sign up");
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -131,6 +136,7 @@ const Signup = () => {
           </form>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

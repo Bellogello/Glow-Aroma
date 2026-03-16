@@ -36,7 +36,7 @@ body {
     width: 100%;
     max-width: 800px;       /* Much wider now! */
     height: 350px;          
-    background-color: #973434; 
+    background-color: #FDF6F0; 
     border-radius: 40px;
     box-shadow: 0 8px 25px rgba(151, 52, 52, 0.3); /* Beautiful glowing shadow */
     transition: all 0.3s ease;

@@ -4,8 +4,11 @@ import Footer from '../components/Footer'; // Ensure this is imported!
 import '../styles/cart.css';
 import { ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import useTitle from '../components/useTitles';
 
-const Cart = () => {
+  const Cart = () => {
+
+  useTitle("Cart");
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
 

@@ -4,8 +4,14 @@ import Navbar from '../components/Navbar';
 import HeroSlideshow from "../components/heroslideshow";
 import Footer from '../components/Footer';
 import '../styles/Home.css';
+import { useEffect } from 'react';
+
 
 const Home = () => {
+  useEffect(() => {
+      document.title = "Glow Aroma";
+    }, []);
+
   const scrollRef = useRef(null);
   const navigate = useNavigate();
 

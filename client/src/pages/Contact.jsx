@@ -2,8 +2,12 @@ import React from 'react';
 import Navbar from '../components/Navbar';
 import '../styles/contact.css';
 import Footer from '../components/Footer';
+import useTitle from '../components/useTitles';
 
-const Contact = () => {
+  const Contact = () => {
+
+  useTitle("Contact");
+
   return (
     <div className="home-container">
       <Navbar />

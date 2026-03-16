@@ -3,7 +3,13 @@ import Navbar from '../components/Navbar';
 import candle from "../assets/candle.png";
 import "../styles/create.css";
 import CandlePreview3D from '../components/CandlePreview3D';
+import useTitle from '../components/useTitles';
+import Footer from '../components/Footer';
+
 const Create = () => {
+
+  useTitle("Create Your Own");
+
   // --- CORE DATA STATES (Now completely dynamic!) ---
   const [scents, setScents] = useState([]);
   const [colors, setColors] = useState([]);
@@ -293,6 +299,7 @@ const handleConfirm = async () => {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

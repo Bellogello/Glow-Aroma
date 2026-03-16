@@ -3,8 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Nav, Tab, Table, Badge, Form, Alert, Spinner } from 'react-bootstrap';
 import Navbar from '../components/Navbar';
 import '../styles/Dashboard.css';
+import useTitle from '../components/useTitles';
+import Footer from '../components/Footer';
 
-const Dashboard = () => {
+
+  const Dashboard = () => {
+
+  useTitle("Dashboard");
+
   const navigate = useNavigate();
 
   // --- AUTH & ROLES ---
@@ -619,6 +625,7 @@ const Dashboard = () => {
               </div>
             </Form>
           </div>
+        <Footer />
         </div>
       )}
 

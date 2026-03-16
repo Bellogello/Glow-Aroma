@@ -6,6 +6,8 @@ import ProductCard from '../components/ProductCard';
 import CreateYourOwn from '../components/CreateYourOwn';
 import '../styles/CreateYourOwn.css';
 import Footer from '../components/Footer';
+import useTitle from '../components/useTitles';
+
 
 // ==========================================
 // --- DUMMY DATA FOR UI TESTING ---
@@ -41,8 +43,10 @@ const dummyProducts = [
   }
 ];
 
+
 const Products = () => {
-  // 1. Initialize state WITH the dummy data instead of an empty array
+
+  useTitle("Products");
   const [products, setProducts] = useState(dummyProducts);
   
   // Set loading to false immediately since we already have the dummy data

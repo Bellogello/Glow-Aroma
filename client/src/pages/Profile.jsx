@@ -2,8 +2,11 @@ import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom'; // 1. Import useNavigate
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import useTitle from '../components/useTitles';
 
-const Profile = () => {
+  const Profile = () => {
+
+  useTitle("Profile");
   // 2. Setup the navigation tool
   const navigate = useNavigate(); 
 

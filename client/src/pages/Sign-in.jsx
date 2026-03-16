@@ -3,8 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google'; // <-- NEW IMPORT
 import Navbar from '../components/Navbar';
 import '../styles/profile.css';
+import useTitle from '../components/useTitles';
+import Footer from '../components/Footer';
 
-const Signin = () => {
+  const Signin = () => {
+
+  useTitle("Sign in");
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -142,6 +146,7 @@ const Signin = () => {
           </form>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
