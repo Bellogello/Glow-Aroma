@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import '../styles/signup.css'
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
+import validator from 'validator';
 
 
   const Signup = () => {
@@ -17,23 +18,47 @@ import Footer from '../components/Footer';
   
   const navigate = useNavigate(); // FIX: Initialized the navigator
 
-  const handleSignup = async (e) => {
+const handleSignup = async (e) => {
     e.preventDefault();
 
+    // 1. The clean, professional email check
+    if (!validator.isEmail(email)) {
+      alert("Please enter a valid email address.");
+      return; 
+    }
+
+    // 2. Password match check
     if (password !== repeatPassword) {
       alert("Your passwords do not match!");
       return; 
     }
 
+    // 3. Password length check
+// 3. The Ultimate Password Strength Check
+    // You can customize these numbers! I set symbols to 0 so it's not too annoying for a candle shop.
+    const isStrong = validator.isStrongPassword(password, {
+      minLength: 8,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 0, 
+    });
+
+    if (!isStrong) {
+      alert("Password is too weak! It must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.");
+      return; 
+    }
+
+    // 4. Build the payload for the database
     const newUserData = {
       name: name,
       email: email,
-      phone: phone,
+      // THE FIX: If phone is empty, send a true null instead of ""
+      phone: phone.trim() === '' ? null : phone, 
       password_hash: password 
     };
 
     try {
-      // FIX: Removed the sneaky "/api" from the URL to match your backend exactly
       const response = await fetch('http://localhost:5000/users', {
         method: 'POST',
         headers: {
@@ -45,15 +70,15 @@ import Footer from '../components/Footer';
       const data = await response.json();
 
       if (response.ok) {
-        // FIX: Auto-Login! Since the backend gives us a token, log them in instantly.
+        // Auto-Login: grab the token and set the user session
         localStorage.setItem("token", data.token);
         localStorage.setItem("userName", data.userName);
-        localStorage.setItem("roleId", "1"); // Customers are always role 1
+        localStorage.setItem("roleId", "1"); 
         
         // Teleport them straight to their profile
         navigate('/profile'); 
       } else {
-        alert("Error: " + data.error || data.message);
+        alert("Error: " + (data.error || data.message));
       }
     } catch (error) {
       console.error("Failed to push data:", error);
@@ -93,14 +118,15 @@ import Footer from '../components/Footer';
             </div>
             
             <div className="form-group">
-              <input 
-                type="email" 
-                className="custom-pill-input" 
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+            <input 
+              type="email" 
+              className="custom-pill-input" 
+
+              placeholder="Email Address" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+            />
             </div>
             
             <div className="form-group">

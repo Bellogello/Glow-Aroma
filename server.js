@@ -259,16 +259,46 @@ app.post('/cart/add', (req, res) => {
     }
 
     function processItem(cartId) {
+      // ==========================================
+      // UPGRADED LOGIC: PREBUILT CANDLE STACKING
+      // ==========================================
       if (prebuiltCandleId) {
+        // 1. Check if this exact candle is already in this user's cart
         db.query(
-          'INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?)',
-          [cartId, prebuiltCandleId, quantity],
-          (err) => {
-            if (err) return res.status(500).json({ error: 'Insert error: ' + err.message });
-            res.json({ message: 'Added pre-built candle to cart!' });
+          'SELECT id, quantity FROM cart_items WHERE cart_id = ? AND prebuilt_candle_id = ?',
+          [cartId, prebuiltCandleId],
+          (err, existingItems) => {
+            if (err) return res.status(500).json({ error: 'Check error: ' + err.message });
+
+            if (existingItems.length > 0) {
+              // 2. It exists! Update the quantity instead of making a new row
+              const newQuantity = existingItems[0].quantity + quantity;
+              db.query(
+                'UPDATE cart_items SET quantity = ? WHERE id = ?',
+                [newQuantity, existingItems[0].id],
+                (err) => {
+                  if (err) return res.status(500).json({ error: 'Update error: ' + err.message });
+                  res.json({ message: 'Updated candle quantity in cart!' });
+                }
+              );
+            } else {
+              // 3. It doesn't exist yet! Safe to insert a new row
+              db.query(
+                'INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?)',
+                [cartId, prebuiltCandleId, quantity],
+                (err) => {
+                  if (err) return res.status(500).json({ error: 'Insert error: ' + err.message });
+                  res.json({ message: 'Added pre-built candle to cart!' });
+                }
+              );
+            }
           }
         );
-      } else if (type === 'cup') {
+      } 
+      // ==========================================
+      // CUSTOM CANDLES (Left unchanged so they stay unique)
+      // ==========================================
+      else if (type === 'cup') {
         const { cupShapeId, cupSizeId, cupColorId, candleColorId } = req.body;
 
         db.query(
@@ -330,7 +360,6 @@ app.post('/cart/add', (req, res) => {
     }
   });
 });
-
 // ==========================================
 // --- CART: GET USER'S CART ---
 // ==========================================

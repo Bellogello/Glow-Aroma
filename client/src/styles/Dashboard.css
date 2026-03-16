@@ -12,128 +12,28 @@
   max-width: 87.5rem;
   margin: 0 auto;
   box-sizing: border-box;
-}
-
-/* ========================================= */
-/* --- THE LAYOUT (GAPS BETWEEN BOXES) ---   */
-/* ========================================= */
-.dashboard-layout {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  gap: 4rem !important; /* 🔥 INCREASED: Was 2.5rem, now 4rem for a huge, airy gap */
-  align-items: flex-start;
-}
-
-/* ========================================= */
-/* --- SIDEBAR PANEL (THE MAIN BOX) ---      */
-/* ========================================= */
-.dashboard-sidebar {
-  width: 17.5rem !important;
-  min-width: 17.5rem !important;
-  max-width: 17.5rem !important;
-  background-color: #ffffff; /* Clean white card */
-  border: 1px solid #e0dcd3;
-  border-radius: 1.25rem;
-  padding: 2rem 1.5rem;
-  box-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, 0.03);
-  box-sizing: border-box;
-}
-
-.sidebar-title {
-  color: #4a3728;
-  font-weight: 800;
-  text-align: center;
-  margin-bottom: 2rem;
-  border-bottom: 2px solid #fdfbf7;
-  padding-bottom: 1rem;
-  font-size: 1.3rem;
-  letter-spacing: 0.03rem;
-}
-
-/* The "Inner Tray" holding the buttons */
-.custom-sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem; 
-  padding: 1.25rem !important; /* The big beige box padding */
-  margin: 0 !important;
-  width: 100%;
-  background-color: #fdfbf7; 
-  border: 1px solid #ede8df;
-  border-radius: 1.25rem;
-  box-sizing: border-box;
-}
-
-.custom-sidebar-nav .nav-item {
-  width: 100%;
-  margin: 0 !important;
-  padding: 0;
-}
-
-/* The Signature Pill Buttons Inside the Tray */
-.custom-sidebar-nav .nav-link {
-  color: #5a4a3a !important;
-  font-weight: 600;
-  background-color: transparent !important;
-  border: 1px solid transparent !important;
-  border-radius: 3rem !important;
-  padding: 0.875rem 1.5rem !important;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-  box-sizing: border-box;
-  display: block;
-  margin: 0 !important;
-  text-decoration: none !important;
-}
-
-.custom-sidebar-nav .nav-link:hover {
-  background-color: #f5efe1 !important;
-  color: #4a3728 !important;
-  transform: translateY(-2px);
-  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.03);
-}
-
-.custom-sidebar-nav .nav-link.active {
-  background-color: #4a3728 !important;
-  color: #ffffff !important;
-  box-shadow: 0 0.25rem 1rem rgba(74, 55, 40, 0.2);
-  transform: translateY(-2px);
+  gap: 2.5rem;
 }
 
 /* ========================================= */
-/* --- MAIN CONTENT AREA & CARDS ---         */
+/* --- CARDS ---                             */
 /* ========================================= */
-.dashboard-content-area {
-  flex: 1 !important;
-  min-width: 0 !important;
-  width: 100%;
-  /* This creates the vertical gap between stacked sections */
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem !important; 
-}
-
-/* The Individual Cards (Orders, Inventory, etc.) */
 .dashboard-card {
   background-color: #ffffff;
   border-radius: 1.25rem;
   padding: 2.5rem;
   box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.05);
-  /* Remove the min-height so they don't stretch to touch each other */
-  min-height: auto !important; 
   border: 1px solid #e0dcd3;
   box-sizing: border-box;
-  /* Adds a gap if you have multiple divs inside one tab */
-  margin-bottom: 2rem; 
 }
 
-/* Ensure the background of the whole page is clear so gaps are visible */
-.dashboard-bg {
-  background-color: #fdfbf7; /* This warm white makes the white cards "pop" */
-  min-height: 100vh;
+.card-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
 }
 
 /* ========================================= */
@@ -266,70 +166,12 @@
 /* --- MOBILE RESPONSIVE TWEAKS ---          */
 /* ========================================= */
 @media (max-width: 48rem) {
-  .dashboard-content-area {
-    gap: 2rem !important;
-    margin-top: 2rem;
-  }
   .dashboard-container {
-    padding: 1.5rem !important;
-  }
-
-  .dashboard-layout {
-    flex-direction: column !important;
-    gap: 1.5rem; /* Distinct gap between mobile top-bar and main card */
-  }
-
-  .dashboard-sidebar {
-    width: 100% !important;
-    min-width: 100% !important;
-    max-width: 100% !important;
-    padding: 1.25rem;
-  }
-
-  .sidebar-title {
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
-  }
-
-  /* FIXED HORIZONTAL SCROLLING */
-  .custom-sidebar-nav {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important; /* Forces items into one row */
-    overflow-x: auto !important; /* Turns on horizontal scroll */
-    -webkit-overflow-scrolling: touch !important; 
-    gap: 0.5rem;
-    padding: 0.75rem !important;
-    margin: 0 !important;
-    width: 100%;
-    border-radius: 1rem;
-  }
-
-  /* Hides the scrollbar visually but keeps the swipe function */
-  .custom-sidebar-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* THE FIX: Prevents the pills from shrinking so they overflow properly */
-  .custom-sidebar-nav .nav-item {
-    flex: 0 0 auto !important; 
-    width: auto !important;
-  }
-
-  .custom-sidebar-nav .nav-link {
-    padding: 0.6rem 1.2rem !important;
-    font-size: 0.9rem;
-    text-align: center;
-  }
-  
-  /* Disable the hover jump on touchscreens */
-  .custom-sidebar-nav .nav-link:hover,
-  .custom-sidebar-nav .nav-link.active {
-    transform: none !important;
+    padding: 1.5rem;
+    gap: 1.5rem;
   }
 
   .dashboard-card {
-    margin-bottom: 1.5rem;
     padding: 1.5rem;
   }
 
@@ -337,32 +179,27 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
-    margin-bottom: 1.25rem;
   }
 
   .dialog-box {
     padding: 1.5rem;
   }
 }
-/* ========================================= */
-/* --- DANGER ZONE (SETTINGS TAB) ---        */
-/* ========================================= */
 
-/* The Container that pushes to bottom */
-.danger-zone-container {
-  padding-top: 3rem;
-}
-
+/* ========================================= */
+/* --- DANGER ZONE ---                       */
+/* ========================================= */
 .danger-zone-card {
-  background-color: #fff8f8; /* Very soft red tint */
+  background-color: #fff8f8;
   border: 1px solid #f5e1e1;
-  border-left: 5px solid #dc3545; /* Bold red accent on the side */
+  border-left: 5px solid #dc3545;
   border-radius: 1rem;
   padding: 1.5rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1.5rem;
+  margin-top: 1rem;
 }
 
 .danger-text h5 {
@@ -378,7 +215,6 @@
   font-size: 0.95rem;
 }
 
-/* The Styled Delete Button */
 .btn-danger-pill {
   background-color: transparent;
   color: #dc3545;
@@ -398,21 +234,20 @@
   box-shadow: 0 0.25rem 0.75rem rgba(220, 53, 69, 0.2);
 }
 
-/* ADDED: Makes it look inactive when submitting */
 .btn-danger-pill:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   border-color: #e5939a;
   color: #e5939a;
 }
-/* Responsive fix for the Danger Zone */
+
 @media (max-width: 48rem) {
   .danger-zone-card {
     flex-direction: column;
     text-align: center;
     padding: 1.5rem;
   }
-  
+
   .btn-danger-pill {
     width: 100%;
   }

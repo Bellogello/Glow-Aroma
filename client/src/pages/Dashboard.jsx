@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Nav, Tab, Table, Badge, Form, Alert, Spinner } from 'react-bootstrap';
+import { Table, Badge, Form, Alert, Spinner } from 'react-bootstrap';
 import Navbar from '../components/Navbar';
 import '../styles/Dashboard.css';
 import useTitle from '../components/useTitles';
@@ -15,7 +15,7 @@ const Dashboard = () => {
   const [userRole, setUserRole] = useState(null);
   const [userId, setUserId] = useState(null);
 
-  // --- REAL DATABASE STATES ---
+  // --- DATABASE STATES ---
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -35,10 +35,9 @@ const Dashboard = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [newStatusId, setNewStatusId] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
-
-// --- PROMO FORM STATE ---
-  const [discountForm, setDiscountForm] = useState({ 
-    code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_order_amount: '', max_uses: '', expires_at: '' 
+  const [discountForm, setDiscountForm] = useState({
+    code: '', discount_type: 'percentage', discount_value: '',
+    min_order_amount: '', max_order_amount: '', max_uses: '', expires_at: '',
   });
 
   // --- FEEDBACK STATES ---
@@ -47,17 +46,11 @@ const Dashboard = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const roleId = String(localStorage.getItem('roleId')); 
     const uId = localStorage.getItem('userId');
-    
-    // ==========================================
-    // 🔓 TEMPORARY VIP PASS (DELETE THIS LATER) 🔓
-    // ==========================================
-    setIsAuthorized(true); 
-    setUserRole('3');      
+    setIsAuthorized(true);
+    setUserRole('3');
     setUserId(uId);
-    fetchDashboardData();  
-
+    fetchDashboardData();
   }, [navigate]);
 
   const fetchDashboardData = async () => {
@@ -70,10 +63,7 @@ const Dashboard = () => {
         fetch('http://localhost:5000/admin/discount-codes'),
       ]);
       const [prodData, orderData, staffData, discountData] = await Promise.all([
-        prodRes.json(),
-        orderRes.json(),
-        staffRes.json(),
-        discountRes.json(),
+        prodRes.json(), orderRes.json(), staffRes.json(), discountRes.json(),
       ]);
       setProducts(Array.isArray(prodData) ? prodData : []);
       setOrders(Array.isArray(orderData) ? orderData : []);
@@ -86,56 +76,24 @@ const Dashboard = () => {
     }
   };
 
-  const resetDialogState = () => {
-    setDialogError('');
-    setDialogSuccess('');
-    setSubmitting(false);
-  };
+  const resetDialogState = () => { setDialogError(''); setDialogSuccess(''); setSubmitting(false); };
 
-  const getStatusLabel = (statusId) => {
-    if (statusId === 1) return 'Processing';
-    if (statusId === 2) return 'Shipped';
-    if (statusId === 3) return 'Delivered';
-    return 'Unknown';
-  };
-
-  const getStatusBg = (statusId) => {
-    if (statusId === 1) return 'warning';
-    if (statusId === 2) return 'info';
-    if (statusId === 3) return 'success';
-    return 'secondary';
-  };
+  const getStatusLabel = (s) => s === 1 ? 'Processing' : s === 2 ? 'Shipped' : 'Delivered';
+  const getStatusBg = (s) => s === 1 ? 'warning' : s === 2 ? 'info' : 'success';
 
   // --- STAFF ---
-  const handleOpenAddStaff = () => {
-    setStaffForm({ name: '', email: '', phone: '', password: '', role_id: '2' });
-    resetDialogState();
-    setShowAddStaffDialog(true);
-  };
-
+  const handleOpenAddStaff = () => { setStaffForm({ name: '', email: '', phone: '', password: '', role_id: '2' }); resetDialogState(); setShowAddStaffDialog(true); };
   const handleAddStaff = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setDialogError('');
-    setDialogSuccess('');
+    e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      const res = await fetch('http://localhost:5000/admin/add-staff', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(staffForm),
-      });
+      const res = await fetch('http://localhost:5000/admin/add-staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(staffForm) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add staff member.');
       setDialogSuccess('Staff member added successfully!');
       setStaff((prev) => [...prev, data.newStaff]);
-      setTimeout(() => setShowAddStaffDialog(false), 1500); 
-    } catch (err) {
-      setDialogError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+      setTimeout(() => setShowAddStaffDialog(false), 1500);
+    } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
-
   const handleRemoveStaff = async (memberId) => {
     if (!window.confirm('Are you sure you want to remove this admin?')) return;
     try {
@@ -143,165 +101,78 @@ const Dashboard = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to remove staff member.');
       setStaff((prev) => prev.filter((m) => m.id !== memberId));
-    } catch (err) {
-      alert(`Error: ${err.message}`);
-    }
+    } catch (err) { alert(`Error: ${err.message}`); }
   };
 
   // --- PRODUCTS ---
-  const handleOpenAddProduct = () => {
-    setProductForm({ name: '', price: '', stock_quantity: '', description: '', image_url: '' });
-    resetDialogState();
-    setShowAddProductDialog(true);
-  };
-
+  const handleOpenAddProduct = () => { setProductForm({ name: '', price: '', stock_quantity: '', description: '', image_url: '' }); resetDialogState(); setShowAddProductDialog(true); };
   const handleAddProduct = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setDialogError('');
-    setDialogSuccess('');
+    e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      const res = await fetch('http://localhost:5000/admin/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productForm),
-      });
+      const res = await fetch('http://localhost:5000/admin/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(productForm) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add product.');
       setDialogSuccess('Product added successfully!');
       setProducts((prev) => [...prev, data.newProduct]);
-      setTimeout(() => setShowAddProductDialog(false), 1500); 
-    } catch (err) {
-      setDialogError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+      setTimeout(() => setShowAddProductDialog(false), 1500);
+    } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
 
   // --- ORDERS ---
-  const handleOpenOrderDialog = (order) => {
-    setSelectedOrder(order);
-    setNewStatusId(String(order.status_id));
-    resetDialogState();
-    setShowOrderDialog(true);
-  };
-
+  const handleOpenOrderDialog = (order) => { setSelectedOrder(order); setNewStatusId(String(order.status_id)); resetDialogState(); setShowOrderDialog(true); };
   const handleUpdateOrderStatus = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setDialogError('');
-    setDialogSuccess('');
+    e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      const res = await fetch(`http://localhost:5000/admin/orders/${selectedOrder.id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status_id: Number(newStatusId) }),
-      });
+      const res = await fetch(`http://localhost:5000/admin/orders/${selectedOrder.id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status_id: Number(newStatusId) }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update order status.');
       setDialogSuccess('Order status updated!');
-      setOrders((prev) =>
-        prev.map((o) => (o.id === selectedOrder.id ? { ...o, status_id: Number(newStatusId) } : o))
-      );
-      setTimeout(() => setShowOrderDialog(false), 1500); 
-    } catch (err) {
-      setDialogError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+      setOrders((prev) => prev.map((o) => (o.id === selectedOrder.id ? { ...o, status_id: Number(newStatusId) } : o)));
+      setTimeout(() => setShowOrderDialog(false), 1500);
+    } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
 
   // --- DELETE ACCOUNT ---
-  const handleOpenDeleteAccount = () => {
-    setDeletePassword('');
-    resetDialogState();
-    setShowDeleteAccountDialog(true);
-  }
-
+  const handleOpenDeleteAccount = () => { setDeletePassword(''); resetDialogState(); setShowDeleteAccountDialog(true); };
   const handleDeleteAccount = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setDialogError('');
-    
+    e.preventDefault(); setSubmitting(true); setDialogError('');
     try {
-      const res = await fetch(`http://localhost:5000/admin/delete-account`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userId, password: deletePassword }),
-      });
+      const res = await fetch(`http://localhost:5000/admin/delete-account`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, password: deletePassword }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.message || 'Failed to delete account.');
-      
-      alert("Account successfully deleted. You will now be logged out.");
+      alert('Account successfully deleted. You will now be logged out.');
       localStorage.clear();
       navigate('/');
-    } catch (err) {
-      setDialogError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+    } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
 
-  // --- PROMO CODES LOGIC ---
-  const handleOpenAddDiscount = () => { 
-    setDiscountForm({ code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_uses: '', expires_at: '' }); 
-    resetDialogState(); 
-    setShowAddDiscountDialog(true); 
-  };
-
+  // --- PROMO CODES ---
+  const handleOpenAddDiscount = () => { setDiscountForm({ code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_order_amount: '', max_uses: '', expires_at: '' }); resetDialogState(); setShowAddDiscountDialog(true); };
   const generateRandomCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = 'GLOW-';
     for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
     setDiscountForm({ ...discountForm, code: result });
   };
-
-    const handleAddDiscountCode = async (e) => {
-    e.preventDefault(); 
-    // Add max_order_amount here:
+  const handleAddDiscountCode = async (e) => {
+    e.preventDefault();
     const { code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at } = discountForm;
     if (!code.trim() || !discount_value) { setDialogError('Code and discount value are required.'); return; }
-    
-    setSubmitting(true); 
-    setDialogError('');
-    setDialogSuccess('');
+    setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      const res = await fetch('http://localhost:5000/admin/discount-codes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: code.trim().toUpperCase(),
-          discount_type,
-          discount_value: Number(discount_value),
-          min_order_amount: min_order_amount ? Number(min_order_amount) : null,
-          max_order_amount: max_order_amount ? Number(max_order_amount) : null, // <-- ADDED
-          max_uses: max_uses ? Number(max_uses) : null,
-          expires_at: expires_at || null,
-        }),
-      });
-      // ... rest of the function stays exactly the same
+      const res = await fetch('http://localhost:5000/admin/discount-codes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim().toUpperCase(), discount_type, discount_value: Number(discount_value), min_order_amount: min_order_amount ? Number(min_order_amount) : null, max_order_amount: max_order_amount ? Number(max_order_amount) : null, max_uses: max_uses ? Number(max_uses) : null, expires_at: expires_at || null }) });
       if (!res.ok) throw new Error('Failed to create discount code.');
       setDialogSuccess('Discount code created successfully!');
       fetchDashboardData();
       setTimeout(() => { setShowAddDiscountDialog(false); resetDialogState(); }, 1500);
-    } catch (err) {
-      setDialogError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+    } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
-
   const handleToggleDiscount = async (id, currentActive) => {
     try {
-      await fetch(`http://localhost:5000/admin/discount-codes/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !currentActive }),
-      });
+      await fetch(`http://localhost:5000/admin/discount-codes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !currentActive }) });
       fetchDashboardData();
     } catch (err) { console.error(err.message); }
   };
-
   const handleDeleteDiscount = async (id) => {
     if (!window.confirm('Delete this code permanently?')) return;
     try {
@@ -317,267 +188,142 @@ const Dashboard = () => {
       <div className="home-container dashboard-bg">
         <Navbar />
         <div className="dashboard-container">
-          <Tab.Container id="dashboard-tabs" defaultActiveKey="orders">
-            <div className="dashboard-layout">
 
-              {/* SIDEBAR (ORDERED EXACTLY AS REQUESTED) */}
-              <div className="dashboard-sidebar">
-                <h3 className="sidebar-title">
-                  {userRole === '3' ? 'Super Admin Panel' : 'Admin Panel'}
-                </h3>
-                <Nav variant="pills" className="flex-column custom-sidebar-nav">
-                  <Nav.Item><Nav.Link eventKey="orders">Recent Orders</Nav.Link></Nav.Item>
-                  <Nav.Item><Nav.Link eventKey="products">Products Inventory</Nav.Link></Nav.Item>
-                  {userRole === '3' && (
-                    <Nav.Item><Nav.Link eventKey="discounts">Promo Codes</Nav.Link></Nav.Item>
-                  )}
-                  <Nav.Item><Nav.Link eventKey="settings">Account Settings</Nav.Link></Nav.Item>
-                  {userRole === '3' && (
-                    <Nav.Item><Nav.Link eventKey="staff">Staff Management</Nav.Link></Nav.Item>
-                  )}
-                  <Nav.Item><Nav.Link eventKey="delete">Delete Account</Nav.Link></Nav.Item>
-                </Nav>
-              </div>
+          {/* 1. ORDERS */}
+          <div className="dashboard-card">
+            <div className="card-header-flex"><h2>Recent Orders</h2></div>
+            {loading ? <p className="text-muted">Loading orders...</p> : (
+              <Table responsive className="custom-table borderless">
+                <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody>
+                  {orders.length === 0
+                    ? <tr><td colSpan="6" className="text-center text-muted">No orders found.</td></tr>
+                    : orders.map((order) => (
+                      <tr key={order.id} className="table-row-hover">
+                        <td><strong>#{order.id}</strong></td>
+                        <td>{order.customer_name}</td>
+                        <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                        <td>{Number(order.total).toFixed(2)} L.E.</td>
+                        <td><Badge bg={getStatusBg(order.status_id)} className="custom-badge">{getStatusLabel(order.status_id)}</Badge></td>
+                        <td><button className="btn-action" onClick={() => handleOpenOrderDialog(order)}>View</button></td>
+                      </tr>
+                    ))}
+                </tbody>
+              </Table>
+            )}
+          </div>
 
-              {/* MAIN CONTENT AREA */}
-              <div className="dashboard-content-area">
-                <Tab.Content>
-
-                  {/* 1. ORDERS TAB */}
-                  <Tab.Pane eventKey="orders">
-                    <div className="dashboard-card">
-                      <div className="card-header-flex">
-                        <h2>Recent Orders</h2>
-                      </div>
-                      {loading ? <p className="text-muted">Loading orders...</p> : (
-                        <Table responsive className="custom-table borderless">
-                          <thead>
-                            <tr>
-                              <th>Order ID</th>
-                              <th>Customer</th>
-                              <th>Date</th>
-                              <th>Total</th>
-                              <th>Status</th>
-                              <th>Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {orders.length === 0
-                              ? <tr><td colSpan="6" className="text-center text-muted">No orders found.</td></tr>
-                              : orders.map((order) => (
-                                <tr key={order.id} className="table-row-hover">
-                                  <td><strong>#{order.id}</strong></td>
-                                  <td>{order.customer_name}</td>
-                                  <td>{new Date(order.created_at).toLocaleDateString()}</td>
-                                  <td>{Number(order.total).toFixed(2)} L.E.</td>
-                                  <td>
-                                    <Badge bg={getStatusBg(order.status_id)} className="custom-badge">
-                                      {getStatusLabel(order.status_id)}
-                                    </Badge>
-                                  </td>
-                                  <td>
-                                    <button className="btn-action" onClick={() => handleOpenOrderDialog(order)}>
-                                      View
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </Table>
-                      )}
-                    </div>
-                  </Tab.Pane>
-
-                  {/* 2. PRODUCTS TAB */}
-                  <Tab.Pane eventKey="products">
-                    <div className="dashboard-card">
-                      <div className="card-header-flex">
-                        <h2>Products Inventory</h2>
-                        <button className="btn btn-gold custom-pill-btn-small" onClick={handleOpenAddProduct}>
-                          + Add Product
-                        </button>
-                      </div>
-                      {loading ? <p className="text-muted">Loading inventory...</p> : (
-                        <Table responsive className="custom-table borderless">
-                          <thead>
-                            <tr>
-                              <th>ID</th>
-                              <th>Product Name</th>
-                              <th>Stock Level</th>
-                              <th>Price</th>
-                              <th>Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {products.length === 0
-                              ? <tr><td colSpan="5" className="text-center text-muted">No products found.</td></tr>
-                              : products.map((product) => (
-                                <tr key={product.id} className="table-row-hover">
-                                  <td>{product.id}</td>
-                                  <td><strong>{product.name}</strong></td>
-                                  <td>
-                                    <span className={product.stock_quantity === 0 ? 'text-danger fw-bold' : ''}>
-                                      {product.stock_quantity} units
-                                    </span>
-                                  </td>
-                                  <td>{Number(product.price).toFixed(2)} L.E.</td>
-                                  <td><button className="btn-action">Edit</button></td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </Table>
-                      )}
-                    </div>
-                  </Tab.Pane>
-
-                  {/* 3. PROMO CODES TAB */}
-                  {userRole === '3' && (
-                    <Tab.Pane eventKey="discounts">
-                      <div className="dashboard-card">
-                        <div className="card-header-flex">
-                          <h2>Promo Codes</h2>
-                          <button className="btn btn-gold custom-pill-btn-small" onClick={handleOpenAddDiscount}>
-                            + New Code
-                          </button>
-                        </div>
-                        {loading ? <p className="text-muted">Loading codes...</p> : (
-                          <Table responsive className="custom-table borderless">
-                            <thead>
-                              <tr>
-                                <th>Code</th>
-                                <th>Type</th>
-                                <th>Value</th>
-                                <th>Min. Order</th>
-                                <th>Uses</th>
-                                <th>Expires</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {discountCodes.length === 0 ? (
-                                <tr><td colSpan="8" className="text-center text-muted">No codes found.</td></tr>
-                              ) : discountCodes.map((dc) => (
-                                <tr key={dc.id} className="table-row-hover">
-                                  <td><strong>{dc.code}</strong></td>
-                                  <td>{dc.discount_type === 'percentage' ? 'Percentage' : 'Fixed'}</td>
-                                  <td>{dc.discount_type === 'percentage' ? `${dc.discount_value}%` : `${Number(dc.discount_value).toFixed(2)} L.E.`}</td>
-                                  <td>{dc.min_order_amount ? `${Number(dc.min_order_amount).toFixed(2)} L.E.` : '—'}</td>
-                                  <td>{dc.times_used ?? 0} {dc.max_uses ? ` / ${dc.max_uses}` : ' / ∞'}</td>
-                                  <td>{dc.expires_at ? new Date(dc.expires_at).toLocaleDateString() : '—'}</td>
-                                  <td><Badge bg={dc.is_active ? 'success' : 'secondary'} className="custom-badge">{dc.is_active ? 'Active' : 'Inactive'}</Badge></td>
-                                  <td className="d-flex gap-2">
-                                    <button className={dc.is_active ? 'btn-action-danger' : 'btn-action'} onClick={() => handleToggleDiscount(dc.id, dc.is_active)}>
-                                      {dc.is_active ? 'Disable' : 'Enable'}
-                                    </button>
-                                    <button className="btn-action-danger" onClick={() => handleDeleteDiscount(dc.id)}>Delete</button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </Table>
-                        )}
-                      </div>
-                    </Tab.Pane>
-                  )}
-
-                  {/* 4. ACCOUNT SETTINGS TAB */}
-                  <Tab.Pane eventKey="settings">
-                    <div className="dashboard-settings-wrapper">
-                      <div className="dashboard-card">
-                        <div className="settings-header">
-                          <h2>Account Settings</h2>
-                          <p className="text-muted mt-3">Manage your personal admin profile and security.</p>
-                        </div>
-                        <div className="settings-placeholder" style={{ padding: '2rem 0', color: '#a89f91' }}>
-                          Profile management features coming soon...
-                        </div>
-                      </div>
-                    </div>
-                  </Tab.Pane>
-
-                  {/* 5. STAFF TAB */}
-                  {userRole === '3' && (
-                    <Tab.Pane eventKey="staff">
-                      <div className="dashboard-card">
-                        <div className="card-header-flex">
-                          <h2>Staff Management</h2>
-                          <button className="btn btn-gold custom-pill-btn-small" onClick={handleOpenAddStaff}>
-                            + Add New Admin
-                          </button>
-                        </div>
-                        <p className="text-muted">Manage your admin team below.</p>
-                        {loading ? <p className="text-muted">Loading staff...</p> : (
-                          <Table responsive className="custom-table borderless">
-                            <thead>
-                              <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Action</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {staff.map((member) => (
-                                <tr key={member.id} className="table-row-hover">
-                                  <td>{member.id}</td>
-                                  <td><strong>{member.name}</strong></td>
-                                  <td>{member.email}</td>
-                                  <td>
-                                    <Badge bg={member.role_id === 3 ? 'danger' : 'primary'} className="custom-badge">
-                                      {member.role_id === 3 ? 'Super Admin' : 'Admin'}
-                                    </Badge>
-                                  </td>
-                                  <td>
-                                    {member.role_id !== 3 && (
-                                      <button className="btn-action-danger" onClick={() => handleRemoveStaff(member.id)}>
-                                        Remove
-                                      </button>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </Table>
-                        )}
-                      </div>
-                    </Tab.Pane>
-                  )}
-
-                  {/* 6. DELETE ACCOUNT TAB */}
-                  <Tab.Pane eventKey="delete">
-                    <div className="dashboard-card">
-                      <div className="card-header-flex">
-                        <h2 className="text-danger">Delete Account</h2>
-                      </div>
-                      <p className="text-muted">Account deletion is permanent. Proceed with caution.</p>
-                      <div className="danger-zone-card mt-4">
-                        <div className="danger-text">
-                          <h5>Danger Zone</h5>
-                          <p>Permanently delete your admin account. This action cannot be undone.</p>
-                        </div>
-                        <button 
-                          className="btn-danger-pill" 
-                          onClick={handleOpenDeleteAccount}
-                        >
-                          Delete My Account
-                        </button>
-                      </div>
-                    </div>
-                  </Tab.Pane>
-
-                </Tab.Content>
-              </div>
+          {/* 2. PRODUCTS */}
+          <div className="dashboard-card">
+            <div className="card-header-flex">
+              <h2>Products Inventory</h2>
+              <button className="custom-pill-btn-small" onClick={handleOpenAddProduct}>+ Add Product</button>
             </div>
-          </Tab.Container>
+            {loading ? <p className="text-muted">Loading inventory...</p> : (
+              <Table responsive className="custom-table borderless">
+                <thead><tr><th>ID</th><th>Product Name</th><th>Stock Level</th><th>Price</th><th>Action</th></tr></thead>
+                <tbody>
+                  {products.length === 0
+                    ? <tr><td colSpan="5" className="text-center text-muted">No products found.</td></tr>
+                    : products.map((product) => (
+                      <tr key={product.id} className="table-row-hover">
+                        <td>{product.id}</td>
+                        <td><strong>{product.name}</strong></td>
+                        <td><span className={product.stock_quantity === 0 ? 'text-danger fw-bold' : ''}>{product.stock_quantity} units</span></td>
+                        <td>{Number(product.price).toFixed(2)} L.E.</td>
+                        <td><button className="btn-action">Edit</button></td>
+                      </tr>
+                    ))}
+                </tbody>
+              </Table>
+            )}
+          </div>
+
+          {/* 3. PROMO CODES */}
+          {userRole === '3' && (
+            <div className="dashboard-card">
+              <div className="card-header-flex">
+                <h2>Promo Codes</h2>
+                <button className="custom-pill-btn-small" onClick={handleOpenAddDiscount}>+ New Code</button>
+              </div>
+              {loading ? <p className="text-muted">Loading codes...</p> : (
+                <Table responsive className="custom-table borderless">
+                  <thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min. Order</th><th>Max Order</th><th>Uses</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    {discountCodes.length === 0
+                      ? <tr><td colSpan="9" className="text-center text-muted">No codes found.</td></tr>
+                      : discountCodes.map((dc) => (
+                        <tr key={dc.id} className="table-row-hover">
+                          <td><strong>{dc.code}</strong></td>
+                          <td>{dc.discount_type === 'percentage' ? 'Percentage' : 'Fixed'}</td>
+                          <td>{dc.discount_type === 'percentage' ? `${dc.discount_value}%` : `${Number(dc.discount_value).toFixed(2)} L.E.`}</td>
+                          <td>{dc.min_order_amount ? `${Number(dc.min_order_amount).toFixed(2)} L.E.` : '—'}</td>
+                          <td>{dc.max_order_amount ? `${Number(dc.max_order_amount).toFixed(2)} L.E.` : '—'}</td>
+                          <td>{dc.times_used ?? 0}{dc.max_uses ? ` / ${dc.max_uses}` : ' / ∞'}</td>
+                          <td>{dc.expires_at ? new Date(dc.expires_at).toLocaleDateString() : '—'}</td>
+                          <td><Badge bg={dc.is_active ? 'success' : 'secondary'} className="custom-badge">{dc.is_active ? 'Active' : 'Inactive'}</Badge></td>
+                          <td className="d-flex gap-2">
+                            <button className={dc.is_active ? 'btn-action-danger' : 'btn-action'} onClick={() => handleToggleDiscount(dc.id, dc.is_active)}>{dc.is_active ? 'Disable' : 'Enable'}</button>
+                            <button className="btn-action-danger" onClick={() => handleDeleteDiscount(dc.id)}>Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </Table>
+              )}
+            </div>
+          )}
+
+          {/* 4. ACCOUNT SETTINGS */}
+          <div className="dashboard-card">
+            <h2>Account Settings</h2>
+            <p className="text-muted mt-3">Manage your personal admin profile and security.</p>
+            <div style={{ padding: '2rem 0', color: '#a89f91' }}>Profile management features coming soon...</div>
+          </div>
+
+          {/* 5. STAFF */}
+          {userRole === '3' && (
+            <div className="dashboard-card">
+              <div className="card-header-flex">
+                <h2>Staff Management</h2>
+                <button className="custom-pill-btn-small" onClick={handleOpenAddStaff}>+ Add New Admin</button>
+              </div>
+              <p className="text-muted">Manage your admin team below.</p>
+              {loading ? <p className="text-muted">Loading staff...</p> : (
+                <Table responsive className="custom-table borderless">
+                  <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
+                  <tbody>
+                    {staff.map((member) => (
+                      <tr key={member.id} className="table-row-hover">
+                        <td>{member.id}</td>
+                        <td><strong>{member.name}</strong></td>
+                        <td>{member.email}</td>
+                        <td><Badge bg={member.role_id === 3 ? 'danger' : 'primary'} className="custom-badge">{member.role_id === 3 ? 'Super Admin' : 'Admin'}</Badge></td>
+                        <td>{member.role_id !== 3 && <button className="btn-action-danger" onClick={() => handleRemoveStaff(member.id)}>Remove</button>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </div>
+          )}
+
+          {/* 6. DELETE ACCOUNT */}
+          <div className="dashboard-card">
+            <div className="card-header-flex"><h2 className="text-danger">Delete Account</h2></div>
+            <p className="text-muted">Account deletion is permanent. Proceed with caution.</p>
+            <div className="danger-zone-card mt-4">
+              <div className="danger-text">
+                <h5>Danger Zone</h5>
+                <p>Permanently delete your admin account. This action cannot be undone.</p>
+              </div>
+              <button className="btn-danger-pill" onClick={handleOpenDeleteAccount}>Delete My Account</button>
+            </div>
+          </div>
+
         </div>
         <Footer />
       </div>
-
-      {/* ============================================================ */}
-      {/* THE PURE CSS DIALOG BOXES                                    */}
-      {/* ============================================================ */}
 
       {/* ADD STAFF DIALOG */}
       {showAddStaffDialog && (
@@ -587,49 +333,17 @@ const Dashboard = () => {
               <h3>Add New Admin</h3>
               <button className="close-btn" onClick={() => setShowAddStaffDialog(false)}>&times;</button>
             </div>
-            
             <Form onSubmit={handleAddStaff}>
               {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
               {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Full Name</Form.Label>
-                <Form.Control type="text" className="custom-input" placeholder="Enter full name" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })} required />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Email Address</Form.Label>
-                <Form.Control type="email" className="custom-input" placeholder="Enter email" value={staffForm.email} onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })} required />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Phone Number</Form.Label>
-                <Form.Control type="tel" className="custom-input" placeholder="Enter phone number" value={staffForm.phone} onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })} />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Assign Role</Form.Label>
-                <Form.Select 
-                  className="custom-input form-select" 
-                  value={staffForm.role_id} 
-                  onChange={(e) => setStaffForm({ ...staffForm, role_id: e.target.value })} 
-                  required
-                >
-                  <option value="2">Admin (Manage Orders & Products)</option>
-                  <option value="3">Super Admin (Full Access)</option>
-                </Form.Select>
-              </Form.Group>
-
-              <Form.Group className="mb-4">
-                <Form.Label className="fw-semibold">Password</Form.Label>
-                <Form.Control type="password" className="custom-input" placeholder="Set a temporary password" value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })} required minLength={6} />
-              </Form.Group>
-
+              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Full Name</Form.Label><Form.Control type="text" className="custom-input" placeholder="Enter full name" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })} required /></Form.Group>
+              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Email Address</Form.Label><Form.Control type="email" className="custom-input" placeholder="Enter email" value={staffForm.email} onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })} required /></Form.Group>
+              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Phone Number</Form.Label><Form.Control type="tel" className="custom-input" placeholder="Enter phone number" value={staffForm.phone} onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })} /></Form.Group>
+              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Assign Role</Form.Label><Form.Select className="custom-input form-select" value={staffForm.role_id} onChange={(e) => setStaffForm({ ...staffForm, role_id: e.target.value })} required><option value="2">Admin (Manage Orders & Products)</option><option value="3">Super Admin (Full Access)</option></Form.Select></Form.Group>
+              <Form.Group className="mb-4"><Form.Label className="fw-semibold">Password</Form.Label><Form.Control type="password" className="custom-input" placeholder="Set a temporary password" value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })} required minLength={6} /></Form.Group>
               <div className="dialog-footer">
                 <button type="button" className="btn btn-cancel" onClick={() => setShowAddStaffDialog(false)}>Cancel</button>
-                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>
-                  {submitting ? <Spinner animation="border" size="sm" /> : 'Add Admin'}
-                </button>
+                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Add Admin'}</button>
               </div>
             </Form>
           </div>
@@ -644,43 +358,19 @@ const Dashboard = () => {
               <h3>Add New Product</h3>
               <button className="close-btn" onClick={() => setShowAddProductDialog(false)}>&times;</button>
             </div>
-            
             <Form onSubmit={handleAddProduct}>
               {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
               {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Product Name</Form.Label>
-                <Form.Control type="text" className="custom-input" placeholder="e.g. Lavender Bliss" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} required />
-              </Form.Group>
-
+              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Product Name</Form.Label><Form.Control type="text" className="custom-input" placeholder="e.g. Lavender Bliss" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} required /></Form.Group>
               <div className="d-flex gap-3 mb-3">
-                  <Form.Group className="flex-fill">
-                  <Form.Label className="fw-semibold">Price (L.E.)</Form.Label>
-                  <Form.Control type="number" className="custom-input" placeholder="0.00" min="0" step="0.01" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} required />
-                  </Form.Group>
-
-                  <Form.Group className="flex-fill">
-                  <Form.Label className="fw-semibold">Stock Quantity</Form.Label>
-                  <Form.Control type="number" className="custom-input" placeholder="0" min="0" value={productForm.stock_quantity} onChange={(e) => setProductForm({ ...productForm, stock_quantity: e.target.value })} required />
-                  </Form.Group>
+                <Form.Group className="flex-fill"><Form.Label className="fw-semibold">Price (L.E.)</Form.Label><Form.Control type="number" className="custom-input" placeholder="0.00" min="0" step="0.01" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} required /></Form.Group>
+                <Form.Group className="flex-fill"><Form.Label className="fw-semibold">Stock Quantity</Form.Label><Form.Control type="number" className="custom-input" placeholder="0" min="0" value={productForm.stock_quantity} onChange={(e) => setProductForm({ ...productForm, stock_quantity: e.target.value })} required /></Form.Group>
               </div>
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Description</Form.Label>
-                <Form.Control as="textarea" className="custom-input" rows={2} placeholder="Describe the product..." value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} />
-              </Form.Group>
-
-              <Form.Group className="mb-4">
-                <Form.Label className="fw-semibold">Image URL</Form.Label>
-                <Form.Control type="url" className="custom-input" placeholder="https://..." value={productForm.image_url} onChange={(e) => setProductForm({ ...productForm, image_url: e.target.value })} />
-              </Form.Group>
-
+              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Description</Form.Label><Form.Control as="textarea" className="custom-input" rows={2} placeholder="Describe the product..." value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></Form.Group>
+              <Form.Group className="mb-4"><Form.Label className="fw-semibold">Image URL</Form.Label><Form.Control type="url" className="custom-input" placeholder="https://..." value={productForm.image_url} onChange={(e) => setProductForm({ ...productForm, image_url: e.target.value })} /></Form.Group>
               <div className="dialog-footer">
                 <button type="button" className="btn btn-cancel" onClick={() => setShowAddProductDialog(false)}>Cancel</button>
-                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>
-                  {submitting ? <Spinner animation="border" size="sm" /> : 'Add Product'}
-                </button>
+                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Add Product'}</button>
               </div>
             </Form>
           </div>
@@ -695,37 +385,22 @@ const Dashboard = () => {
               <h3>Order #{selectedOrder.id}</h3>
               <button className="close-btn" onClick={() => setShowOrderDialog(false)}>&times;</button>
             </div>
-            
             <Form onSubmit={handleUpdateOrderStatus}>
               {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
               {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-
               <div className="order-details-box mb-4">
                 <p className="mb-2"><strong>Customer:</strong> <span className="text-muted">{selectedOrder.customer_name}</span></p>
                 <p className="mb-2"><strong>Date:</strong> <span className="text-muted">{new Date(selectedOrder.created_at).toLocaleDateString()}</span></p>
                 <p className="mb-2"><strong>Total:</strong> <span className="fw-bold text-success">{Number(selectedOrder.total).toFixed(2)} L.E.</span></p>
                 <div className="d-flex align-items-center mt-3">
                   <strong className="me-2">Current Status:</strong>
-                  <Badge bg={getStatusBg(selectedOrder.status_id)} className="custom-badge fs-6">
-                    {getStatusLabel(selectedOrder.status_id)}
-                  </Badge>
+                  <Badge bg={getStatusBg(selectedOrder.status_id)} className="custom-badge fs-6">{getStatusLabel(selectedOrder.status_id)}</Badge>
                 </div>
               </div>
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Update Status</Form.Label>
-                <Form.Select className="custom-input form-select" value={newStatusId} onChange={(e) => setNewStatusId(e.target.value)} required>
-                  <option value="1">Processing</option>
-                  <option value="2">Shipped</option>
-                  <option value="3">Delivered</option>
-                </Form.Select>
-              </Form.Group>
-
+              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Update Status</Form.Label><Form.Select className="custom-input form-select" value={newStatusId} onChange={(e) => setNewStatusId(e.target.value)} required><option value="1">Processing</option><option value="2">Shipped</option><option value="3">Delivered</option></Form.Select></Form.Group>
               <div className="dialog-footer">
                 <button type="button" className="btn btn-cancel" onClick={() => setShowOrderDialog(false)}>Close</button>
-                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>
-                  {submitting ? <Spinner animation="border" size="sm" /> : 'Save Changes'}
-                </button>
+                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save Changes'}</button>
               </div>
             </Form>
           </div>
@@ -740,26 +415,13 @@ const Dashboard = () => {
               <h3 className="text-danger">Delete Account</h3>
               <button className="close-btn" onClick={() => setShowDeleteAccountDialog(false)}>&times;</button>
             </div>
-            
             <Form onSubmit={handleDeleteAccount}>
               {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-              
-              <Alert variant="warning" className="rounded-4 mb-4">
-                <strong>Warning:</strong> This action is permanent and cannot be undone. All of your data will be erased.
-              </Alert>
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Confirm Password</Form.Label>
-                <Form.Control type="password" className="custom-input" placeholder="Enter your password to confirm" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} required />
-              </Form.Group>
-
+              <Alert variant="warning" className="rounded-4 mb-4"><strong>Warning:</strong> This action is permanent and cannot be undone.</Alert>
+              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Confirm Password</Form.Label><Form.Control type="password" className="custom-input" placeholder="Enter your password to confirm" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} required /></Form.Group>
               <div className="dialog-footer">
-                <button type="button" className="btn-cancel" onClick={() => setShowDeleteAccountDialog(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-danger-pill" disabled={submitting}>
-                  {submitting ? <Spinner animation="border" size="sm" /> : 'Permanently Delete'}
-                </button>
+                <button type="button" className="btn-cancel" onClick={() => setShowDeleteAccountDialog(false)}>Cancel</button>
+                <button type="submit" className="btn-danger-pill" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Permanently Delete'}</button>
               </div>
             </Form>
           </div>
@@ -774,11 +436,9 @@ const Dashboard = () => {
               <h3>Create Promo Code</h3>
               <button className="close-btn" onClick={() => setShowAddDiscountDialog(false)}>&times;</button>
             </div>
-            
             <Form onSubmit={handleAddDiscountCode}>
               {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
               {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold">Discount Code</Form.Label>
                 <div className="d-flex gap-2">
@@ -786,54 +446,26 @@ const Dashboard = () => {
                   <button type="button" className="btn-action" onClick={generateRandomCode}>Random</button>
                 </div>
               </Form.Group>
-
               <div className="row">
-                <div className="col-md-6 mb-3">
-                  <Form.Label className="fw-semibold">Type</Form.Label>
-                  <Form.Select className="custom-input form-select" value={discountForm.discount_type} onChange={e => setDiscountForm({ ...discountForm, discount_type: e.target.value })}>
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="fixed">Fixed Amount (L.E.)</option>
-                  </Form.Select>
-                </div>
-                <div className="col-md-6 mb-3">
-                  <Form.Label className="fw-semibold">Value</Form.Label>
-                  <Form.Control type="number" className="custom-input" placeholder="e.g. 15" min="0" value={discountForm.discount_value} onChange={e => setDiscountForm({ ...discountForm, discount_value: e.target.value })} required />
-                </div>
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Type</Form.Label><Form.Select className="custom-input form-select" value={discountForm.discount_type} onChange={e => setDiscountForm({ ...discountForm, discount_type: e.target.value })}><option value="percentage">Percentage (%)</option><option value="fixed">Fixed Amount (L.E.)</option></Form.Select></div>
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Value</Form.Label><Form.Control type="number" className="custom-input" placeholder="e.g. 15" min="0" value={discountForm.discount_value} onChange={e => setDiscountForm({ ...discountForm, discount_value: e.target.value })} required /></div>
               </div>
-
               <div className="row">
-                <div className="col-md-6 mb-3">
-                  <Form.Label className="fw-semibold">Min. Order (L.E.) <span className="text-muted">(optional)</span></Form.Label>
-                  <Form.Control type="number" className="custom-input" placeholder="e.g. 200" min="0" value={discountForm.min_order_amount} onChange={e => setDiscountForm({ ...discountForm, min_order_amount: e.target.value })} />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <Form.Label className="fw-semibold">Max Order (L.E.) <span className="text-muted">(optional)</span></Form.Label>
-                  <Form.Control type="number" className="custom-input" placeholder="e.g. 1000" min="0" value={discountForm.max_order_amount} onChange={e => setDiscountForm({ ...discountForm, max_order_amount: e.target.value })} />
-                </div>
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Min. Order (L.E.) <span className="text-muted">(optional)</span></Form.Label><Form.Control type="number" className="custom-input" placeholder="e.g. 200" min="0" value={discountForm.min_order_amount} onChange={e => setDiscountForm({ ...discountForm, min_order_amount: e.target.value })} /></div>
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Max Order (L.E.) <span className="text-muted">(optional)</span></Form.Label><Form.Control type="number" className="custom-input" placeholder="e.g. 1000" min="0" value={discountForm.max_order_amount} onChange={e => setDiscountForm({ ...discountForm, max_order_amount: e.target.value })} /></div>
               </div>
-
               <div className="row">
-                <div className="col-md-6 mb-3">
-                  <Form.Label className="fw-semibold">Max Uses <span className="text-muted">(optional)</span></Form.Label>
-                  <Form.Control type="number" className="custom-input" placeholder="∞" min="1" value={discountForm.max_uses} onChange={e => setDiscountForm({ ...discountForm, max_uses: e.target.value })} />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <Form.Label className="fw-semibold">Expiry Date <span className="text-muted">(optional)</span></Form.Label>
-                  <Form.Control type="date" className="custom-input" value={discountForm.expires_at} onChange={e => setDiscountForm({ ...discountForm, expires_at: e.target.value })} />
-                </div>
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Max Uses <span className="text-muted">(optional)</span></Form.Label><Form.Control type="number" className="custom-input" placeholder="∞" min="1" value={discountForm.max_uses} onChange={e => setDiscountForm({ ...discountForm, max_uses: e.target.value })} /></div>
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Expiry Date <span className="text-muted">(optional)</span></Form.Label><Form.Control type="date" className="custom-input" value={discountForm.expires_at} onChange={e => setDiscountForm({ ...discountForm, expires_at: e.target.value })} /></div>
               </div>
-
               <div className="dialog-footer">
                 <button type="button" className="btn btn-cancel" onClick={() => setShowAddDiscountDialog(false)}>Cancel</button>
-                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>
-                  {submitting ? <Spinner animation="border" size="sm" /> : 'Create Code'}
-                </button>
+                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Create Code'}</button>
               </div>
             </Form>
           </div>
         </div>
       )}
-
     </>
   );
 };
