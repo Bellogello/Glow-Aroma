@@ -672,19 +672,26 @@ app.get('/admin/discount-codes', async (req, res) => {
     }
 });
 
-// 2. Create a new code
+// 2. Create a new code (UPDATED WITH MAX ORDER AMOUNT)
 app.post('/admin/discount-codes', async (req, res) => {
-    const { code, discount_type, discount_value, min_order_amount, max_uses, expires_at } = req.body;
+    const { code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at } = req.body;
     try {
         await db.promise().query(
             `INSERT INTO discount_codes 
-            (code, discount_type, discount_value, min_order_amount, max_uses, expires_at) 
-            VALUES (?, ?, ?, ?, ?, ?)`,
-            [code, discount_type, discount_value, min_order_amount || 0, max_uses || null, expires_at || null]
+            (code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+                code, 
+                discount_type, 
+                discount_value, 
+                min_order_amount || 0, 
+                max_order_amount || null, 
+                max_uses || null, 
+                expires_at || null
+            ]
         );
         res.status(201).json({ message: "Discount code created" });
     } catch (err) {
-        // Now it safely catches the ER_DUP_ENTRY without crashing!
         if (err.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ message: "This discount code already exists." });
         }

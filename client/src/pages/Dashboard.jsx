@@ -36,9 +36,9 @@ const Dashboard = () => {
   const [newStatusId, setNewStatusId] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
 
-  // --- PROMO FORM STATE ---
+// --- PROMO FORM STATE ---
   const [discountForm, setDiscountForm] = useState({ 
-    code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_uses: '', expires_at: '' 
+    code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_order_amount: '', max_uses: '', expires_at: '' 
   });
 
   // --- FEEDBACK STATES ---
@@ -256,9 +256,10 @@ const Dashboard = () => {
     setDiscountForm({ ...discountForm, code: result });
   };
 
-  const handleAddDiscountCode = async (e) => {
+    const handleAddDiscountCode = async (e) => {
     e.preventDefault(); 
-    const { code, discount_type, discount_value, min_order_amount, max_uses, expires_at } = discountForm;
+    // Add max_order_amount here:
+    const { code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at } = discountForm;
     if (!code.trim() || !discount_value) { setDialogError('Code and discount value are required.'); return; }
     
     setSubmitting(true); 
@@ -273,10 +274,12 @@ const Dashboard = () => {
           discount_type,
           discount_value: Number(discount_value),
           min_order_amount: min_order_amount ? Number(min_order_amount) : null,
+          max_order_amount: max_order_amount ? Number(max_order_amount) : null, // <-- ADDED
           max_uses: max_uses ? Number(max_uses) : null,
           expires_at: expires_at || null,
         }),
       });
+      // ... rest of the function stays exactly the same
       if (!res.ok) throw new Error('Failed to create discount code.');
       setDialogSuccess('Discount code created successfully!');
       fetchDashboardData();
@@ -798,10 +801,16 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Min. Order Amount (L.E.) <span className="text-muted">(optional)</span></Form.Label>
-                <Form.Control type="number" className="custom-input" placeholder="e.g. 200" min="0" value={discountForm.min_order_amount} onChange={e => setDiscountForm({ ...discountForm, min_order_amount: e.target.value })} />
-              </Form.Group>
+              <div className="row">
+                <div className="col-md-6 mb-3">
+                  <Form.Label className="fw-semibold">Min. Order (L.E.) <span className="text-muted">(optional)</span></Form.Label>
+                  <Form.Control type="number" className="custom-input" placeholder="e.g. 200" min="0" value={discountForm.min_order_amount} onChange={e => setDiscountForm({ ...discountForm, min_order_amount: e.target.value })} />
+                </div>
+                <div className="col-md-6 mb-3">
+                  <Form.Label className="fw-semibold">Max Order (L.E.) <span className="text-muted">(optional)</span></Form.Label>
+                  <Form.Control type="number" className="custom-input" placeholder="e.g. 1000" min="0" value={discountForm.max_order_amount} onChange={e => setDiscountForm({ ...discountForm, max_order_amount: e.target.value })} />
+                </div>
+              </div>
 
               <div className="row">
                 <div className="col-md-6 mb-3">
