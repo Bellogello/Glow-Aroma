@@ -10,24 +10,23 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize }) => {
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    const isMobile = window.innerWidth < 768;
+    const size = isMobile ? 280 : 400;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#fdf6f0');
 
-    // Camera position matching your Blender view
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    camera.position.set(0, 4, 4);
-    
-    camera.rotation.set(
-      THREE.MathUtils.degToRad(68.143),
-      THREE.MathUtils.degToRad(0.022),
-      THREE.MathUtils.degToRad(46.693)
-    );
+    camera.position.set(0, 6, 4);
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setSize(400, 400);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.shadowMap.enabled = true;
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: !isMobile,
+      powerPreference: 'high-performance',
+    });
+    renderer.setSize(size, size);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.shadowMap.enabled = !isMobile;
     rendererRef.current = renderer;
 
     scene.add(new THREE.AmbientLight(0xfff5e0, 1.5));
@@ -42,10 +41,8 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize }) => {
     controls.enableDamping = true;
     controls.enablePan = false;
     controls.enableZoom = false;
-    controls.minDistance = 2;
-    controls.maxDistance = 10;
-    controls.minPolarAngle = Math.PI / 6; 
-    controls.maxPolarAngle = Math.PI / 2.5;  
+    controls.minPolarAngle = Math.PI / 6;
+    controls.maxPolarAngle = Math.PI / 2.5;
     controls.target.set(0, 1, 0);
     controls.update();
 
@@ -58,7 +55,7 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize }) => {
         gltf.scene.traverse((obj) => {
           if (obj.isMesh) {
             obj.material = obj.material.clone();
-            obj.castShadow = true;
+            obj.castShadow = !isMobile;
           }
         });
 
@@ -79,7 +76,7 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize }) => {
           });
         }
 
-        // Apply any colors that were already selected before model loaded
+        // Apply colors if already selected before model loaded
         if (cupColor && meshesRef.current['cup']) {
           meshesRef.current['cup'].traverse((child) => {
             if (child.isMesh) child.material.color.set(cupColor);
@@ -95,14 +92,16 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize }) => {
       (err) => console.error('Failed to load model:', err)
     );
 
-    // ✅ THIS WAS MISSING — frameId declared and animate() actually called
     let frameId;
-    const animate = () => {
+    let lastTime = 0;
+    const animate = (time) => {
       frameId = requestAnimationFrame(animate);
+      if (time - lastTime < 32) return; // cap at ~30fps
+      lastTime = time;
       controls.update();
       renderer.render(scene, camera);
     };
-    animate(); // ← this line was missing in your file
+    animate();
 
     return () => {
       cancelAnimationFrame(frameId);
@@ -140,12 +139,15 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize }) => {
     });
   }, [cupSize]);
 
+  const isMobile = window.innerWidth < 768;
+  const canvasSize = isMobile ? '280px' : '400px';
+
   return (
     <canvas
       ref={canvasRef}
       style={{
-        width: '400px',
-        height: '400px',
+        width: canvasSize,
+        height: canvasSize,
         borderRadius: '16px',
         cursor: 'grab',
       }}

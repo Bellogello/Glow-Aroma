@@ -1,3 +1,6 @@
+/* Must be at the absolute top of the file! */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
 /* --- GLOBAL FIXES --- */
 html, body {
   margin: 0 !important;
@@ -9,11 +12,23 @@ html, body {
 
 /* --- PAGE WRAPPER --- */
 .AllProducts {
-  padding: 2vw; /* Replaces 23px with a scalable viewport width */
+  padding: 2vw; 
   width: 100%;
-  max-width: 1200px;
+  max-width: 75rem; /* Fluid replacement for 1200px */
   margin: 0 auto; 
   box-sizing: border-box;
+}
+
+.products-title {
+  font-family: 'Playfair Display', serif; 
+  font-size: 3rem;
+  color: #4a3728; 
+  text-align: center;
+  margin-top: 3rem;
+  margin-bottom: 2rem;
+  font-weight: 400;
+  letter-spacing: 0.15rem; 
+  text-transform: uppercase; 
 }
 
 h1 {
@@ -23,22 +38,22 @@ h1 {
 }
 
 .product-list {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr); 
-    gap: 5vw;
-    
-    width: 100%;
-    margin: 4vh auto; 
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 3vw;
+  width: 100%;
+  margin: 4vh auto; 
 }
 
 /* =========================================
-   MOBILE RESPONSIVENESS (Under 768px)
+   MOBILE RESPONSIVENESS (Under 48rem / ~768px)
 ========================================= */
-@media (max-width: 768px) {
+@media (max-width: 48rem) {
   .product-list {
-    grid-template-columns: 1fr; /* Stacks to 1 column on phones */
-    gap: 5vw; 
-    width: 85% !important; 
+    /* FIX: 2 columns stops them from becoming giant squares! */
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 4vw; 
+    width: 95% !important; 
     margin: 0 auto !important; 
   }
   
@@ -46,16 +61,7 @@ h1 {
     padding: 3vw; 
   }
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
-
-.products-title {
-  font-family: 'Playfair Display', serif; /* Elegant high-end font */
-  font-size: 3rem;
-  color: #4a3728; /* Your dark brown brand color */
-  text-align: center;
-  margin-top: 50px;
-  margin-bottom: 30px;
-  font-weight: 400;
-  letter-spacing: 2px; /* Adds sophisticated breathing room between letters */
-  text-transform: uppercase; /* Optional: makes it look like a boutique label */
-}}
+  .products-title {
+    font-size: 2rem; /* Shrinks the elegant title so it fits mobile screens */
+  }
+}

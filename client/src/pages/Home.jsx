@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import HeroSlideshow from "../components/heroslideshow";
 import Footer from '../components/Footer';
-import '../styles/home.css';
+import '../styles/Home.css';
 
 const Home = () => {
   const scrollRef = useRef(null);

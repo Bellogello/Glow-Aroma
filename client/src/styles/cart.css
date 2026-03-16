@@ -91,89 +91,95 @@ button:hover{
     text-decoration: none;
 }
 
-/* --- CART PAGE STYLES --- */
+/* --- CART PAGE STYLES (PIXEL-FREE) --- */
 
-/* Centers the whole cart area */
+/* Universal box-sizing so padding doesn't break the layout */
+.cart-content, .cart-content * {
+  box-sizing: border-box;
+}
+
+/* Main Container - Uses percentages to guarantee breathing room on any screen */
 .cart-content {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 0 20px;
+  width: 90%; 
+  max-width: 50rem; 
+  margin: 2rem auto;
 }
 
-/* The message when the cart is empty */
-.cart-content h3 {
-  text-align: center;
-  color: #5a4a3a;
-  margin-top: 50px;
-}
-
-/* Individual Cart Item Cards */
+/* The Item Cards */
 .cart-item {
   background-color: #ffffff;
-  border-radius: 20px;
-  padding: 25px;
-  margin-bottom: 20px;
-  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05); /* Soft premium shadow */
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.03);
+  border: 0.1rem solid #f0ebe1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.75rem;
   color: #5a4a3a;
+  width: 100%;
 }
 
-/* Item Title */
+/* Title */
 .cart-item h3 {
   margin: 0;
-  color: #5a4a3a;
-  border-bottom: 2px solid #f5efe1; /* Soft line under the title */
-  padding-bottom: 15px;
-  margin-bottom: 5px;
+  color: #4a3728;
+  border-bottom: 0.1rem solid #f0ebe1;
+  padding-bottom: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: bold;
 }
 
-/* Quantity Controls Area */
+.cart-item p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* The Quantity Row - Stripped of the ugly border */
 .quantity-wrapper {
   display: flex;
   align-items: center;
-  gap: 15px;
-  margin-top: 10px;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  background: transparent;
+  border: none;
 }
 
-/* The pill-shaped box holding the + and - buttons */
+/* The tiny pill just for the + / - buttons */
 .quantity-controls {
   display: flex;
   align-items: center;
+  gap: 1rem;
   background-color: #fdfbf7;
-  border-radius: 50px;
-  padding: 5px 10px;
-  border: 1px solid #e0dcd3;
+  border-radius: 3rem;
+  padding: 0.25rem 0.75rem;
+  border: 0.1rem solid #e0dcd3;
 }
 
-/* The + and - buttons */
 .btn-qty {
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 1.25rem;
   color: #5a4a3a;
   cursor: pointer;
-  width: 35px;
-  height: 35px;
   display: flex;
   justify-content: center;
   align-items: center;
-  border-radius: 50%;
-  transition: background-color 0.2s;
+  transition: opacity 0.2s ease;
 }
 
 .btn-qty:hover {
-  background-color: #D2C9B8;
+  opacity: 0.6;
 }
 
 .qty-amount {
   font-weight: bold;
-  min-width: 30px;
+  font-size: 1.1rem;
+  min-width: 1.5rem;
   text-align: center;
 }
 
-/* The Remove Button */
+/* The Remove Link - Tucked cleanly into the bottom right */
 .btn-remove {
   align-self: flex-start;
   background-color: transparent;
@@ -192,40 +198,43 @@ button:hover{
   color: white;
 }
 
-/* The Total / Checkout Box at the bottom */
+/* The Checkout Box */
 .cart-summary {
   background-color: #D2C9B8;
-  border-radius: 30px;
-  padding: 40px;
+  border-radius: 1.25rem;
+  padding: 1.5rem;
   text-align: center;
-  margin-top: 50px;
-  color: #5a4a3a;
-  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05);
+  margin-top: 2rem;
+  margin-bottom: 3rem;
+  color: #4a3728;
+  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.05);
+  width: 100%;
 }
 
 .cart-summary h2 {
-  margin-bottom: 25px;
+  margin-bottom: 1.5rem;
   font-weight: bold;
+  font-size: 1.5rem;
 }
 
-/* The Checkout Button matching your brand */
 .cart-summary .btn-primary {
-  background-color: #5a4a3a !important;
+  background-color: #4a3728 !important;
   border: none !important;
-  color: white;
-  padding: 15px 30px;
-  border-radius: 50px;
-  font-size: 18px;
+  color: #f5efe1;
+  padding: 1rem;
+  border-radius: 3rem;
+  font-size: 1.1rem;
   font-weight: bold;
   cursor: pointer;
   transition: background-color 0.2s;
   width: 100%;
-  max-width: 350px;
 }
 
 .cart-summary .btn-primary:hover {
-  background-color: #43362a !important;
+  background-color: #76594C !important;
 }
+
+/* Empty Cart State */
 .empty-cart-container {
   display: flex;
   flex-direction: column;
@@ -235,38 +244,38 @@ button:hover{
   text-align: center;
 }
 
-/* The Animation */
 @keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
-  100% { transform: translateY(0px); }
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-1rem); }
+  100% { transform: translateY(0); }
 }
 
 .floating-icon {
-  font-size: 5rem;
-  margin-bottom: 20px;
-  animation: float 3s ease-in-out infinite; /* Smooth, slow loop */
-  filter: drop-shadow(0 10px 15px rgba(74, 55, 40, 0.2));
+  margin-bottom: 1.25rem;
+  animation: float 3s ease-in-out infinite; 
 }
 
 .empty-cart-text {
   font-family: 'Playfair Display', serif;
   color: #4a3728;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .shop-now-btn {
-  margin-top: 25px;
-  padding: 12px 30px;
+  margin-top: 1.5rem;
+  padding: 0.75rem 2rem;
   background-color: #4a3728;
   color: #f5efe1;
   border: none;
-  border-radius: 25px;
+  border-radius: 2rem;
   transition: all 0.3s ease;
   text-decoration: none;
+  font-weight: bold;
 }
 
 .shop-now-btn:hover {
   background-color: #76594C;
   transform: scale(1.05);
+  color: #f5efe1;
 }
