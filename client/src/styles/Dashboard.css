@@ -1,251 +1,419 @@
-/* Overall Page Background */
+/* ========================================= */
+/* --- GLOBAL DASHBOARD WRAPPERS ---         */
+/* ========================================= */
 .dashboard-bg {
   background-color: #fdfbf7;
   min-height: 100vh;
+  width: 100%;
 }
 
 .dashboard-container {
-  padding: 40px;
-  max-width: 1400px;
+  padding: 2.5rem;
+  max-width: 87.5rem;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 /* ========================================= */
-/* --- THE FORCED FLEXBOX LAYOUT --- */
+/* --- THE LAYOUT (GAPS BETWEEN BOXES) ---   */
 /* ========================================= */
 .dashboard-layout {
   display: flex !important;
   flex-direction: row !important;
-  flex-wrap: nowrap !important; /* Absolutely prevents stacking */
-  gap: 40px; 
-  align-items: flex-start; 
+  flex-wrap: nowrap !important;
+  gap: 4rem !important; /* 🔥 INCREASED: Was 2.5rem, now 4rem for a huge, airy gap */
+  align-items: flex-start;
 }
 
-/* --- SIDEBAR STYLES --- */
+/* ========================================= */
+/* --- SIDEBAR PANEL (THE MAIN BOX) ---      */
+/* ========================================= */
 .dashboard-sidebar {
-  width: 280px !important; 
-  min-width: 280px !important; /* Locks the width */
-  max-width: 280px !important;
-  background-color: #D2C9B8; 
-  border-radius: 20px;
-  padding: 30px 20px;
-  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05);
+  width: 17.5rem !important;
+  min-width: 17.5rem !important;
+  max-width: 17.5rem !important;
+  background-color: #ffffff; /* Clean white card */
+  border: 1px solid #e0dcd3;
+  border-radius: 1.25rem;
+  padding: 2rem 1.5rem;
+  box-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
 }
 
 .sidebar-title {
-  color: #5a4a3a;
-  font-weight: bold;
+  color: #4a3728;
+  font-weight: 800;
   text-align: center;
-  margin-bottom: 30px;
-  border-bottom: 2px solid rgba(90, 74, 58, 0.1);
-  padding-bottom: 15px;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #fdfbf7;
+  padding-bottom: 1rem;
+  font-size: 1.3rem;
+  letter-spacing: 0.03rem;
 }
 
-/* Sidebar Links */
+/* The "Inner Tray" holding the buttons */
 .custom-sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 8px; 
+  gap: 0.75rem; 
+  padding: 1.25rem !important; /* The big beige box padding */
+  margin: 0 !important;
+  width: 100%;
+  background-color: #fdfbf7; 
+  border: 1px solid #ede8df;
+  border-radius: 1.25rem;
+  box-sizing: border-box;
 }
 
+.custom-sidebar-nav .nav-item {
+  width: 100%;
+  margin: 0 !important;
+  padding: 0;
+}
+
+/* The Signature Pill Buttons Inside the Tray */
 .custom-sidebar-nav .nav-link {
   color: #5a4a3a !important;
   font-weight: 600;
-  border-radius: 50px !important; 
-  padding: 12px 20px !important;
-  transition: all 0.2s ease;
+  background-color: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 3rem !important;
+  padding: 0.875rem 1.5rem !important;
+  transition: all 0.3s ease;
   cursor: pointer;
   text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+  display: block;
+  margin: 0 !important;
+  text-decoration: none !important;
 }
 
 .custom-sidebar-nav .nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.4);
+  background-color: #f5efe1 !important;
+  color: #4a3728 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.03);
 }
 
-/* The Active (Selected) Tab */
 .custom-sidebar-nav .nav-link.active {
-  background-color: #5a4a3a !important; 
+  background-color: #4a3728 !important;
   color: #ffffff !important;
-  box-shadow: 0px 4px 10px rgba(90, 74, 58, 0.2);
+  box-shadow: 0 0.25rem 1rem rgba(74, 55, 40, 0.2);
+  transform: translateY(-2px);
 }
 
-/* --- MAIN CONTENT AREA --- */
+/* ========================================= */
+/* --- MAIN CONTENT AREA & CARDS ---         */
+/* ========================================= */
 .dashboard-content-area {
-  flex: 1 !important; /* Takes up exactly the remaining space */
-  min-width: 0 !important; /* Prevents large tables from breaking the layout */
+  flex: 1 !important;
+  min-width: 0 !important;
   width: 100%;
+  /* This creates the vertical gap between stacked sections */
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem !important; 
 }
 
+/* The Individual Cards (Orders, Inventory, etc.) */
 .dashboard-card {
   background-color: #ffffff;
-  border-radius: 20px;
-  padding: 40px;
-  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05);
-  min-height: 60vh;
+  border-radius: 1.25rem;
+  padding: 2.5rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.05);
+  /* Remove the min-height so they don't stretch to touch each other */
+  min-height: auto !important; 
+  border: 1px solid #e0dcd3;
+  box-sizing: border-box;
+  /* Adds a gap if you have multiple divs inside one tab */
+  margin-bottom: 2rem; 
 }
 
-.dashboard-card h2 {
-  color: #5a4a3a;
-  font-weight: bold;
-  margin-bottom: 0;
+/* Ensure the background of the whole page is clear so gaps are visible */
+.dashboard-bg {
+  background-color: #fdfbf7; /* This warm white makes the white cards "pop" */
+  min-height: 100vh;
 }
 
-.card-header-flex {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
+/* ========================================= */
+/* --- TABLES & BUTTONS ---                  */
+/* ========================================= */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* --- CUSTOM TABLE STYLING --- */
 .custom-table {
-  margin-top: 20px;
+  margin-top: 1.25rem;
   border-collapse: separate;
-  border-spacing: 0 10px; 
+  border-spacing: 0 0.625rem;
+  width: 100%;
 }
 
 .custom-table th {
   background-color: #fdfbf7;
   color: #7a6a5a;
   border: none;
-  padding: 15px;
+  padding: 0.9375rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
-/* Rounded corners for the table headers */
-.custom-table th:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
-.custom-table th:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+.custom-table th:first-child { border-top-left-radius: 0.625rem; border-bottom-left-radius: 0.625rem; }
+.custom-table th:last-child { border-top-right-radius: 0.625rem; border-bottom-right-radius: 0.625rem; }
 
 .custom-table td {
-  padding: 20px 15px;
+  padding: 1.25rem 0.9375rem;
   vertical-align: middle;
   color: #5a4a3a;
   border-top: 1px solid #fdfbf7;
   border-bottom: 1px solid #fdfbf7;
+  white-space: nowrap;
 }
 
-/* Badges for Order Status */
 .custom-badge {
-  padding: 8px 12px;
-  border-radius: 50px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 3rem;
   font-weight: normal;
-  font-size: 13px;
-  letter-spacing: 0.5px;
+  font-size: 0.85rem;
+  letter-spacing: 0.03rem;
 }
 
-/* Action Buttons (View/Edit) */
-.btn-action {
+.btn-action, .btn-action-danger {
   background-color: transparent;
-  color: #5a4a3a;
-  border: 1px solid #D2C9B8;
-  border-radius: 50px;
-  padding: 6px 16px;
-  font-size: 14px;
+  border-radius: 3rem;
+  padding: 0.375rem 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
   transition: all 0.2s;
   cursor: pointer;
 }
+.btn-action { color: #5a4a3a; border: 1px solid #D2C9B8; }
+.btn-action:hover { background-color: #D2C9B8; }
+.btn-action-danger { color: #dc3545; border: 1px solid #f5c6cb; }
+.btn-action-danger:hover { background-color: #dc3545; color: white; }
 
-.btn-action:hover {
-  background-color: #D2C9B8;
-}
-
-/* Small Pill Button for "Add Product" */
 .custom-pill-btn-small {
   background-color: #5a4a3a !important;
   border: none !important;
   color: white;
-  padding: 10px 25px;
-  border-radius: 50px;
+  padding: 0.625rem 1.5rem;
+  border-radius: 3rem;
   font-weight: bold;
   transition: background-color 0.2s ease;
+  white-space: nowrap;
 }
+.custom-pill-btn-small:hover { background-color: #43362a !important; color: white; }
 
-.custom-pill-btn-small:hover {
-  background-color: #43362a !important;
-  color: white;
-}
-
-/* Changed to 768px so it only stacks on actual phones/tablets, not laptops */
-@media (max-width: 768px) {
-  .dashboard-layout {
-    flex-direction: column !important;
-  }
-  .dashboard-sidebar {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-}
 /* ========================================= */
-/* --- CUSTOM DIALOG BOX OVERLAY --- */
+/* --- DIALOG BOXES ---                      */
 /* ========================================= */
-
 .dialog-overlay {
   position: fixed;
-  top: 0; 
-  left: 0; 
-  right: 0; 
-  bottom: 0;
-  background-color: rgba(90, 74, 58, 0.6); /* Dark brown tint */
-  backdrop-filter: blur(5px); /* Premium blur effect */
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(90, 74, 58, 0.6);
+  backdrop-filter: blur(5px);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999; /* Forces it over absolutely everything */
+  z-index: 9999;
+  padding: 1rem;
 }
 
 .dialog-box {
   background-color: #ffffff;
   width: 100%;
-  max-width: 500px;
-  padding: 35px;
-  border-radius: 20px;
-  box-shadow: 0px 20px 50px rgba(0, 0, 0, 0.2);
-  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  position: relative;
+  max-width: 31.25rem;
+  padding: 2.1875rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 1.25rem 3.125rem rgba(0, 0, 0, 0.2);
+  animation: popIn 0.3s ease-out;
   max-height: 90vh;
-  overflow-y: auto; /* Adds scroll if the screen is tiny */
+  overflow-y: auto;
 }
 
 @keyframes popIn {
-  from { transform: scale(0.8); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .dialog-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 1.25rem;
   border-bottom: 2px solid #fdfbf7;
-  padding-bottom: 15px;
+  padding-bottom: 0.9375rem;
+}
+.dialog-header h3 { margin: 0; color: #5a4a3a; font-weight: bold; }
+.close-btn { background: none; border: none; font-size: 1.75rem; color: #a9a096; cursor: pointer; transition: color 0.2s; }
+.close-btn:hover { color: #dc3545; }
+
+.dialog-box .form-label { display: block; color: #4a3728; margin-bottom: 0.3125rem; font-weight: 600; }
+.custom-input { width: 100%; padding: 0.75rem 0.9375rem; border: 1px solid #e0dcd3; border-radius: 0.625rem; font-size: 1rem; color: #5a4a3a; background-color: #fdfbf7; box-sizing: border-box; transition: all 0.3s ease; }
+.custom-input:focus { outline: none; border-color: #4a3728; box-shadow: 0 0 0 0.1875rem rgba(74, 55, 40, 0.1); }
+.dialog-box .mb-3, .dialog-box .mb-4 { margin-bottom: 1.25rem !important; }
+
+.dialog-footer { display: flex; justify-content: flex-end; gap: 0.9375rem; margin-top: 1.5625rem; padding-top: 1.25rem; border-top: 2px solid #fdfbf7; }
+.btn-cancel { background-color: transparent; border: 2px solid #e0dcd3; color: #7a6a5a; padding: 0.625rem 1.5rem; border-radius: 3rem; font-weight: bold; cursor: pointer; transition: all 0.2s ease; }
+.btn-cancel:hover { background-color: #f5efe1; color: #4a3728; border-color: #d2c9b8; }
+.btn-gold-solid { background-color: #4a3728; border: none; color: #f5efe1; padding: 0.625rem 1.5rem; border-radius: 3rem; font-weight: bold; cursor: pointer; transition: background-color 0.2s ease; }
+.btn-gold-solid:hover { background-color: #76594C; }
+
+/* ========================================= */
+/* --- MOBILE RESPONSIVE TWEAKS ---          */
+/* ========================================= */
+@media (max-width: 48rem) {
+  .dashboard-content-area {
+    gap: 2rem !important;
+    margin-top: 2rem;
+  }
+  .dashboard-container {
+    padding: 1.5rem !important;
+  }
+
+  .dashboard-layout {
+    flex-direction: column !important;
+    gap: 1.5rem; /* Distinct gap between mobile top-bar and main card */
+  }
+
+  .dashboard-sidebar {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    padding: 1.25rem;
+  }
+
+  .sidebar-title {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+  }
+
+  /* FIXED HORIZONTAL SCROLLING */
+  .custom-sidebar-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important; /* Forces items into one row */
+    overflow-x: auto !important; /* Turns on horizontal scroll */
+    -webkit-overflow-scrolling: touch !important; 
+    gap: 0.5rem;
+    padding: 0.75rem !important;
+    margin: 0 !important;
+    width: 100%;
+    border-radius: 1rem;
+  }
+
+  /* Hides the scrollbar visually but keeps the swipe function */
+  .custom-sidebar-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* THE FIX: Prevents the pills from shrinking so they overflow properly */
+  .custom-sidebar-nav .nav-item {
+    flex: 0 0 auto !important; 
+    width: auto !important;
+  }
+
+  .custom-sidebar-nav .nav-link {
+    padding: 0.6rem 1.2rem !important;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+  
+  /* Disable the hover jump on touchscreens */
+  .custom-sidebar-nav .nav-link:hover,
+  .custom-sidebar-nav .nav-link.active {
+    transform: none !important;
+  }
+
+  .dashboard-card {
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .card-header-flex {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .dialog-box {
+    padding: 1.5rem;
+  }
+}
+/* ========================================= */
+/* --- DANGER ZONE (SETTINGS TAB) ---        */
+/* ========================================= */
+
+/* The Container that pushes to bottom */
+.danger-zone-container {
+  padding-top: 3rem;
 }
 
-.dialog-header h3 {
-  margin: 0;
-  color: #5a4a3a;
-  font-weight: bold;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 28px;
-  color: #a9a096;
-  cursor: pointer;
-  line-height: 1;
-  transition: color 0.2s;
-}
-
-.close-btn:hover {
-  color: #dc3545; /* Red on hover */
-}
-
-.dialog-footer {
+.danger-zone-card {
+  background-color: #fff8f8; /* Very soft red tint */
+  border: 1px solid #f5e1e1;
+  border-left: 5px solid #dc3545; /* Bold red accent on the side */
+  border-radius: 1rem;
+  padding: 1.5rem 2rem;
   display: flex;
-  justify-content: flex-end;
-  gap: 15px;
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 2px solid #fdfbf7;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.danger-text h5 {
+  color: #dc3545;
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+  font-size: 1.1rem;
+}
+
+.danger-text p {
+  color: #8a7a7a;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* The Styled Delete Button */
+.btn-danger-pill {
+  background-color: transparent;
+  color: #dc3545;
+  border: 2px solid #dc3545;
+  border-radius: 3rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-danger-pill:hover:not(:disabled) {
+  background-color: #dc3545;
+  color: #ffffff;
+  box-shadow: 0 0.25rem 0.75rem rgba(220, 53, 69, 0.2);
+}
+
+/* ADDED: Makes it look inactive when submitting */
+.btn-danger-pill:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: #e5939a;
+  color: #e5939a;
+}
+/* Responsive fix for the Danger Zone */
+@media (max-width: 48rem) {
+  .danger-zone-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 1.5rem;
+  }
+  
+  .btn-danger-pill {
+    width: 100%;
+  }
 }

@@ -6,11 +6,8 @@ import '../styles/Dashboard.css';
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
 
-
-  const Dashboard = () => {
-
+const Dashboard = () => {
   useTitle("Dashboard");
-
   const navigate = useNavigate();
 
   // --- AUTH & ROLES ---
@@ -22,6 +19,7 @@ import Footer from '../components/Footer';
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [staff, setStaff] = useState([]);
+  const [discountCodes, setDiscountCodes] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // --- DIALOG VISIBILITY STATES ---
@@ -29,13 +27,19 @@ import Footer from '../components/Footer';
   const [showAddProductDialog, setShowAddProductDialog] = useState(false);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+  const [showAddDiscountDialog, setShowAddDiscountDialog] = useState(false);
 
   // --- FORM STATES ---
-  const [staffForm, setStaffForm] = useState({ name: '', email: '', phone: '', password: '' });
+  const [staffForm, setStaffForm] = useState({ name: '', email: '', phone: '', password: '', role_id: '2' });
   const [productForm, setProductForm] = useState({ name: '', price: '', stock_quantity: '', description: '', image_url: '' });
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [newStatusId, setNewStatusId] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
+
+  // --- PROMO FORM STATE ---
+  const [discountForm, setDiscountForm] = useState({ 
+    code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_uses: '', expires_at: '' 
+  });
 
   // --- FEEDBACK STATES ---
   const [dialogError, setDialogError] = useState('');
@@ -43,49 +47,38 @@ import Footer from '../components/Footer';
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // Force it to a string so it doesn't break if it reads 'null' or 'undefined'
     const roleId = String(localStorage.getItem('roleId')); 
     const uId = localStorage.getItem('userId');
     
     // ==========================================
-    // 🚨 TEMPORARILY DISABLED FOR STYLING 🚨
-    // ==========================================
-    // if (roleId !== '2' && roleId !== '3') {
-    //   alert('Access Denied: Admin permissions required.');
-    //   navigate('/');
-    // } else {
-    //   setIsAuthorized(true);
-    //   setUserRole(roleId);
-    //   setUserId(uId);
-    //   fetchDashboardData();
-    // }
-
-    // ==========================================
     // 🔓 TEMPORARY VIP PASS (DELETE THIS LATER) 🔓
     // ==========================================
-    setIsAuthorized(true); // Tells React to render the page instead of returning null
-    setUserRole('3');      // Fakes being a Super Admin so you can see the "Manage Staff" tab!
+    setIsAuthorized(true); 
+    setUserRole('3');      
     setUserId(uId);
-    fetchDashboardData();  // Still fetches the database stuff so it's not empty
+    fetchDashboardData();  
 
   }, [navigate]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [prodRes, orderRes, staffRes] = await Promise.all([
+      const [prodRes, orderRes, staffRes, discountRes] = await Promise.all([
         fetch('http://localhost:5000/products'),
         fetch('http://localhost:5000/admin/orders'),
         fetch('http://localhost:5000/admin/staff'),
+        fetch('http://localhost:5000/admin/discount-codes'),
       ]);
-      const [prodData, orderData, staffData] = await Promise.all([
+      const [prodData, orderData, staffData, discountData] = await Promise.all([
         prodRes.json(),
         orderRes.json(),
         staffRes.json(),
+        discountRes.json(),
       ]);
       setProducts(Array.isArray(prodData) ? prodData : []);
       setOrders(Array.isArray(orderData) ? orderData : []);
       setStaff(Array.isArray(staffData) ? staffData : []);
+      setDiscountCodes(Array.isArray(discountData) ? discountData : []);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
     } finally {
@@ -115,7 +108,7 @@ import Footer from '../components/Footer';
 
   // --- STAFF ---
   const handleOpenAddStaff = () => {
-    setStaffForm({ name: '', email: '', phone: '', password: '' });
+    setStaffForm({ name: '', email: '', phone: '', password: '', role_id: '2' });
     resetDialogState();
     setShowAddStaffDialog(true);
   };
@@ -249,6 +242,71 @@ import Footer from '../components/Footer';
     }
   };
 
+  // --- PROMO CODES LOGIC ---
+  const handleOpenAddDiscount = () => { 
+    setDiscountForm({ code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_uses: '', expires_at: '' }); 
+    resetDialogState(); 
+    setShowAddDiscountDialog(true); 
+  };
+
+  const generateRandomCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = 'GLOW-';
+    for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+    setDiscountForm({ ...discountForm, code: result });
+  };
+
+  const handleAddDiscountCode = async (e) => {
+    e.preventDefault(); 
+    const { code, discount_type, discount_value, min_order_amount, max_uses, expires_at } = discountForm;
+    if (!code.trim() || !discount_value) { setDialogError('Code and discount value are required.'); return; }
+    
+    setSubmitting(true); 
+    setDialogError('');
+    setDialogSuccess('');
+    try {
+      const res = await fetch('http://localhost:5000/admin/discount-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: code.trim().toUpperCase(),
+          discount_type,
+          discount_value: Number(discount_value),
+          min_order_amount: min_order_amount ? Number(min_order_amount) : null,
+          max_uses: max_uses ? Number(max_uses) : null,
+          expires_at: expires_at || null,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to create discount code.');
+      setDialogSuccess('Discount code created successfully!');
+      fetchDashboardData();
+      setTimeout(() => { setShowAddDiscountDialog(false); resetDialogState(); }, 1500);
+    } catch (err) {
+      setDialogError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleToggleDiscount = async (id, currentActive) => {
+    try {
+      await fetch(`http://localhost:5000/admin/discount-codes/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !currentActive }),
+      });
+      fetchDashboardData();
+    } catch (err) { console.error(err.message); }
+  };
+
+  const handleDeleteDiscount = async (id) => {
+    if (!window.confirm('Delete this code permanently?')) return;
+    try {
+      await fetch(`http://localhost:5000/admin/discount-codes/${id}`, { method: 'DELETE' });
+      fetchDashboardData();
+    } catch (err) { console.error(err.message); }
+  };
+
   if (!isAuthorized) return null;
 
   return (
@@ -259,26 +317,30 @@ import Footer from '../components/Footer';
           <Tab.Container id="dashboard-tabs" defaultActiveKey="orders">
             <div className="dashboard-layout">
 
-              {/* SIDEBAR */}
+              {/* SIDEBAR (ORDERED EXACTLY AS REQUESTED) */}
               <div className="dashboard-sidebar">
                 <h3 className="sidebar-title">
                   {userRole === '3' ? 'Super Admin Panel' : 'Admin Panel'}
                 </h3>
                 <Nav variant="pills" className="flex-column custom-sidebar-nav">
-                  <Nav.Item><Nav.Link eventKey="orders">Orders</Nav.Link></Nav.Item>
+                  <Nav.Item><Nav.Link eventKey="orders">Recent Orders</Nav.Link></Nav.Item>
                   <Nav.Item><Nav.Link eventKey="products">Products Inventory</Nav.Link></Nav.Item>
-                  <Nav.Item><Nav.Link eventKey="settings">Store Settings</Nav.Link></Nav.Item>
                   {userRole === '3' && (
-                    <Nav.Item><Nav.Link eventKey="staff">Manage Staff</Nav.Link></Nav.Item>
+                    <Nav.Item><Nav.Link eventKey="discounts">Promo Codes</Nav.Link></Nav.Item>
                   )}
+                  <Nav.Item><Nav.Link eventKey="settings">Account Settings</Nav.Link></Nav.Item>
+                  {userRole === '3' && (
+                    <Nav.Item><Nav.Link eventKey="staff">Staff Management</Nav.Link></Nav.Item>
+                  )}
+                  <Nav.Item><Nav.Link eventKey="delete">Delete Account</Nav.Link></Nav.Item>
                 </Nav>
               </div>
 
-              {/* MAIN CONTENT */}
+              {/* MAIN CONTENT AREA */}
               <div className="dashboard-content-area">
                 <Tab.Content>
 
-                  {/* ORDERS TAB */}
+                  {/* 1. ORDERS TAB */}
                   <Tab.Pane eventKey="orders">
                     <div className="dashboard-card">
                       <div className="card-header-flex">
@@ -323,7 +385,7 @@ import Footer from '../components/Footer';
                     </div>
                   </Tab.Pane>
 
-                  {/* PRODUCTS TAB */}
+                  {/* 2. PRODUCTS TAB */}
                   <Tab.Pane eventKey="products">
                     <div className="dashboard-card">
                       <div className="card-header-flex">
@@ -365,38 +427,73 @@ import Footer from '../components/Footer';
                     </div>
                   </Tab.Pane>
 
-                  {/* SETTINGS TAB */}
-                  <Tab.Pane eventKey="settings" className="h-100">
-                    <div className="dashboard-card d-flex flex-column" style={{ minHeight: '60vh' }}>
-                      
-                      {/* Top Section: Normal Settings */}
-                      <div>
-                        <h2>Store Settings</h2>
-                        <p className="text-muted mt-3">Manage your personal account settings below.</p>
-                        <hr className="my-4" />
-                        
-                        {/* Future normal settings (like changing your name/email) will go here! */}
-                        
+                  {/* 3. PROMO CODES TAB */}
+                  {userRole === '3' && (
+                    <Tab.Pane eventKey="discounts">
+                      <div className="dashboard-card">
+                        <div className="card-header-flex">
+                          <h2>Promo Codes</h2>
+                          <button className="btn btn-gold custom-pill-btn-small" onClick={handleOpenAddDiscount}>
+                            + New Code
+                          </button>
+                        </div>
+                        {loading ? <p className="text-muted">Loading codes...</p> : (
+                          <Table responsive className="custom-table borderless">
+                            <thead>
+                              <tr>
+                                <th>Code</th>
+                                <th>Type</th>
+                                <th>Value</th>
+                                <th>Min. Order</th>
+                                <th>Uses</th>
+                                <th>Expires</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {discountCodes.length === 0 ? (
+                                <tr><td colSpan="8" className="text-center text-muted">No codes found.</td></tr>
+                              ) : discountCodes.map((dc) => (
+                                <tr key={dc.id} className="table-row-hover">
+                                  <td><strong>{dc.code}</strong></td>
+                                  <td>{dc.discount_type === 'percentage' ? 'Percentage' : 'Fixed'}</td>
+                                  <td>{dc.discount_type === 'percentage' ? `${dc.discount_value}%` : `${Number(dc.discount_value).toFixed(2)} L.E.`}</td>
+                                  <td>{dc.min_order_amount ? `${Number(dc.min_order_amount).toFixed(2)} L.E.` : '—'}</td>
+                                  <td>{dc.times_used ?? 0} {dc.max_uses ? ` / ${dc.max_uses}` : ' / ∞'}</td>
+                                  <td>{dc.expires_at ? new Date(dc.expires_at).toLocaleDateString() : '—'}</td>
+                                  <td><Badge bg={dc.is_active ? 'success' : 'secondary'} className="custom-badge">{dc.is_active ? 'Active' : 'Inactive'}</Badge></td>
+                                  <td className="d-flex gap-2">
+                                    <button className={dc.is_active ? 'btn-action-danger' : 'btn-action'} onClick={() => handleToggleDiscount(dc.id, dc.is_active)}>
+                                      {dc.is_active ? 'Disable' : 'Enable'}
+                                    </button>
+                                    <button className="btn-action-danger" onClick={() => handleDeleteDiscount(dc.id)}>Delete</button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </Table>
+                        )}
                       </div>
+                    </Tab.Pane>
+                  )}
 
-                      {/* Bottom Section: Danger Zone (Pushed to the very bottom) */}
-                      <div className="danger-zone p-4 rounded-4 mt-auto" style={{ backgroundColor: '#fff5f5', border: '2px dashed #f5c6cb' }}>
-                        <h5 className="text-danger fw-bold mb-2">Danger Zone</h5>
-                        <p className="text-muted mb-3" style={{ fontSize: '0.95rem' }}>
-                          Once you delete your account, there is no going back. Please be certain.
-                        </p>
-                        <button 
-                          className="btn btn-outline-danger rounded-pill px-4 fw-bold" 
-                          onClick={handleOpenDeleteAccount}
-                        >
-                          Delete My Account
-                        </button>
+                  {/* 4. ACCOUNT SETTINGS TAB */}
+                  <Tab.Pane eventKey="settings">
+                    <div className="dashboard-settings-wrapper">
+                      <div className="dashboard-card">
+                        <div className="settings-header">
+                          <h2>Account Settings</h2>
+                          <p className="text-muted mt-3">Manage your personal admin profile and security.</p>
+                        </div>
+                        <div className="settings-placeholder" style={{ padding: '2rem 0', color: '#a89f91' }}>
+                          Profile management features coming soon...
+                        </div>
                       </div>
-
                     </div>
                   </Tab.Pane>
 
-                  {/* STAFF TAB */}
+                  {/* 5. STAFF TAB */}
                   {userRole === '3' && (
                     <Tab.Pane eventKey="staff">
                       <div className="dashboard-card">
@@ -445,11 +542,34 @@ import Footer from '../components/Footer';
                     </Tab.Pane>
                   )}
 
+                  {/* 6. DELETE ACCOUNT TAB */}
+                  <Tab.Pane eventKey="delete">
+                    <div className="dashboard-card">
+                      <div className="card-header-flex">
+                        <h2 className="text-danger">Delete Account</h2>
+                      </div>
+                      <p className="text-muted">Account deletion is permanent. Proceed with caution.</p>
+                      <div className="danger-zone-card mt-4">
+                        <div className="danger-text">
+                          <h5>Danger Zone</h5>
+                          <p>Permanently delete your admin account. This action cannot be undone.</p>
+                        </div>
+                        <button 
+                          className="btn-danger-pill" 
+                          onClick={handleOpenDeleteAccount}
+                        >
+                          Delete My Account
+                        </button>
+                      </div>
+                    </div>
+                  </Tab.Pane>
+
                 </Tab.Content>
               </div>
             </div>
           </Tab.Container>
         </div>
+        <Footer />
       </div>
 
       {/* ============================================================ */}
@@ -482,6 +602,19 @@ import Footer from '../components/Footer';
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold">Phone Number</Form.Label>
                 <Form.Control type="tel" className="custom-input" placeholder="Enter phone number" value={staffForm.phone} onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })} />
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold">Assign Role</Form.Label>
+                <Form.Select 
+                  className="custom-input form-select" 
+                  value={staffForm.role_id} 
+                  onChange={(e) => setStaffForm({ ...staffForm, role_id: e.target.value })} 
+                  required
+                >
+                  <option value="2">Admin (Manage Orders & Products)</option>
+                  <option value="3">Super Admin (Full Access)</option>
+                </Form.Select>
               </Form.Group>
 
               <Form.Group className="mb-4">
@@ -618,14 +751,77 @@ import Footer from '../components/Footer';
               </Form.Group>
 
               <div className="dialog-footer">
-                <button type="button" className="btn btn-cancel" onClick={() => setShowDeleteAccountDialog(false)}>Cancel</button>
-                <button type="submit" className="btn btn-danger rounded-pill px-4 fw-bold" disabled={submitting}>
+                <button type="button" className="btn-cancel" onClick={() => setShowDeleteAccountDialog(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-danger-pill" disabled={submitting}>
                   {submitting ? <Spinner animation="border" size="sm" /> : 'Permanently Delete'}
                 </button>
               </div>
             </Form>
           </div>
-        <Footer />
+        </div>
+      )}
+
+      {/* PROMO CODE DIALOG */}
+      {showAddDiscountDialog && (
+        <div className="dialog-overlay">
+          <div className="dialog-box">
+            <div className="dialog-header">
+              <h3>Create Promo Code</h3>
+              <button className="close-btn" onClick={() => setShowAddDiscountDialog(false)}>&times;</button>
+            </div>
+            
+            <Form onSubmit={handleAddDiscountCode}>
+              {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
+              {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
+
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold">Discount Code</Form.Label>
+                <div className="d-flex gap-2">
+                  <Form.Control type="text" className="custom-input" placeholder="e.g. GLOW10" value={discountForm.code} onChange={e => setDiscountForm({ ...discountForm, code: e.target.value.toUpperCase() })} required />
+                  <button type="button" className="btn-action" onClick={generateRandomCode}>Random</button>
+                </div>
+              </Form.Group>
+
+              <div className="row">
+                <div className="col-md-6 mb-3">
+                  <Form.Label className="fw-semibold">Type</Form.Label>
+                  <Form.Select className="custom-input form-select" value={discountForm.discount_type} onChange={e => setDiscountForm({ ...discountForm, discount_type: e.target.value })}>
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed">Fixed Amount (L.E.)</option>
+                  </Form.Select>
+                </div>
+                <div className="col-md-6 mb-3">
+                  <Form.Label className="fw-semibold">Value</Form.Label>
+                  <Form.Control type="number" className="custom-input" placeholder="e.g. 15" min="0" value={discountForm.discount_value} onChange={e => setDiscountForm({ ...discountForm, discount_value: e.target.value })} required />
+                </div>
+              </div>
+
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold">Min. Order Amount (L.E.) <span className="text-muted">(optional)</span></Form.Label>
+                <Form.Control type="number" className="custom-input" placeholder="e.g. 200" min="0" value={discountForm.min_order_amount} onChange={e => setDiscountForm({ ...discountForm, min_order_amount: e.target.value })} />
+              </Form.Group>
+
+              <div className="row">
+                <div className="col-md-6 mb-3">
+                  <Form.Label className="fw-semibold">Max Uses <span className="text-muted">(optional)</span></Form.Label>
+                  <Form.Control type="number" className="custom-input" placeholder="∞" min="1" value={discountForm.max_uses} onChange={e => setDiscountForm({ ...discountForm, max_uses: e.target.value })} />
+                </div>
+                <div className="col-md-6 mb-3">
+                  <Form.Label className="fw-semibold">Expiry Date <span className="text-muted">(optional)</span></Form.Label>
+                  <Form.Control type="date" className="custom-input" value={discountForm.expires_at} onChange={e => setDiscountForm({ ...discountForm, expires_at: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="dialog-footer">
+                <button type="button" className="btn btn-cancel" onClick={() => setShowAddDiscountDialog(false)}>Cancel</button>
+                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>
+                  {submitting ? <Spinner animation="border" size="sm" /> : 'Create Code'}
+                </button>
+              </div>
+            </Form>
+          </div>
         </div>
       )}
 

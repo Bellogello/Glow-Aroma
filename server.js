@@ -504,11 +504,12 @@ app.get('/admin/staff', (req, res) => {
 });
 
 app.post('/admin/add-staff', (req, res) => {
-  const { name, email, phone, password } = req.body;
+  // 1. We added role_id here so Express grabs it from React
+  const { name, email, phone, password, role_id } = req.body;
 
-  // --- PHONE NUMBER FIX ---
-  if (!name || !email || !password || !phone) {
-    return res.status(400).json({ message: 'Name, email, phone, and password are required.' });
+  // 2. Updated the safety check to make sure they picked a role
+  if (!name || !email || !password || !phone || !role_id) {
+    return res.status(400).json({ message: 'Name, email, phone, password, and role are required.' });
   }
 
   db.query('SELECT id FROM users WHERE email = ?', [email], (err, existing) => {
@@ -521,11 +522,15 @@ app.post('/admin/add-staff', (req, res) => {
     bcrypt.hash(password, SALT_ROUNDS, (hashErr, hashed) => {
       if (hashErr) return res.status(500).json({ message: 'Hashing failed.' });
 
-      const sql = 'INSERT INTO users (name, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, 2)';
-      db.query(sql, [name, email, phone, hashed], (err, result) => {
+      // 3. Swapped the hardcoded '2' for a '?' placeholder
+      const sql = 'INSERT INTO users (name, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, ?)';
+      
+      // 4. Injected the role_id variable into the database query
+      db.query(sql, [name, email, phone, hashed, role_id], (err, result) => {
         if (err) return res.status(500).json({ message: 'Failed to add staff: ' + err.message });
 
-        const newStaff = { id: result.insertId, name, email, phone, role_id: 2 };
+        // 5. Tell the frontend exactly which role was just created
+        const newStaff = { id: result.insertId, name, email, phone, role_id: Number(role_id) };
         res.status(201).json({ message: 'Staff member added successfully.', newStaff });
       });
     });
@@ -651,6 +656,66 @@ app.delete('/admin/delete-account', (req, res) => {
       });
     }
   });
+});
+// ==========================================
+// --- DISCOUNT CODES (ADMIN ROUTES) ---
+// ==========================================
+
+// 1. Get all codes
+app.get('/admin/discount-codes', async (req, res) => {
+    try {
+        const [rows] = await db.promise().query('SELECT * FROM discount_codes ORDER BY created_at DESC');
+        res.json(rows);
+    } catch (err) {
+        console.error("Fetch Promo Error:", err);
+        res.status(500).json({ message: "Error fetching discount codes" });
+    }
+});
+
+// 2. Create a new code
+app.post('/admin/discount-codes', async (req, res) => {
+    const { code, discount_type, discount_value, min_order_amount, max_uses, expires_at } = req.body;
+    try {
+        await db.promise().query(
+            `INSERT INTO discount_codes 
+            (code, discount_type, discount_value, min_order_amount, max_uses, expires_at) 
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [code, discount_type, discount_value, min_order_amount || 0, max_uses || null, expires_at || null]
+        );
+        res.status(201).json({ message: "Discount code created" });
+    } catch (err) {
+        // Now it safely catches the ER_DUP_ENTRY without crashing!
+        if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ message: "This discount code already exists." });
+        }
+        console.error("Create Promo Error:", err);
+        res.status(500).json({ message: "Error creating discount code" });
+    }
+});
+
+// 3. Toggle Active/Inactive Status
+app.patch('/admin/discount-codes/:id', async (req, res) => {
+    const { id } = req.params;
+    const { is_active } = req.body;
+    try {
+        await db.promise().query('UPDATE discount_codes SET is_active = ? WHERE id = ?', [is_active, id]);
+        res.json({ message: "Status updated successfully" });
+    } catch (err) {
+        console.error("Toggle Promo Error:", err);
+        res.status(500).json({ message: "Error updating status" });
+    }
+});
+
+// 4. Delete a code
+app.delete('/admin/discount-codes/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.promise().query('DELETE FROM discount_codes WHERE id = ?', [id]);
+        res.json({ message: "Discount code deleted" });
+    } catch (err) {
+        console.error("Delete Promo Error:", err);
+        res.status(500).json({ message: "Error deleting discount code" });
+    }
 });
 // ==========================================
 // --- START SERVER ---
