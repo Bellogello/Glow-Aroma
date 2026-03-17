@@ -36,7 +36,11 @@ body {
     width: 100%;
     max-width: 800px;       /* Much wider now! */
     height: 350px;          
+<<<<<<< Updated upstream
     background-color: #FDF6F0; 
+=======
+    background-color: #973434; 
+>>>>>>> Stashed changes
     border-radius: 40px;
     box-shadow: 0 8px 25px rgba(151, 52, 52, 0.3); /* Beautiful glowing shadow */
     transition: all 0.3s ease;
@@ -245,6 +249,7 @@ option {
         padding: 10px 15px;
         font-size: 1rem;
     }
+<<<<<<< Updated upstream
 }
 /* --- THE MAIN WRAPPER --- */
 .creation {
@@ -385,4 +390,6 @@ select {
   .confirmation-area {
     grid-column: span 2;
   }
+=======
+>>>>>>> Stashed changes
 }

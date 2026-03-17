@@ -7,9 +7,12 @@ import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
 
 const Create = () => {
+<<<<<<< Updated upstream
 
   useTitle("Create Your Own");
 
+=======
+>>>>>>> Stashed changes
   // --- CORE DATA STATES (Now completely dynamic!) ---
   const [scents, setScents] = useState([]);
   const [colors, setColors] = useState([]);
@@ -75,10 +78,13 @@ const Create = () => {
       setMoldLayers([]);
     }
   }, [selectedMoldShape, moldShapes]);
+<<<<<<< Updated upstream
   useEffect(() => {
   if (colors.length > 0) console.log('color sample:', colors[0]);
   if (cupColors.length > 0) console.log('cupColor sample:', cupColors[0]);
 }, [colors, cupColors]);
+=======
+>>>>>>> Stashed changes
 
   const handleLayerColorChange = (index, colorId) => {
     const newLayers = [...moldLayers];
