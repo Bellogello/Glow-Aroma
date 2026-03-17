@@ -252,3 +252,16 @@
     width: 100%;
   }
 }
+
+/* ========================================= */
+/* --- TABLE ALIGNMENT OVERRIDES ---         */
+/* ========================================= */
+.align-left-table th,
+.align-left-table td {
+  text-align: left !important;
+}
+
+.align-left-table th:first-child,
+.align-left-table td:first-child {
+  padding-left: 1.5rem !important;
+}

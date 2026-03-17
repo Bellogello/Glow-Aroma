@@ -21,6 +21,7 @@ const Dashboard = () => {
   const [staff, setStaff] = useState([]);
   const [discountCodes, setDiscountCodes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState([]);
 
   // --- DIALOG VISIBILITY STATES ---
   const [showAddStaffDialog, setShowAddStaffDialog] = useState(false);
@@ -28,6 +29,8 @@ const Dashboard = () => {
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
   const [showAddDiscountDialog, setShowAddDiscountDialog] = useState(false);
+  const [showViewMessageDialog, setShowViewMessageDialog] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
 
   // --- FORM STATES ---
   const [staffForm, setStaffForm] = useState({ name: '', email: '', phone: '', password: '', role_id: '2' });
@@ -56,19 +59,23 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [prodRes, orderRes, staffRes, discountRes] = await Promise.all([
+      const [prodRes, orderRes, staffRes, discountRes, msgRes] = await Promise.all([
         fetch('http://localhost:5000/products'),
         fetch('http://localhost:5000/admin/orders'),
         fetch('http://localhost:5000/admin/staff'),
         fetch('http://localhost:5000/admin/discount-codes'),
+        fetch('http://localhost:5000/admin/messages'),
       ]);
-      const [prodData, orderData, staffData, discountData] = await Promise.all([
-        prodRes.json(), orderRes.json(), staffRes.json(), discountRes.json(),
+      
+      const [prodData, orderData, staffData, discountData, msgData] = await Promise.all([
+        prodRes.json(), orderRes.json(), staffRes.json(), discountRes.json(), msgRes.json(),
       ]);
+      
       setProducts(Array.isArray(prodData) ? prodData : []);
       setOrders(Array.isArray(orderData) ? orderData : []);
       setStaff(Array.isArray(staffData) ? staffData : []);
       setDiscountCodes(Array.isArray(discountData) ? discountData : []);
+      setMessages(Array.isArray(msgData) ? msgData : []);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
     } finally {
@@ -180,6 +187,16 @@ const Dashboard = () => {
       fetchDashboardData();
     } catch (err) { console.error(err.message); }
   };
+  const handleDeleteMessage = async (id) => {
+    if (!window.confirm('Delete this message permanently?')) return;
+    try {
+      const res = await fetch(`http://localhost:5000/admin/messages/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== id));
+        setShowViewMessageDialog(false);
+      }
+    } catch (err) { console.error(err.message); }
+  };
 
   if (!isAuthorized) return null;
 
@@ -193,7 +210,7 @@ const Dashboard = () => {
           <div className="dashboard-card">
             <div className="card-header-flex"><h2>Recent Orders</h2></div>
             {loading ? <p className="text-muted">Loading orders...</p> : (
-              <Table responsive className="custom-table borderless">
+              <Table responsive className="custom-table borderless align-left-table">
                 <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody>
                   {orders.length === 0
@@ -220,7 +237,7 @@ const Dashboard = () => {
               <button className="custom-pill-btn-small" onClick={handleOpenAddProduct}>+ Add Product</button>
             </div>
             {loading ? <p className="text-muted">Loading inventory...</p> : (
-              <Table responsive className="custom-table borderless">
+              <Table responsive className="custom-table borderless align-left-table">
                 <thead><tr><th>ID</th><th>Product Name</th><th>Stock Level</th><th>Price</th><th>Action</th></tr></thead>
                 <tbody>
                   {products.length === 0
@@ -247,7 +264,7 @@ const Dashboard = () => {
                 <button className="custom-pill-btn-small" onClick={handleOpenAddDiscount}>+ New Code</button>
               </div>
               {loading ? <p className="text-muted">Loading codes...</p> : (
-                <Table responsive className="custom-table borderless">
+                <Table responsive className="custom-table borderless align-left-table">
                   <thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min. Order</th><th>Max Order</th><th>Uses</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
                   <tbody>
                     {discountCodes.length === 0
@@ -274,6 +291,52 @@ const Dashboard = () => {
             </div>
           )}
 
+          {/* CUSTOMER MESSAGES */}
+          <div className="dashboard-card">
+            <div className="card-header-flex">
+              <h2>Customer Messages</h2>
+            </div>
+            {loading ? <p className="text-muted">Loading messages...</p> : (
+              <Table responsive className="custom-table borderless align-left-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {messages.length === 0
+                    ? <tr><td colSpan="5" className="text-center text-muted">No messages found.</td></tr>
+                    : messages.map((msg) => (
+                      <tr key={msg.id} className="table-row-hover">
+                        <td>{new Date(msg.created_at).toLocaleDateString()}</td>
+                        <td><strong>{msg.name}</strong></td>
+                        <td><a href={`mailto:${msg.email}`} className="text-decoration-none">{msg.email}</a></td>
+                        <td>
+                          {msg.phone ? (
+                            <a href={`tel:${msg.phone}`} className="text-decoration-none text-muted">{msg.phone}</a>
+                          ) : (
+                            <span className="text-muted">—</span>
+                          )}
+                        </td>
+                        <td>
+                          <button 
+                            className="btn-action" 
+                            onClick={() => { setSelectedMessage(msg); setShowViewMessageDialog(true); }}
+                          >
+                            Read
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </Table>
+            )}
+          </div>
+
           {/* 4. ACCOUNT SETTINGS */}
           <div className="dashboard-card">
             <h2>Account Settings</h2>
@@ -290,7 +353,7 @@ const Dashboard = () => {
               </div>
               <p className="text-muted">Manage your admin team below.</p>
               {loading ? <p className="text-muted">Loading staff...</p> : (
-                <Table responsive className="custom-table borderless">
+                <Table responsive className="custom-table borderless align-left-table">
                   <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
                   <tbody>
                     {staff.map((member) => (
@@ -466,6 +529,33 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {/* VIEW MESSAGE DIALOG */}
+      {showViewMessageDialog && selectedMessage && (
+        <div className="dialog-overlay">
+          <div className="dialog-box">
+            <div className="dialog-header">
+              <h3>Message from {selectedMessage.name}</h3>
+              <button className="close-btn" onClick={() => setShowViewMessageDialog(false)}>&times;</button>
+            </div>
+            <div className="p-2 mb-3">
+              <p className="mb-1"><strong>Email:</strong> <a href={`mailto:${selectedMessage.email}`}>{selectedMessage.email}</a></p>
+              <p className="mb-1"><strong>Phone:</strong> {selectedMessage.phone ? <a href={`tel:${selectedMessage.phone}`}>{selectedMessage.phone}</a> : <span className="text-muted">Not provided</span>}</p>
+              <p className="mb-3 text-muted" style={{ fontSize: '0.85rem' }}>
+                <strong>Received:</strong> {new Date(selectedMessage.created_at).toLocaleString()}
+              </p>
+              <div className="p-3 bg-light rounded" style={{ whiteSpace: 'pre-wrap', border: '1px solid #e0dcd3' }}>
+                {selectedMessage.message}
+              </div>
+            </div>
+            <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
+              <button className="btn-action-danger" onClick={() => handleDeleteMessage(selectedMessage.id)}>Delete</button>
+              <button className="btn btn-cancel" onClick={() => setShowViewMessageDialog(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+      
     </>
   );
 };

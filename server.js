@@ -98,7 +98,22 @@ app.get('/users', (req, res) => {
     res.json(results);
   });
 });
-
+// Fetch a single user's profile (Used for Auto-Fill and Profile page)
+app.get('/users/:id', (req, res) => {
+  const { id } = req.params;
+  
+  // We only select safe data (no passwords!)
+  db.query('SELECT name, email, phone FROM users WHERE id = ?', [id], (err, results) => {
+    if (err) return res.status(500).json({ error: 'Database error: ' + err.message });
+    
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    
+    // Send back the exact user object
+    res.json(results[0]);
+  });
+});
 app.post('/users', (req, res) => {
   const { name, email, phone, password_hash } = req.body;
 
@@ -752,6 +767,58 @@ app.delete('/admin/discount-codes/:id', async (req, res) => {
         console.error("Delete Promo Error:", err);
         res.status(500).json({ message: "Error deleting discount code" });
     }
+});
+
+// ==========================================
+// CUSTOMER MESSAGES ROUTES
+// ==========================================
+
+// 1. POST: Customers sending a message from the Contact Page
+app.post('/messages', (req, res) => {
+    // 1. MUST HAVE 'phone' here!
+    const { name, email, phone, message } = req.body; 
+    
+    if (!name || !email || !message) {
+        return res.status(400).json({ error: 'All fields are required.' });
+    }
+
+    db.query(
+        // 2. MUST HAVE 'phone' in the columns and a 4th '?' in the values
+        'INSERT INTO contact_messages (name, email, phone, message) VALUES (?, ?, ?, ?)',
+        [name, email, phone || null, message], // 3. MUST pass the phone variable here
+        (err) => {
+            if (err) {
+                console.error("Message Error:", err);
+                return res.status(500).json({ error: 'Failed to send message.' });
+            }
+            res.status(201).json({ message: 'Message sent successfully!' });
+        }
+    );
+});
+
+// 2. GET: Admin dashboard fetching the inbox
+app.get('/admin/messages', (req, res) => {
+    // Ordering by created_at DESC puts the newest messages at the top
+    db.query('SELECT * FROM contact_messages ORDER BY created_at DESC', (err, results) => {
+        if (err) {
+            console.error("Fetch Messages Error:", err);
+            return res.status(500).json({ error: 'Failed to fetch messages.' });
+        }
+        res.json(results);
+    });
+});
+
+// 3. DELETE: Admin deleting a read message
+app.delete('/admin/messages/:id', (req, res) => {
+    const { id } = req.params;
+    
+    db.query('DELETE FROM contact_messages WHERE id = ?', [id], (err) => {
+        if (err) {
+            console.error("Delete Message Error:", err);
+            return res.status(500).json({ error: 'Failed to delete message.' });
+        }
+        res.json({ message: 'Message deleted successfully.' });
+    });
 });
 // ==========================================
 // --- START SERVER ---
