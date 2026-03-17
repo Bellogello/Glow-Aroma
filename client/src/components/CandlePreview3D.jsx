@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-const CandlePreview3D = ({ cupColor, waxColor, cupSize }) => {
+// 1. We add 'modelUrl' to the props
+const CandlePreview3D = ({ cupColor, waxColor, cupSize, modelUrl }) => {
   const canvasRef = useRef(null);
   const meshesRef = useRef({});
   const rendererRef = useRef(null);
@@ -46,9 +47,14 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize }) => {
     controls.target.set(0, 1, 0);
     controls.update();
 
+    // 2. Determine which model to load!
+    const finalModelUrl = modelUrl 
+      ? (modelUrl.startsWith('http') ? modelUrl : `http://localhost:5000${modelUrl}`)
+      : '/candle.glb'; // Default fallback for the Custom Builder
+
     const loader = new GLTFLoader();
     loader.load(
-      '/candle.glb',
+      finalModelUrl,
       (gltf) => {
         scene.add(gltf.scene);
 
@@ -89,7 +95,7 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize }) => {
         }
       },
       undefined,
-      (err) => console.error('Failed to load model:', err)
+      (err) => console.error('Failed to load 3D model:', err)
     );
 
     let frameId;
@@ -107,7 +113,7 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize }) => {
       cancelAnimationFrame(frameId);
       renderer.dispose();
     };
-  }, []);
+  }, [modelUrl]); // 3. Added modelUrl as a dependency so it re-renders if the link changes
 
   // Cup color changes
   useEffect(() => {

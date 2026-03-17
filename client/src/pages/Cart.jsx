@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
-import Footer from '../components/Footer'; // Ensure this is imported!
+import Footer from '../components/Footer'; 
 import '../styles/cart.css';
 import { ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import useTitle from '../components/useTitles';
 
-  const Cart = () => {
-
+const Cart = () => {
   useTitle("Cart");
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +53,9 @@ import useTitle from '../components/useTitles';
           }
           return item;
         }));
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || "Cannot update quantity.");
       }
     } catch (error) {
       console.error("Failed to update quantity:", error);
@@ -97,7 +99,6 @@ import useTitle from '../components/useTitles';
       
       <div className="cart-content">
         {cartItems.length === 0 ? (
-          /* LUXURY EMPTY STATE */
           <div className="empty-cart-container">
             <div className="floating-icon">
               <ShoppingBag size={80} color="#4a3728" strokeWidth={1} />
@@ -108,31 +109,61 @@ import useTitle from '../components/useTitles';
           </div>
         ) : (
           <div className="cart-list">
+            <h1 className="cart-page-title">Shopping Cart</h1>
             {cartItems.map(item => (
               <div key={item.cart_item_id} className="cart-item">
-                <h3>{item.name}</h3>
                 
-                {item.is_custom ? (
-                  <>
-                    <p><strong>Color:</strong> {item.color}</p>
-                    <p><strong>Scent:</strong> {item.scent}</p>
-                  </>
-                ) : (
-                  item.image && <img src={item.image} alt={item.name} style={{ width: "80px", marginBottom: "10px" }} />
-                )}
+                {/* 1. IMAGE SECTION (Left) */}
+                <div className="cart-item-image">
+                  {item.is_custom ? (
+                    <div className="custom-candle-placeholder">✨</div>
+                  ) : (
+                    item.image && (
+                      <img 
+                        src={item.image.startsWith('http') ? item.image : `http://localhost:5000${item.image}`} 
+                        alt={item.name} 
+                      />
+                    ) 
+                  )}
+                </div>
+
+                {/* 2. DETAILS SECTION (Middle) */}
+                <div className="cart-item-details">
+                  <h3>{item.name}</h3>
+                  {item.is_custom && (
+                    <div className="custom-specs">
+                      <p><span>Color:</span> {item.color}</p>
+                      <p><span>Scent:</span> {item.scent}</p>
+                    </div>
+                  )}
+                  <p className="cart-item-price">{Number(item.price).toFixed(2)} L.E.</p>
+                </div>
                 
-                <div className="quantity-wrapper">
-                  <strong>Quantity:</strong> 
+                {/* 3. ACTIONS SECTION (Right) */}
+                <div className="cart-item-actions">
                   <div className="quantity-controls">
                     <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'decrease')}>−</button>
                     <span className="qty-amount">{item.quantity}</span>
-                    <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'increase')}>+</button>
+                    <button 
+                      className="btn-qty" 
+                      onClick={() => handleQuantityChange(item.cart_item_id, 'increase')}
+                      disabled={item.quantity >= item.max_stock}
+                      style={{ 
+                        opacity: item.quantity >= item.max_stock ? 0.4 : 1, 
+                        cursor: item.quantity >= item.max_stock ? 'not-allowed' : 'pointer' 
+                      }}
+                      title={item.quantity >= item.max_stock ? "Maximum stock reached" : ""}
+                    >
+                      +
+                    </button>
                   </div>
-                </div>                
-                
-                <p><strong>Price:</strong> {Number(item.price).toFixed(2)} L.E.</p>
-                
-                <button className="btn-remove" onClick={() => handleRemove(item.cart_item_id)}>Remove</button>
+                  {item.quantity >= item.max_stock && !item.is_custom && (
+                    <span className="stock-warning">Max Stock!</span>
+                  )}
+                  {/* Swapped bulky button for a sleek text link */}
+                  <button className="btn-remove-text" onClick={() => handleRemove(item.cart_item_id)}>Remove</button>
+                </div>
+
               </div>
             ))}
             

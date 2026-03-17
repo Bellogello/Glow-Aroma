@@ -8,52 +8,14 @@ import '../styles/CreateYourOwn.css';
 import Footer from '../components/Footer';
 import useTitle from '../components/useTitles';
 
-
-// ==========================================
-// --- DUMMY DATA FOR UI TESTING ---
-// ==========================================
-const dummyProducts = [
-  {
-    id: 1,
-    name: "Vanilla Dream Jar",
-    price: "150.00",
-    description: "A sweet, comforting classic vanilla scent.",
-    image_url: "https://via.placeholder.com/200/F5DEB3/5a4a3a?text=Vanilla+Dream" // Fake image URL
-  },
-  {
-    id: 2,
-    name: "Ocean Breeze Tin",
-    price: "120.00",
-    description: "Crisp and refreshing ocean notes for any room.",
-    image_url: "https://via.placeholder.com/200/ADD8E6/5a4a3a?text=Ocean+Breeze"
-  },
-  {
-    id: 3,
-    name: "Lavender Serenity",
-    price: "165.00",
-    description: "Calming lavender essential oils for a peaceful night.",
-    image_url: "https://via.placeholder.com/200/E6E6FA/5a4a3a?text=Lavender"
-  },
-  {
-    id: 4,
-    name: "Spiced Pumpkin Glass",
-    price: "180.00",
-    description: "Warm spices and autumn vibes, perfect for cozy evenings.",
-    image_url: "https://via.placeholder.com/200/FF7F50/5a4a3a?text=Spiced+Pumpkin"
-  }
-];
-
-
 const Products = () => {
-
   useTitle("Products");
-  const [products, setProducts] = useState(dummyProducts);
   
-  // Set loading to false immediately since we already have the dummy data
-  const [loading, setLoading] = useState(false);
+  // 1. Start completely empty and turn the loading screen ON
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // 2. We comment out the fetch so it doesn't overwrite our dummy data!
-  /*
+  // 2. Fetch the real inventory from your MySQL database
   useEffect(() => {
     fetch('http://localhost:5000/products')
       .then(res => res.json())
@@ -63,14 +25,13 @@ const Products = () => {
         } else {
           console.error("Backend sent weird data:", data);
         }
-        setLoading(false);
+        setLoading(false); // Turn off the loading screen
       })
       .catch(err => {
         console.error("Error fetching products:", err);
-        setLoading(false);
+        setLoading(false); // Turn off loading even if it fails, so it doesn't spin forever
       });
   }, []);
-  */
 
   return (
     <div className="products-container">
@@ -82,15 +43,15 @@ const Products = () => {
           <CreateYourOwn />
         </div>
 
-        {/* 3. Loading message (won't show up right now because loading is false) */}
+        {/* 3. Show a loading message until the backend replies */}
         {loading ? (
           <h2 style={{ textAlign: 'center' }}>Loading candles...</h2>
         ) : (
           <div className="product-list">
             
-            {/* 4. The Magic Loop! Maps over our dummy data */}
+            {/* 4. Display the real products, or a fallback message if the database is empty */}
             {products.length === 0 ? (
-              <p style={{ textAlign: 'center', gridColumn: '1 / -1' }}>No products found!</p>
+              <p style={{ textAlign: 'center', gridColumn: '1 / -1' }}>No products found in the database!</p>
             ) : (
               products.map((product) => (
                 <ProductCard 

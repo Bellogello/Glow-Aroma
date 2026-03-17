@@ -26,6 +26,7 @@ const Dashboard = () => {
   // --- DIALOG VISIBILITY STATES ---
   const [showAddStaffDialog, setShowAddStaffDialog] = useState(false);
   const [showAddProductDialog, setShowAddProductDialog] = useState(false);
+  const [showEditProductDialog, setShowEditProductDialog] = useState(false);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
   const [showAddDiscountDialog, setShowAddDiscountDialog] = useState(false);
@@ -34,7 +35,11 @@ const Dashboard = () => {
 
   // --- FORM STATES ---
   const [staffForm, setStaffForm] = useState({ name: '', email: '', phone: '', password: '', role_id: '2' });
-  const [productForm, setProductForm] = useState({ name: '', price: '', stock_quantity: '', description: '', image_url: '' });
+  
+  // NOTE: Image is now 'null' instead of a URL string
+  const [productForm, setProductForm] = useState({ name: '', price: '', stock_quantity: '', description: '', image: null });
+  const [editProductForm, setEditProductForm] = useState({ id: '', name: '', price: '', stock_quantity: '', description: '', image_url: '', image: null });
+  
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [newStatusId, setNewStatusId] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
@@ -51,7 +56,7 @@ const Dashboard = () => {
   useEffect(() => {
     const uId = localStorage.getItem('userId');
     setIsAuthorized(true);
-    setUserRole('3');
+    setUserRole('3'); // Forcing Super Admin for testing, update later if needed
     setUserId(uId);
     fetchDashboardData();
   }, [navigate]);
@@ -112,17 +117,64 @@ const Dashboard = () => {
   };
 
   // --- PRODUCTS ---
-  const handleOpenAddProduct = () => { setProductForm({ name: '', price: '', stock_quantity: '', description: '', image_url: '' }); resetDialogState(); setShowAddProductDialog(true); };
+  const handleOpenAddProduct = () => { setProductForm({ name: '', price: '', stock_quantity: '', description: '', image: null }); resetDialogState(); setShowAddProductDialog(true); };
+  
   const handleAddProduct = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
+    
+    const formData = new FormData();
+    formData.append('name', productForm.name);
+    formData.append('price', productForm.price);
+    formData.append('stock_quantity', productForm.stock_quantity);
+    formData.append('description', productForm.description);
+    if (productForm.image) formData.append('image', productForm.image);
+
     try {
-      const res = await fetch('http://localhost:5000/admin/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(productForm) });
+      const res = await fetch('http://localhost:5000/admin/products', { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add product.');
       setDialogSuccess('Product added successfully!');
       setProducts((prev) => [...prev, data.newProduct]);
       setTimeout(() => setShowAddProductDialog(false), 1500);
     } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
+  };
+
+  const handleOpenEditProduct = (product) => { 
+    setEditProductForm({ ...product, image: null }); 
+    resetDialogState(); 
+    setShowEditProductDialog(true); 
+  };
+
+  const handleUpdateProduct = async (e) => {
+    e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
+    
+    const formData = new FormData();
+    formData.append('name', editProductForm.name);
+    formData.append('price', editProductForm.price);
+    formData.append('stock_quantity', editProductForm.stock_quantity);
+    formData.append('description', editProductForm.description);
+    formData.append('existing_image_url', editProductForm.image_url || ''); 
+    if (editProductForm.image) formData.append('image', editProductForm.image);
+
+    try {
+      const res = await fetch(`http://localhost:5000/admin/products/${editProductForm.id}`, { method: 'PUT', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update product.');
+      setDialogSuccess('Product updated successfully!');
+      setProducts((prev) => prev.map((p) => (p.id === editProductForm.id ? { ...p, ...editProductForm, image_url: data.image_url } : p)));
+      setTimeout(() => setShowEditProductDialog(false), 1500);
+    } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm('Are you sure you want to completely remove this product? This action cannot be undone.')) return;
+    try {
+      const res = await fetch(`http://localhost:5000/admin/products/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to delete product.');
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+      setShowEditProductDialog(false);
+    } catch (err) { alert(`Error: ${err.message}`); }
   };
 
   // --- ORDERS ---
@@ -187,6 +239,8 @@ const Dashboard = () => {
       fetchDashboardData();
     } catch (err) { console.error(err.message); }
   };
+  
+  // --- MESSAGES ---
   const handleDeleteMessage = async (id) => {
     if (!window.confirm('Delete this message permanently?')) return;
     try {
@@ -245,10 +299,15 @@ const Dashboard = () => {
                     : products.map((product) => (
                       <tr key={product.id} className="table-row-hover">
                         <td>{product.id}</td>
-                        <td><strong>{product.name}</strong></td>
+                        <td>
+                          {product.image_url && (
+                            <img src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:5000${product.image_url}`} alt={product.name} style={{width: '30px', height: '30px', objectFit: 'cover', borderRadius: '4px', marginRight: '10px'}} />
+                          )}
+                          <strong>{product.name}</strong>
+                        </td>
                         <td><span className={product.stock_quantity === 0 ? 'text-danger fw-bold' : ''}>{product.stock_quantity} units</span></td>
                         <td>{Number(product.price).toFixed(2)} L.E.</td>
-                        <td><button className="btn-action">Edit</button></td>
+                        <td><button className="btn-action" onClick={() => handleOpenEditProduct(product)}>Edit</button></td>
                       </tr>
                     ))}
                 </tbody>
@@ -388,6 +447,8 @@ const Dashboard = () => {
         <Footer />
       </div>
 
+      {/* DIALOGS BELOW */}
+
       {/* ADD STAFF DIALOG */}
       {showAddStaffDialog && (
         <div className="dialog-overlay">
@@ -430,10 +491,47 @@ const Dashboard = () => {
                 <Form.Group className="flex-fill"><Form.Label className="fw-semibold">Stock Quantity</Form.Label><Form.Control type="number" className="custom-input" placeholder="0" min="0" value={productForm.stock_quantity} onChange={(e) => setProductForm({ ...productForm, stock_quantity: e.target.value })} required /></Form.Group>
               </div>
               <Form.Group className="mb-3"><Form.Label className="fw-semibold">Description</Form.Label><Form.Control as="textarea" className="custom-input" rows={2} placeholder="Describe the product..." value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></Form.Group>
-              <Form.Group className="mb-4"><Form.Label className="fw-semibold">Image URL</Form.Label><Form.Control type="url" className="custom-input" placeholder="https://..." value={productForm.image_url} onChange={(e) => setProductForm({ ...productForm, image_url: e.target.value })} /></Form.Group>
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold">Upload Product Image</Form.Label>
+                <Form.Control type="file" accept="image/*" className="custom-input" onChange={(e) => setProductForm({ ...productForm, image: e.target.files[0] })} />
+              </Form.Group>
               <div className="dialog-footer">
                 <button type="button" className="btn btn-cancel" onClick={() => setShowAddProductDialog(false)}>Cancel</button>
                 <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Add Product'}</button>
+              </div>
+            </Form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PRODUCT DIALOG */}
+      {showEditProductDialog && (
+        <div className="dialog-overlay">
+          <div className="dialog-box">
+            <div className="dialog-header">
+              <h3>Edit Product</h3>
+              <button className="close-btn" onClick={() => setShowEditProductDialog(false)}>&times;</button>
+            </div>
+            <Form onSubmit={handleUpdateProduct}>
+              {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
+              {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
+              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Product Name</Form.Label><Form.Control type="text" className="custom-input" placeholder="e.g. Lavender Bliss" value={editProductForm.name} onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })} required /></Form.Group>
+              <div className="d-flex gap-3 mb-3">
+                <Form.Group className="flex-fill"><Form.Label className="fw-semibold">Price (L.E.)</Form.Label><Form.Control type="number" className="custom-input" placeholder="0.00" min="0" step="0.01" value={editProductForm.price} onChange={(e) => setEditProductForm({ ...editProductForm, price: e.target.value })} required /></Form.Group>
+                <Form.Group className="flex-fill"><Form.Label className="fw-semibold">Stock Quantity</Form.Label><Form.Control type="number" className="custom-input" placeholder="0" min="0" value={editProductForm.stock_quantity} onChange={(e) => setEditProductForm({ ...editProductForm, stock_quantity: e.target.value })} required /></Form.Group>
+              </div>
+              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Description</Form.Label><Form.Control as="textarea" className="custom-input" rows={2} placeholder="Describe the product..." value={editProductForm.description || ''} onChange={(e) => setEditProductForm({ ...editProductForm, description: e.target.value })} /></Form.Group>
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold">Update Image <span className="text-muted fw-normal">(Leave blank to keep current)</span></Form.Label>
+                <Form.Control type="file" accept="image/*" className="custom-input" onChange={(e) => setEditProductForm({ ...editProductForm, image: e.target.files[0] })} />
+              </Form.Group>
+              
+              <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
+                <button type="button" className="btn-action-danger" onClick={() => handleDeleteProduct(editProductForm.id)}>Delete Product</button>
+                <div className="d-flex gap-2">
+                  <button type="button" className="btn btn-cancel" onClick={() => setShowEditProductDialog(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save Changes'}</button>
+                </div>
               </div>
             </Form>
           </div>

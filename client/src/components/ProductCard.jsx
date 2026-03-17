@@ -3,11 +3,9 @@ import { Link } from 'react-router-dom';
 import '../styles/ProductCard.css';
 import FallbackCandle from '../assets/candle.png'; // We use this if the DB doesn't have an image
 
-// 1. Accept the 'product' prop we passed from Products.jsx
 const ProductCard = ({ product }) => {
   const [isAdding, setIsAdding] = useState(false);
 
-  // 2. The Add to Cart function
   const handleAddToCart = async (e) => {
     e.preventDefault(); // <-- CRITICAL: Stops the <Link> from triggering when you click the button!
 
@@ -19,7 +17,6 @@ const ProductCard = ({ product }) => {
 
     setIsAdding(true);
 
-    // Using the prebuiltCandleId for your new database structure
     const payload = {
       userId: userId,
       prebuiltCandleId: product.id, 
@@ -47,19 +44,22 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  // If React renders this before the database loads, don't crash
   if (!product) return null;
+
+  // THE FIX: If the DB has an image, point it to the backend server (port 5000). 
+  // If it's a dummy HTTP link, leave it alone. If there's no image, use the fallback!
+  const displayImage = product.image_url 
+    ? (product.image_url.startsWith('http') ? product.image_url : `http://localhost:5000${product.image_url}`)
+    : FallbackCandle;
 
   return (
     <div className="product-card-container">
-      {/* 3. Make the link dynamic based on the specific candle ID */}
       <Link to={`/product/${product.id}`} className="product-card">
         
-        {/* 4. Use the database image, or fallback to your local candle asset */}
-        <img src={product.image_url || FallbackCandle} className="candle-img" alt={product.name}/>
+        {/* Drop our fixed image variable right here */}
+        <img src={displayImage} className="candle-img" alt={product.name}/>
       
         <div className="card-overlay">
-            {/* 5. Dynamically inject the name and price */}
             <h3 className="product-name">{product.name}</h3>
             <p className="price">{Number(product.price).toFixed(2)} L.E.</p>
             
