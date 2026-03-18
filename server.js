@@ -123,6 +123,16 @@ app.get('/products', (req, res) => {
   });
 });
 
+// 2. GET A SINGLE PRODUCT (Used by your new Product Details page)
+app.get('/products/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('SELECT * FROM prebuilt_candles WHERE id = ?', [id], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (results.length === 0) return res.status(404).json({ error: 'Product not found.' });
+    res.json(results[0]);
+  });
+});
+
 // ==========================================
 // --- USERS (SIGNUP) ---
 // ==========================================
@@ -287,12 +297,15 @@ app.post('/auth/google', async (req, res) => {
 });
 
 // ==========================================
-// --- CART: ADD ITEM (UPDATED WITH STOCK CHECK) ---
+// --- CART: ADD ITEM (UPDATED WITH STRICT MATH FIX) ---
 // ==========================================
 
 app.post('/cart/add', (req, res) => {
   const { userId, type, scentId, quantity = 1, prebuiltCandleId, totalPrice = 0, cupShapeId, cupSizeId, cupColorId, candleColorId, moldShapeId, layers } = req.body;
   if (!userId) return res.status(401).json({ error: 'You must be logged in!' });
+
+  // STRICT MATH: Force the incoming quantity to be a real number!
+  const parsedQty = Number(quantity);
 
   db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
     if (err) return res.status(500).json({ error: 'Cart error: ' + err.message });
@@ -310,7 +323,6 @@ app.post('/cart/add', (req, res) => {
     }
 
     function checkStockAndProcess(cartId) {
-      // If it's a prebuilt candle, check stock first!
       if (prebuiltCandleId) {
         const stockCheckSql = `
           SELECT 
@@ -324,19 +336,18 @@ app.post('/cart/add', (req, res) => {
           if (err) return res.status(500).json({ error: 'Stock check error: ' + err.message });
           if (stockResults.length === 0) return res.status(404).json({ error: 'Product not found.' });
 
-          const stock = stockResults[0].stock_quantity;
-          const currentCartQty = stockResults[0].current_cart_qty;
+          // STRICT MATH: Force the database values to be real numbers!
+          const stock = Number(stockResults[0].stock_quantity);
+          const currentCartQty = Number(stockResults[0].current_cart_qty);
 
-          // The Bouncer blocks the door
-          if (currentCartQty + quantity > stock) {
+          // The Bouncer is now doing actual math: 19 + 1 = 20!
+          if (currentCartQty + parsedQty > stock) {
              return res.status(400).json({ error: `Cannot add to cart! Only ${stock} left in stock.` });
           }
           
-          // Safe to insert or update the prebuilt candle
           executeInsertPrebuilt(cartId);
         });
       } else {
-        // Custom candles skip the stock check completely and just insert
         executeInsertCustom(cartId);
       }
     }
@@ -349,13 +360,15 @@ app.post('/cart/add', (req, res) => {
           if (err) return res.status(500).json({ error: 'Check error: ' + err.message });
 
           if (existingItems.length > 0) {
-            const newQuantity = existingItems[0].quantity + quantity;
+            // STRICT MATH: Stop "19" + 1 from becoming "191" in the database update!
+            const newQuantity = Number(existingItems[0].quantity) + parsedQty;
+            
             db.query('UPDATE cart_items SET quantity = ? WHERE id = ?', [newQuantity, existingItems[0].id], (err) => {
                 if (err) return res.status(500).json({ error: 'Update error: ' + err.message });
                 res.json({ message: 'Updated candle quantity in cart!' });
             });
           } else {
-            db.query('INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?)', [cartId, prebuiltCandleId, quantity], (err) => {
+            db.query('INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?)', [cartId, prebuiltCandleId, parsedQty], (err) => {
                 if (err) return res.status(500).json({ error: 'Insert error: ' + err.message });
                 res.json({ message: 'Added pre-built candle to cart!' });
             });
@@ -375,7 +388,7 @@ app.post('/cart/add', (req, res) => {
             const customCandleId = candleResult.insertId;
             db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)', [customCandleId, candleColorId], (err) => {
                 if (err) return res.status(500).json({ error: 'Layer error: ' + err.message });
-                db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cartId, customCandleId, quantity], (err) => {
+                db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cartId, customCandleId, parsedQty], (err) => {
                     if (err) return res.status(500).json({ error: 'Cart link error: ' + err.message });
                     res.json({ message: 'Added custom cup candle to cart!' });
                 });
@@ -394,7 +407,7 @@ app.post('/cart/add', (req, res) => {
 
             db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES ?', [layerValues], (err) => {
                 if (err) return res.status(500).json({ error: 'Layers bulk insert error: ' + err.message });
-                db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cartId, customCandleId, quantity], (err) => {
+                db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cartId, customCandleId, parsedQty], (err) => {
                     if (err) return res.status(500).json({ error: 'Cart link error: ' + err.message });
                     res.json({ message: 'Added layered mold candle to cart!' });
                 });
@@ -407,7 +420,6 @@ app.post('/cart/add', (req, res) => {
     }
   });
 });
-
 // ==========================================
 // --- CART: GET USER'S CART ---
 // ==========================================
@@ -868,6 +880,98 @@ app.delete('/admin/messages/:id', (req, res) => {
     });
 });
 
+// ==========================================
+// --- USER ADDRESS BOOK ---
+// ==========================================
+
+// Get all saved addresses for a user
+app.get('/addresses/:userId', (req, res) => {
+  db.query('SELECT * FROM user_addresses WHERE user_id = ?', [req.params.userId], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
+
+// Save a new address for a user
+app.post('/addresses/:userId', (req, res) => {
+  const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
+  const sql = 'INSERT INTO user_addresses (user_id, full_name, phone, governorate, area, street, building, floor_apt, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  
+  db.query(sql, [req.params.userId, fullName, phone, governorate, area, street, building, floorApt, notes || null], (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.status(201).json({ message: 'Address saved!', addressId: result.insertId });
+  });
+});
+// ==========================================
+// --- CHECKOUT: PLACE ORDER ---
+// ==========================================
+app.post('/checkout', (req, res) => {
+  const { userId, shippingDetails } = req.body;
+
+  if (!userId) return res.status(401).json({ error: 'You must be logged in to checkout.' });
+
+  // 1. Get the user's cart ID
+  db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
+    if (err) return res.status(500).json({ error: 'Database error: ' + err.message });
+    if (cartResults.length === 0) return res.status(400).json({ error: 'Your cart is empty!' });
+
+    const cartId = cartResults[0].id;
+
+    // 2. Fetch cart items AND THEIR CURRENT LIVE STOCK
+    const cartItemsSql = `
+      SELECT 
+        ci.quantity, 
+        ci.prebuilt_candle_id, 
+        cc.total_price AS custom_price, 
+        pc.price AS prebuilt_price,
+        pc.name AS prebuilt_name,
+        pc.stock_quantity
+      FROM cart_items ci
+      LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
+      LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
+      WHERE ci.cart_id = ?
+    `;
+
+    db.query(cartItemsSql, [cartId], (err, items) => {
+      if (err) return res.status(500).json({ error: 'Failed to fetch cart items: ' + err.message });
+      if (items.length === 0) return res.status(400).json({ error: 'Your cart is empty!' });
+
+      // 3. THE FINAL BOUNCER: Check stock one last time right before they pay!
+      for (let item of items) {
+        if (item.prebuilt_candle_id && item.quantity > item.stock_quantity) {
+          return res.status(400).json({ 
+            error: `Sorry, "${item.prebuilt_name}" only has ${item.stock_quantity} left in stock. Please remove it from your cart to proceed.` 
+          });
+        }
+      }
+
+      // If they passed the bouncer, calculate the total!
+      let orderTotal = 0;
+      items.forEach(item => {
+        const price = item.prebuilt_price || item.custom_price || 0;
+        orderTotal += price * item.quantity;
+      });
+
+      // 4. Create the official Order! (Status 1 = Processing)
+      db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, orderTotal], (err, orderResult) => {
+        if (err) return res.status(500).json({ error: 'Failed to create order: ' + err.message });
+        
+        // 5. Deduct the stock for any prebuilt candles they bought (ONLY happens after order is confirmed!)
+        items.forEach(item => {
+          if (item.prebuilt_candle_id) {
+            db.query('UPDATE prebuilt_candles SET stock_quantity = stock_quantity - ? WHERE id = ?', [item.quantity, item.prebuilt_candle_id]);
+          }
+        });
+
+        // 6. Empty the cart!
+        db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], (err) => {
+          if (err) console.error("Failed to clear cart items", err);
+          res.status(201).json({ message: 'Order placed successfully!', orderId: orderResult.insertId });
+        });
+      });
+    });
+  });
+});
 // ==========================================
 // --- START SERVER ---
 // ==========================================

@@ -504,7 +504,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* EDIT PRODUCT DIALOG */}
+{/* EDIT PRODUCT DIALOG */}
       {showEditProductDialog && (
         <div className="dialog-overlay">
           <div className="dialog-box">
@@ -515,12 +515,41 @@ const Dashboard = () => {
             <Form onSubmit={handleUpdateProduct}>
               {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
               {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Product Name</Form.Label><Form.Control type="text" className="custom-input" placeholder="e.g. Lavender Bliss" value={editProductForm.name} onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })} required /></Form.Group>
+              
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold">Product Name</Form.Label>
+                <Form.Control type="text" className="custom-input" placeholder="e.g. Lavender Bliss" value={editProductForm.name} onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })} required />
+              </Form.Group>
+              
               <div className="d-flex gap-3 mb-3">
-                <Form.Group className="flex-fill"><Form.Label className="fw-semibold">Price (L.E.)</Form.Label><Form.Control type="number" className="custom-input" placeholder="0.00" min="0" step="0.01" value={editProductForm.price} onChange={(e) => setEditProductForm({ ...editProductForm, price: e.target.value })} required /></Form.Group>
-                <Form.Group className="flex-fill"><Form.Label className="fw-semibold">Stock Quantity</Form.Label><Form.Control type="number" className="custom-input" placeholder="0" min="0" value={editProductForm.stock_quantity} onChange={(e) => setEditProductForm({ ...editProductForm, stock_quantity: e.target.value })} required /></Form.Group>
+                <Form.Group className="flex-fill">
+                  <Form.Label className="fw-semibold">Price (L.E.)</Form.Label>
+                  <Form.Control type="number" className="custom-input" placeholder="0.00" min="0" step="0.01" value={editProductForm.price} onChange={(e) => setEditProductForm({ ...editProductForm, price: e.target.value })} required />
+                </Form.Group>
+                
+                {/* THE FIXED STOCK INPUT */}
+                <Form.Group className="flex-fill">
+                  <Form.Label className="fw-semibold">Stock Quantity</Form.Label>
+                  <Form.Control 
+                    type="number" 
+                    className="custom-input" 
+                    placeholder="0" 
+                    min="0" 
+                    value={editProductForm.stock_quantity} 
+                    onChange={(e) => {
+                      const cleanValue = e.target.value.replace(/^0+(?=\d)/, '');
+                      setEditProductForm({ ...editProductForm, stock_quantity: cleanValue });
+                    }} 
+                    required 
+                  />
+                </Form.Group>
               </div>
-              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Description</Form.Label><Form.Control as="textarea" className="custom-input" rows={2} placeholder="Describe the product..." value={editProductForm.description || ''} onChange={(e) => setEditProductForm({ ...editProductForm, description: e.target.value })} /></Form.Group>
+              
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold">Description</Form.Label>
+                <Form.Control as="textarea" className="custom-input" rows={2} placeholder="Describe the product..." value={editProductForm.description || ''} onChange={(e) => setEditProductForm({ ...editProductForm, description: e.target.value })} />
+              </Form.Group>
+              
               <Form.Group className="mb-4">
                 <Form.Label className="fw-semibold">Update Image <span className="text-muted fw-normal">(Leave blank to keep current)</span></Form.Label>
                 <Form.Control type="file" accept="image/*" className="custom-input" onChange={(e) => setEditProductForm({ ...editProductForm, image: e.target.files[0] })} />
@@ -537,7 +566,6 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-
       {/* VIEW ORDER DIALOG */}
       {showOrderDialog && selectedOrder && (
         <div className="dialog-overlay">

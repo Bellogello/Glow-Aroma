@@ -71,3 +71,37 @@
 .add-btn:hover {
   background-color: #b0b0b0;
 }
+/* --- OUT OF STOCK BADGE STYLES --- */
+.image-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.sold-out-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(198, 40, 40, 0.9);
+  color: white;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  letter-spacing: 0.05rem;
+  text-transform: uppercase;
+  z-index: 10;
+}
+
+.add-btn.disabled-btn {
+  background-color: #d2c9b8;
+  color: #8c7e70;
+  cursor: not-allowed;
+  border: none;
+}
+.add-btn.disabled-btn:hover {
+  background-color: #d2c9b8;
+  color: #8c7e70;
+  transform: none;
+}

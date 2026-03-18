@@ -8,8 +8,9 @@ import Contact from './pages/Contact';
 import Create from './pages/Create';
 import SignIn from './pages/Sign-in';
 import Signup from './pages/Sign-up';
-
-import Dashboard from './pages/Dashboard'; // <--- 1. ADDED IMPORT HERE
+import ProductDetails from './pages/ProductDetails';
+import Checkout from './pages/Checkout';
+import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
@@ -23,9 +24,9 @@ function App() {
         <Route path="/Create" element={<Create />} />
         <Route path="/Sign-in" element={<SignIn />} />   
         <Route path="/Sign-up" element={<Signup />} />   
-         
-        {/* <--- 2. ADDED THE DASHBOARD ROUTE HERE */}
         <Route path="/Dashboard" element={<Dashboard />} /> 
+        <Route path="/product/:id" element={<ProductDetails />} />
+        <Route path="/checkout" element={<Checkout />} />
 
       </Routes>
     </div>

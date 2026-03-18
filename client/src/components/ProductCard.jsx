@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom'; 
 import '../styles/ProductCard.css';
-import FallbackCandle from '../assets/candle.png'; // We use this if the DB doesn't have an image
+import FallbackCandle from '../assets/candle.png'; 
 
 const ProductCard = ({ product }) => {
   const [isAdding, setIsAdding] = useState(false);
 
+  // 1. Check if it's completely out of stock!
+  const isOutOfStock = product.stock_quantity <= 0;
+
   const handleAddToCart = async (e) => {
-    e.preventDefault(); // <-- CRITICAL: Stops the <Link> from triggering when you click the button!
+    e.preventDefault(); 
+    
+    // Safety block
+    if (isOutOfStock) return;
 
     const userId = localStorage.getItem("userId");
     if (!userId) {
@@ -35,7 +41,7 @@ const ProductCard = ({ product }) => {
       if (response.ok) {
         alert(`${product.name} added to cart! 🛒`);
       } else {
-        alert("Error: " + data.error);
+        alert("Wait: " + data.error);
       }
     } catch (error) {
       console.error("Failed to add to cart:", error);
@@ -46,8 +52,6 @@ const ProductCard = ({ product }) => {
 
   if (!product) return null;
 
-  // THE FIX: If the DB has an image, point it to the backend server (port 5000). 
-  // If it's a dummy HTTP link, leave it alone. If there's no image, use the fallback!
   const displayImage = product.image_url 
     ? (product.image_url.startsWith('http') ? product.image_url : `http://localhost:5000${product.image_url}`)
     : FallbackCandle;
@@ -56,19 +60,23 @@ const ProductCard = ({ product }) => {
     <div className="product-card-container">
       <Link to={`/product/${product.id}`} className="product-card">
         
-        {/* Drop our fixed image variable right here */}
-        <img src={displayImage} className="candle-img" alt={product.name}/>
+        <div className="image-wrapper">
+          <img src={displayImage} className="candle-img" alt={product.name}/>
+          {/* 2. Show a Sold Out badge if stock is 0 */}
+          {isOutOfStock && <div className="sold-out-badge">Sold Out</div>}
+        </div>
       
         <div className="card-overlay">
             <h3 className="product-name">{product.name}</h3>
             <p className="price">{Number(product.price).toFixed(2)} L.E.</p>
             
+            {/* 3. Disable the button and change text if out of stock */}
             <button 
-              className="add-btn" 
+              className={`add-btn ${isOutOfStock ? 'disabled-btn' : ''}`} 
               onClick={handleAddToCart}
-              disabled={isAdding}
+              disabled={isAdding || isOutOfStock}
             >
-              {isAdding ? "Adding..." : "Add to Cart"}
+              {isOutOfStock ? "Out of Stock" : (isAdding ? "Adding..." : "Add to Cart")}
             </button>
         </div>
       </Link>
