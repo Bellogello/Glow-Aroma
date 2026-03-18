@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Badge, Form, Alert, Spinner } from 'react-bootstrap';
 import Navbar from '../components/Navbar';
@@ -31,21 +31,20 @@ const Dashboard = () => {
   const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
   const [showAddDiscountDialog, setShowAddDiscountDialog] = useState(false);
   const [showViewMessageDialog, setShowViewMessageDialog] = useState(false);
+
+  // --- SELECTED ITEM STATES ---
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedOrderItems, setSelectedOrderItems] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
 
   // --- FORM STATES ---
   const [staffForm, setStaffForm] = useState({ name: '', email: '', phone: '', password: '', role_id: '2' });
-  
-  // NOTE: Image is now 'null' instead of a URL string
   const [productForm, setProductForm] = useState({ name: '', price: '', stock_quantity: '', description: '', image: null });
   const [editProductForm, setEditProductForm] = useState({ id: '', name: '', price: '', stock_quantity: '', description: '', image_url: '', image: null });
-  
-  const [selectedOrder, setSelectedOrder] = useState(null);
   const [newStatusId, setNewStatusId] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
   const [discountForm, setDiscountForm] = useState({
-    code: '', discount_type: 'percentage', discount_value: '',
-    min_order_amount: '', max_order_amount: '', max_uses: '', expires_at: '',
+    code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_order_amount: '', max_uses: '', expires_at: '',
   });
 
   // --- FEEDBACK STATES ---
@@ -53,10 +52,13 @@ const Dashboard = () => {
   const [dialogSuccess, setDialogSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // ==========================================
+  // --- INITIALIZATION ---
+  // ==========================================
   useEffect(() => {
     const uId = localStorage.getItem('userId');
     setIsAuthorized(true);
-    setUserRole('3'); // Forcing Super Admin for testing, update later if needed
+    setUserRole('3'); // Forcing Super Admin for testing
     setUserId(uId);
     fetchDashboardData();
   }, [navigate]);
@@ -89,11 +91,12 @@ const Dashboard = () => {
   };
 
   const resetDialogState = () => { setDialogError(''); setDialogSuccess(''); setSubmitting(false); };
-
   const getStatusLabel = (s) => s === 1 ? 'Processing' : s === 2 ? 'Shipped' : 'Delivered';
   const getStatusBg = (s) => s === 1 ? 'warning' : s === 2 ? 'info' : 'success';
 
-  // --- STAFF ---
+  // ==========================================
+  // --- STAFF FUNCTIONS ---
+  // ==========================================
   const handleOpenAddStaff = () => { setStaffForm({ name: '', email: '', phone: '', password: '', role_id: '2' }); resetDialogState(); setShowAddStaffDialog(true); };
   const handleAddStaff = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
@@ -116,12 +119,12 @@ const Dashboard = () => {
     } catch (err) { alert(`Error: ${err.message}`); }
   };
 
-  // --- PRODUCTS ---
+  // ==========================================
+  // --- PRODUCT FUNCTIONS ---
+  // ==========================================
   const handleOpenAddProduct = () => { setProductForm({ name: '', price: '', stock_quantity: '', description: '', image: null }); resetDialogState(); setShowAddProductDialog(true); };
-  
   const handleAddProduct = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
-    
     const formData = new FormData();
     formData.append('name', productForm.name);
     formData.append('price', productForm.price);
@@ -144,10 +147,8 @@ const Dashboard = () => {
     resetDialogState(); 
     setShowEditProductDialog(true); 
   };
-
   const handleUpdateProduct = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
-    
     const formData = new FormData();
     formData.append('name', editProductForm.name);
     formData.append('price', editProductForm.price);
@@ -165,9 +166,8 @@ const Dashboard = () => {
       setTimeout(() => setShowEditProductDialog(false), 1500);
     } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
-
   const handleDeleteProduct = async (id) => {
-    if (!window.confirm('Are you sure you want to completely remove this product? This action cannot be undone.')) return;
+    if (!window.confirm('Are you sure you want to completely remove this product?')) return;
     try {
       const res = await fetch(`http://localhost:5000/admin/products/${id}`, { method: 'DELETE' });
       const data = await res.json();
@@ -177,21 +177,55 @@ const Dashboard = () => {
     } catch (err) { alert(`Error: ${err.message}`); }
   };
 
-  // --- ORDERS ---
-  const handleOpenOrderDialog = (order) => { setSelectedOrder(order); setNewStatusId(String(order.status_id)); resetDialogState(); setShowOrderDialog(true); };
-  const handleUpdateOrderStatus = async (e) => {
-    e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
+  // ==========================================
+  // --- ORDER FUNCTIONS ---
+  // ==========================================
+  const handleOpenOrderDialog = async (order) => { 
+    setSelectedOrder(order); 
+    setNewStatusId(String(order.status_id)); 
+    resetDialogState(); 
+    setSelectedOrderItems([]); 
+    setShowOrderDialog(true); 
+
     try {
-      const res = await fetch(`http://localhost:5000/admin/orders/${selectedOrder.id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status_id: Number(newStatusId) }) });
+      const res = await fetch(`http://localhost:5000/admin/orders/${order.id}/items`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to update order status.');
-      setDialogSuccess('Order status updated!');
-      setOrders((prev) => prev.map((o) => (o.id === selectedOrder.id ? { ...o, status_id: Number(newStatusId) } : o)));
-      setTimeout(() => setShowOrderDialog(false), 1500);
-    } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
+      if (!data.error) setSelectedOrderItems(data);
+    } catch (err) {
+      console.error("Failed to load order items", err);
+    }
   };
 
-  // --- DELETE ACCOUNT ---
+  const handleUpdateOrderStatus = async (e) => {
+    e.preventDefault(); 
+    setSubmitting(true); 
+    setDialogError(''); 
+    setDialogSuccess('');
+    
+    try {
+      const res = await fetch(`http://localhost:5000/admin/orders/${selectedOrder.id}/status`, { 
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ status_id: Number(newStatusId) }) 
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.message || 'Failed to update order status.');
+      
+      setDialogSuccess('Order status updated!');
+      setOrders((prev) => prev.map((o) => (o.id === selectedOrder.id ? { ...o, status_id: Number(newStatusId) } : o)));
+      
+      setTimeout(() => setShowOrderDialog(false), 1500);
+    } catch (err) { 
+      setDialogError(err.message); 
+    } finally { 
+      setSubmitting(false); 
+    }
+  };
+
+  // ==========================================
+  // --- ACCOUNT & DISCOUNT FUNCTIONS ---
+  // ==========================================
   const handleOpenDeleteAccount = () => { setDeletePassword(''); resetDialogState(); setShowDeleteAccountDialog(true); };
   const handleDeleteAccount = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError('');
@@ -205,7 +239,6 @@ const Dashboard = () => {
     } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
 
-  // --- PROMO CODES ---
   const handleOpenAddDiscount = () => { setDiscountForm({ code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_order_amount: '', max_uses: '', expires_at: '' }); resetDialogState(); setShowAddDiscountDialog(true); };
   const generateRandomCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -239,8 +272,6 @@ const Dashboard = () => {
       fetchDashboardData();
     } catch (err) { console.error(err.message); }
   };
-  
-  // --- MESSAGES ---
   const handleDeleteMessage = async (id) => {
     if (!window.confirm('Delete this message permanently?')) return;
     try {
@@ -254,6 +285,9 @@ const Dashboard = () => {
 
   if (!isAuthorized) return null;
 
+  // ==========================================
+  // --- MAIN RENDER ---
+  // ==========================================
   return (
     <>
       <div className="home-container dashboard-bg">
@@ -264,23 +298,25 @@ const Dashboard = () => {
           <div className="dashboard-card">
             <div className="card-header-flex"><h2>Recent Orders</h2></div>
             {loading ? <p className="text-muted">Loading orders...</p> : (
-              <Table responsive className="custom-table borderless align-left-table">
-                <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody>
-                  {orders.length === 0
-                    ? <tr><td colSpan="6" className="text-center text-muted">No orders found.</td></tr>
-                    : orders.map((order) => (
-                      <tr key={order.id} className="table-row-hover">
-                        <td><strong>#{order.id}</strong></td>
-                        <td>{order.customer_name}</td>
-                        <td>{new Date(order.created_at).toLocaleDateString()}</td>
-                        <td>{Number(order.total).toFixed(2)} L.E.</td>
-                        <td><Badge bg={getStatusBg(order.status_id)} className="custom-badge">{getStatusLabel(order.status_id)}</Badge></td>
-                        <td><button className="btn-action" onClick={() => handleOpenOrderDialog(order)}>View</button></td>
-                      </tr>
-                    ))}
-                </tbody>
-              </Table>
+              <div className="table-scroll-wrapper">
+                <Table responsive className="custom-table borderless align-left-table mb-0">
+                  <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+                  <tbody>
+                    {orders.length === 0
+                      ? <tr><td colSpan="6" className="text-center text-muted py-4">No orders found.</td></tr>
+                      : orders.map((order) => (
+                        <tr key={order.id} className="table-row-hover">
+                          <td><strong>#{order.id}</strong></td>
+                          <td>{order.customer_name}</td>
+                          <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                          <td>{Number(order.total).toFixed(2)} L.E.</td>
+                          <td><Badge bg={getStatusBg(order.status_id)} className="custom-badge">{getStatusLabel(order.status_id)}</Badge></td>
+                          <td><button className="btn-action" onClick={() => handleOpenOrderDialog(order)}>View</button></td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </Table>
+              </div>
             )}
           </div>
 
@@ -291,27 +327,29 @@ const Dashboard = () => {
               <button className="custom-pill-btn-small" onClick={handleOpenAddProduct}>+ Add Product</button>
             </div>
             {loading ? <p className="text-muted">Loading inventory...</p> : (
-              <Table responsive className="custom-table borderless align-left-table">
-                <thead><tr><th>ID</th><th>Product Name</th><th>Stock Level</th><th>Price</th><th>Action</th></tr></thead>
-                <tbody>
-                  {products.length === 0
-                    ? <tr><td colSpan="5" className="text-center text-muted">No products found.</td></tr>
-                    : products.map((product) => (
-                      <tr key={product.id} className="table-row-hover">
-                        <td>{product.id}</td>
-                        <td>
-                          {product.image_url && (
-                            <img src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:5000${product.image_url}`} alt={product.name} style={{width: '30px', height: '30px', objectFit: 'cover', borderRadius: '4px', marginRight: '10px'}} />
-                          )}
-                          <strong>{product.name}</strong>
-                        </td>
-                        <td><span className={product.stock_quantity === 0 ? 'text-danger fw-bold' : ''}>{product.stock_quantity} units</span></td>
-                        <td>{Number(product.price).toFixed(2)} L.E.</td>
-                        <td><button className="btn-action" onClick={() => handleOpenEditProduct(product)}>Edit</button></td>
-                      </tr>
-                    ))}
-                </tbody>
-              </Table>
+              <div className="table-scroll-wrapper">
+                <Table responsive className="custom-table borderless align-left-table mb-0">
+                  <thead><tr><th>ID</th><th>Product Name</th><th>Stock Level</th><th>Price</th><th>Action</th></tr></thead>
+                  <tbody>
+                    {products.length === 0
+                      ? <tr><td colSpan="5" className="text-center text-muted py-4">No products found.</td></tr>
+                      : products.map((product) => (
+                        <tr key={product.id} className="table-row-hover">
+                          <td>{product.id}</td>
+                          <td>
+                            {product.image_url && (
+                              <img src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:5000${product.image_url}`} alt={product.name} style={{width: '30px', height: '30px', objectFit: 'cover', borderRadius: '4px', marginRight: '10px'}} />
+                            )}
+                            <strong>{product.name}</strong>
+                          </td>
+                          <td><span className={product.stock_quantity === 0 ? 'text-danger fw-bold' : ''}>{product.stock_quantity} units</span></td>
+                          <td>{Number(product.price).toFixed(2)} L.E.</td>
+                          <td><button className="btn-action" onClick={() => handleOpenEditProduct(product)}>Edit</button></td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </Table>
+              </div>
             )}
           </div>
 
@@ -323,87 +361,70 @@ const Dashboard = () => {
                 <button className="custom-pill-btn-small" onClick={handleOpenAddDiscount}>+ New Code</button>
               </div>
               {loading ? <p className="text-muted">Loading codes...</p> : (
-                <Table responsive className="custom-table borderless align-left-table">
-                  <thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min. Order</th><th>Max Order</th><th>Uses</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
-                  <tbody>
-                    {discountCodes.length === 0
-                      ? <tr><td colSpan="9" className="text-center text-muted">No codes found.</td></tr>
-                      : discountCodes.map((dc) => (
-                        <tr key={dc.id} className="table-row-hover">
-                          <td><strong>{dc.code}</strong></td>
-                          <td>{dc.discount_type === 'percentage' ? 'Percentage' : 'Fixed'}</td>
-                          <td>{dc.discount_type === 'percentage' ? `${dc.discount_value}%` : `${Number(dc.discount_value).toFixed(2)} L.E.`}</td>
-                          <td>{dc.min_order_amount ? `${Number(dc.min_order_amount).toFixed(2)} L.E.` : '—'}</td>
-                          <td>{dc.max_order_amount ? `${Number(dc.max_order_amount).toFixed(2)} L.E.` : '—'}</td>
-                          <td>{dc.times_used ?? 0}{dc.max_uses ? ` / ${dc.max_uses}` : ' / ∞'}</td>
-                          <td>{dc.expires_at ? new Date(dc.expires_at).toLocaleDateString() : '—'}</td>
-                          <td><Badge bg={dc.is_active ? 'success' : 'secondary'} className="custom-badge">{dc.is_active ? 'Active' : 'Inactive'}</Badge></td>
-                          <td className="d-flex gap-2">
-                            <button className={dc.is_active ? 'btn-action-danger' : 'btn-action'} onClick={() => handleToggleDiscount(dc.id, dc.is_active)}>{dc.is_active ? 'Disable' : 'Enable'}</button>
-                            <button className="btn-action-danger" onClick={() => handleDeleteDiscount(dc.id)}>Delete</button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </Table>
+                <div className="table-scroll-wrapper">
+                  <Table responsive className="custom-table borderless align-left-table mb-0">
+                    <thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min. Order</th><th>Max Order</th><th>Uses</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {discountCodes.length === 0
+                        ? <tr><td colSpan="9" className="text-center text-muted py-4">No codes found.</td></tr>
+                        : discountCodes.map((dc) => (
+                          <tr key={dc.id} className="table-row-hover">
+                            <td><strong>{dc.code}</strong></td>
+                            <td>{dc.discount_type === 'percentage' ? 'Percentage' : 'Fixed'}</td>
+                            <td>{dc.discount_type === 'percentage' ? `${dc.discount_value}%` : `${Number(dc.discount_value).toFixed(2)} L.E.`}</td>
+                            <td>{dc.min_order_amount ? `${Number(dc.min_order_amount).toFixed(2)} L.E.` : '—'}</td>
+                            <td>{dc.max_order_amount ? `${Number(dc.max_order_amount).toFixed(2)} L.E.` : '—'}</td>
+                            <td>{dc.times_used ?? 0}{dc.max_uses ? ` / ${dc.max_uses}` : ' / ∞'}</td>
+                            <td>{dc.expires_at ? new Date(dc.expires_at).toLocaleDateString() : '—'}</td>
+                            <td><Badge bg={dc.is_active ? 'success' : 'secondary'} className="custom-badge">{dc.is_active ? 'Active' : 'Inactive'}</Badge></td>
+                            <td className="d-flex gap-2">
+                              <button className={dc.is_active ? 'btn-action-danger' : 'btn-action'} onClick={() => handleToggleDiscount(dc.id, dc.is_active)}>{dc.is_active ? 'Disable' : 'Enable'}</button>
+                              <button className="btn-action-danger" onClick={() => handleDeleteDiscount(dc.id)}>Delete</button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </Table>
+                </div>
               )}
             </div>
           )}
 
-          {/* CUSTOMER MESSAGES */}
+          {/* 4. CUSTOMER MESSAGES */}
           <div className="dashboard-card">
             <div className="card-header-flex">
               <h2>Customer Messages</h2>
             </div>
             {loading ? <p className="text-muted">Loading messages...</p> : (
-              <Table responsive className="custom-table borderless align-left-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {messages.length === 0
-                    ? <tr><td colSpan="5" className="text-center text-muted">No messages found.</td></tr>
-                    : messages.map((msg) => (
-                      <tr key={msg.id} className="table-row-hover">
-                        <td>{new Date(msg.created_at).toLocaleDateString()}</td>
-                        <td><strong>{msg.name}</strong></td>
-                        <td><a href={`mailto:${msg.email}`} className="text-decoration-none">{msg.email}</a></td>
-                        <td>
-                          {msg.phone ? (
-                            <a href={`tel:${msg.phone}`} className="text-decoration-none text-muted">{msg.phone}</a>
-                          ) : (
-                            <span className="text-muted">—</span>
-                          )}
-                        </td>
-                        <td>
-                          <button 
-                            className="btn-action" 
-                            onClick={() => { setSelectedMessage(msg); setShowViewMessageDialog(true); }}
-                          >
-                            Read
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </Table>
+              <div className="table-scroll-wrapper">
+                <Table responsive className="custom-table borderless align-left-table mb-0">
+                  <thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Phone</th><th>Action</th></tr></thead>
+                  <tbody>
+                    {messages.length === 0
+                      ? <tr><td colSpan="5" className="text-center text-muted py-4">No messages found.</td></tr>
+                      : messages.map((msg) => (
+                        <tr key={msg.id} className="table-row-hover">
+                          <td>{new Date(msg.created_at).toLocaleDateString()}</td>
+                          <td><strong>{msg.name}</strong></td>
+                          <td><a href={`mailto:${msg.email}`} className="text-decoration-none">{msg.email}</a></td>
+                          <td>{msg.phone ? <a href={`tel:${msg.phone}`} className="text-decoration-none text-muted">{msg.phone}</a> : <span className="text-muted">—</span>}</td>
+                          <td><button className="btn-action" onClick={() => { setSelectedMessage(msg); setShowViewMessageDialog(true); }}>Read</button></td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </Table>
+              </div>
             )}
           </div>
 
-          {/* 4. ACCOUNT SETTINGS */}
+          {/* 5. ACCOUNT SETTINGS */}
           <div className="dashboard-card">
             <h2>Account Settings</h2>
             <p className="text-muted mt-3">Manage your personal admin profile and security.</p>
             <div style={{ padding: '2rem 0', color: '#a89f91' }}>Profile management features coming soon...</div>
           </div>
 
-          {/* 5. STAFF */}
+          {/* 6. STAFF */}
           {userRole === '3' && (
             <div className="dashboard-card">
               <div className="card-header-flex">
@@ -412,25 +433,27 @@ const Dashboard = () => {
               </div>
               <p className="text-muted">Manage your admin team below.</p>
               {loading ? <p className="text-muted">Loading staff...</p> : (
-                <Table responsive className="custom-table borderless align-left-table">
-                  <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
-                  <tbody>
-                    {staff.map((member) => (
-                      <tr key={member.id} className="table-row-hover">
-                        <td>{member.id}</td>
-                        <td><strong>{member.name}</strong></td>
-                        <td>{member.email}</td>
-                        <td><Badge bg={member.role_id === 3 ? 'danger' : 'primary'} className="custom-badge">{member.role_id === 3 ? 'Super Admin' : 'Admin'}</Badge></td>
-                        <td>{member.role_id !== 3 && <button className="btn-action-danger" onClick={() => handleRemoveStaff(member.id)}>Remove</button>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
+                <div className="table-scroll-wrapper">
+                  <Table responsive className="custom-table borderless align-left-table mb-0">
+                    <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
+                    <tbody>
+                      {staff.map((member) => (
+                        <tr key={member.id} className="table-row-hover">
+                          <td>{member.id}</td>
+                          <td><strong>{member.name}</strong></td>
+                          <td>{member.email}</td>
+                          <td><Badge bg={member.role_id === 3 ? 'danger' : 'primary'} className="custom-badge">{member.role_id === 3 ? 'Super Admin' : 'Admin'}</Badge></td>
+                          <td>{member.role_id !== 3 && <button className="btn-action-danger" onClick={() => handleRemoveStaff(member.id)}>Remove</button>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
               )}
             </div>
           )}
 
-          {/* 6. DELETE ACCOUNT */}
+          {/* 7. DELETE ACCOUNT */}
           <div className="dashboard-card">
             <div className="card-header-flex"><h2 className="text-danger">Delete Account</h2></div>
             <p className="text-muted">Account deletion is permanent. Proceed with caution.</p>
@@ -442,12 +465,145 @@ const Dashboard = () => {
               <button className="btn-danger-pill" onClick={handleOpenDeleteAccount}>Delete My Account</button>
             </div>
           </div>
-
         </div>
         <Footer />
       </div>
 
-      {/* DIALOGS BELOW */}
+      {/* ========================================== */}
+      {/* DIALOGS */}
+      {/* ========================================== */}
+
+      {/* VIEW ORDER DIALOG (WITH RECEIPT) */}
+      {showOrderDialog && selectedOrder && (
+        <div className="dialog-overlay">
+          <div className="dialog-box">
+            <div className="dialog-header">
+              <h3>Order #{selectedOrder.id}</h3>
+              <button className="close-btn" onClick={() => setShowOrderDialog(false)}>&times;</button>
+            </div>
+            <Form onSubmit={handleUpdateOrderStatus}>
+              {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
+              {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
+              
+              <div className="order-details-box mb-3">
+                <p className="mb-2"><strong>Customer:</strong> <span className="text-muted">{selectedOrder.customer_name}</span></p>
+                <p className="mb-2"><strong>Date:</strong> <span className="text-muted">{new Date(selectedOrder.created_at).toLocaleDateString()}</span></p>
+                <p className="mb-2"><strong>Total:</strong> <span className="fw-bold text-success">{Number(selectedOrder.total).toFixed(2)} L.E.</span></p>
+                
+                <div className="d-flex align-items-center mt-3">
+                  <strong className="me-2">Current Status:</strong>
+                  <Badge bg={getStatusBg(selectedOrder.status_id)} className="custom-badge fs-6">{getStatusLabel(selectedOrder.status_id)}</Badge>
+                </div>
+              </div>
+
+              {/* THE ITEMIZED RECEIPT */}
+              <div className="mb-4 p-3 rounded" style={{ backgroundColor: '#fdfbf7', border: '1px solid #e0dcd3' }}>
+                <h6 className="fw-bold mb-3" style={{ color: '#4a3728' }}>Order Items</h6>
+                {selectedOrderItems.length === 0 ? (
+                  <p className="text-muted small mb-0">No items found for this order.</p>
+                ) : (
+                  <ul className="list-unstyled mb-0" style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '5px' }}>
+                    {selectedOrderItems.map(item => (
+                      <li key={item.id} className="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                        <div>
+                          <div>
+                            <span className="fw-bold text-dark">{item.quantity}x</span> {item.item_name}
+                            {item.item_type !== 'prebuilt' && <span className="badge bg-secondary ms-2" style={{ fontSize: '0.65rem'}}>Custom</span>}
+                          </div>
+                          
+                          {/* THE NEW RECEIPT DETAILS FOR CUSTOM CANDLES */}
+                          {item.details && item.details !== 'Standard Pre-built' && item.details !== 'See order details' && (
+                            <div className="text-muted mt-1" style={{ fontSize: '0.85rem', marginLeft: '1.5rem', lineHeight: '1.4' }}>
+                              {item.details}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-muted fw-semibold">{(Number(item.unit_price) * item.quantity).toFixed(2)} L.E.</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold">Update Status</Form.Label>
+                <Form.Select className="custom-input form-select" value={newStatusId} onChange={(e) => setNewStatusId(e.target.value)} required>
+                  <option value="1">Processing</option>
+                  <option value="2">Shipped</option>
+                  <option value="3">Delivered</option>
+                </Form.Select>
+              </Form.Group>
+              
+              <div className="dialog-footer">
+                <button type="button" className="btn btn-cancel" onClick={() => setShowOrderDialog(false)}>Close</button>
+                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save Changes'}</button>
+              </div>
+            </Form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PRODUCT DIALOG */}
+      {showEditProductDialog && (
+        <div className="dialog-overlay">
+          <div className="dialog-box">
+            <div className="dialog-header">
+              <h3>Edit Product</h3>
+              <button className="close-btn" onClick={() => setShowEditProductDialog(false)}>&times;</button>
+            </div>
+            <Form onSubmit={handleUpdateProduct}>
+              {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
+              {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
+              
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold">Product Name</Form.Label>
+                <Form.Control type="text" className="custom-input" placeholder="e.g. Lavender Bliss" value={editProductForm.name} onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })} required />
+              </Form.Group>
+              
+              <div className="d-flex gap-3 mb-3">
+                <Form.Group className="flex-fill">
+                  <Form.Label className="fw-semibold">Price (L.E.)</Form.Label>
+                  <Form.Control type="number" className="custom-input" placeholder="0.00" min="0" step="0.01" value={editProductForm.price} onChange={(e) => setEditProductForm({ ...editProductForm, price: e.target.value })} required />
+                </Form.Group>
+                
+                <Form.Group className="flex-fill">
+                  <Form.Label className="fw-semibold">Stock Quantity</Form.Label>
+                  <Form.Control 
+                    type="number" 
+                    className="custom-input" 
+                    placeholder="0" 
+                    min="0" 
+                    value={editProductForm.stock_quantity} 
+                    onChange={(e) => {
+                      const cleanValue = e.target.value.replace(/^0+(?=\d)/, '');
+                      setEditProductForm({ ...editProductForm, stock_quantity: cleanValue });
+                    }} 
+                    required 
+                  />
+                </Form.Group>
+              </div>
+              
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold">Description</Form.Label>
+                <Form.Control as="textarea" className="custom-input" rows={2} placeholder="Describe the product..." value={editProductForm.description || ''} onChange={(e) => setEditProductForm({ ...editProductForm, description: e.target.value })} />
+              </Form.Group>
+              
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold">Update Image <span className="text-muted fw-normal">(Leave blank to keep current)</span></Form.Label>
+                <Form.Control type="file" accept="image/*" className="custom-input" onChange={(e) => setEditProductForm({ ...editProductForm, image: e.target.files[0] })} />
+              </Form.Group>
+              
+              <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
+                <button type="button" className="btn-action-danger" onClick={() => handleDeleteProduct(editProductForm.id)}>Delete Product</button>
+                <div className="d-flex gap-2">
+                  <button type="button" className="btn btn-cancel" onClick={() => setShowEditProductDialog(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save Changes'}</button>
+                </div>
+              </div>
+            </Form>
+          </div>
+        </div>
+      )}
 
       {/* ADD STAFF DIALOG */}
       {showAddStaffDialog && (
@@ -498,98 +654,6 @@ const Dashboard = () => {
               <div className="dialog-footer">
                 <button type="button" className="btn btn-cancel" onClick={() => setShowAddProductDialog(false)}>Cancel</button>
                 <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Add Product'}</button>
-              </div>
-            </Form>
-          </div>
-        </div>
-      )}
-
-{/* EDIT PRODUCT DIALOG */}
-      {showEditProductDialog && (
-        <div className="dialog-overlay">
-          <div className="dialog-box">
-            <div className="dialog-header">
-              <h3>Edit Product</h3>
-              <button className="close-btn" onClick={() => setShowEditProductDialog(false)}>&times;</button>
-            </div>
-            <Form onSubmit={handleUpdateProduct}>
-              {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-              {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-              
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Product Name</Form.Label>
-                <Form.Control type="text" className="custom-input" placeholder="e.g. Lavender Bliss" value={editProductForm.name} onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })} required />
-              </Form.Group>
-              
-              <div className="d-flex gap-3 mb-3">
-                <Form.Group className="flex-fill">
-                  <Form.Label className="fw-semibold">Price (L.E.)</Form.Label>
-                  <Form.Control type="number" className="custom-input" placeholder="0.00" min="0" step="0.01" value={editProductForm.price} onChange={(e) => setEditProductForm({ ...editProductForm, price: e.target.value })} required />
-                </Form.Group>
-                
-                {/* THE FIXED STOCK INPUT */}
-                <Form.Group className="flex-fill">
-                  <Form.Label className="fw-semibold">Stock Quantity</Form.Label>
-                  <Form.Control 
-                    type="number" 
-                    className="custom-input" 
-                    placeholder="0" 
-                    min="0" 
-                    value={editProductForm.stock_quantity} 
-                    onChange={(e) => {
-                      const cleanValue = e.target.value.replace(/^0+(?=\d)/, '');
-                      setEditProductForm({ ...editProductForm, stock_quantity: cleanValue });
-                    }} 
-                    required 
-                  />
-                </Form.Group>
-              </div>
-              
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Description</Form.Label>
-                <Form.Control as="textarea" className="custom-input" rows={2} placeholder="Describe the product..." value={editProductForm.description || ''} onChange={(e) => setEditProductForm({ ...editProductForm, description: e.target.value })} />
-              </Form.Group>
-              
-              <Form.Group className="mb-4">
-                <Form.Label className="fw-semibold">Update Image <span className="text-muted fw-normal">(Leave blank to keep current)</span></Form.Label>
-                <Form.Control type="file" accept="image/*" className="custom-input" onChange={(e) => setEditProductForm({ ...editProductForm, image: e.target.files[0] })} />
-              </Form.Group>
-              
-              <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
-                <button type="button" className="btn-action-danger" onClick={() => handleDeleteProduct(editProductForm.id)}>Delete Product</button>
-                <div className="d-flex gap-2">
-                  <button type="button" className="btn btn-cancel" onClick={() => setShowEditProductDialog(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save Changes'}</button>
-                </div>
-              </div>
-            </Form>
-          </div>
-        </div>
-      )}
-      {/* VIEW ORDER DIALOG */}
-      {showOrderDialog && selectedOrder && (
-        <div className="dialog-overlay">
-          <div className="dialog-box">
-            <div className="dialog-header">
-              <h3>Order #{selectedOrder.id}</h3>
-              <button className="close-btn" onClick={() => setShowOrderDialog(false)}>&times;</button>
-            </div>
-            <Form onSubmit={handleUpdateOrderStatus}>
-              {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-              {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-              <div className="order-details-box mb-4">
-                <p className="mb-2"><strong>Customer:</strong> <span className="text-muted">{selectedOrder.customer_name}</span></p>
-                <p className="mb-2"><strong>Date:</strong> <span className="text-muted">{new Date(selectedOrder.created_at).toLocaleDateString()}</span></p>
-                <p className="mb-2"><strong>Total:</strong> <span className="fw-bold text-success">{Number(selectedOrder.total).toFixed(2)} L.E.</span></p>
-                <div className="d-flex align-items-center mt-3">
-                  <strong className="me-2">Current Status:</strong>
-                  <Badge bg={getStatusBg(selectedOrder.status_id)} className="custom-badge fs-6">{getStatusLabel(selectedOrder.status_id)}</Badge>
-                </div>
-              </div>
-              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Update Status</Form.Label><Form.Select className="custom-input form-select" value={newStatusId} onChange={(e) => setNewStatusId(e.target.value)} required><option value="1">Processing</option><option value="2">Shipped</option><option value="3">Delivered</option></Form.Select></Form.Group>
-              <div className="dialog-footer">
-                <button type="button" className="btn btn-cancel" onClick={() => setShowOrderDialog(false)}>Close</button>
-                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save Changes'}</button>
               </div>
             </Form>
           </div>

@@ -596,6 +596,13 @@ app.put('/admin/orders/:id/status', (req, res) => {
     res.json({ message: 'Order status updated successfully.' });
   });
 });
+// --- ADMIN: GET ORDER ITEMS ---
+app.get('/admin/orders/:id/items', (req, res) => {
+  db.query('SELECT * FROM order_items WHERE order_id = ?', [req.params.id], (err, results) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch items: ' + err.message });
+    res.json(results);
+  });
+});
 
 // ==========================================
 // --- ADMIN: STAFF ---
@@ -902,33 +909,42 @@ app.post('/addresses/:userId', (req, res) => {
     res.status(201).json({ message: 'Address saved!', addressId: result.insertId });
   });
 });
+
 // ==========================================
 // --- CHECKOUT: PLACE ORDER ---
 // ==========================================
 app.post('/checkout', (req, res) => {
   const { userId, shippingDetails } = req.body;
-
   if (!userId) return res.status(401).json({ error: 'You must be logged in to checkout.' });
 
-  // 1. Get the user's cart ID
   db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
     if (err) return res.status(500).json({ error: 'Database error: ' + err.message });
     if (cartResults.length === 0) return res.status(400).json({ error: 'Your cart is empty!' });
-
     const cartId = cartResults[0].id;
 
-    // 2. Fetch cart items AND THEIR CURRENT LIVE STOCK
+    // UPGRADED: Fetch the exact DNA of the custom candles (Scent, Size, Color, Wax Layers)
     const cartItemsSql = `
       SELECT 
-        ci.quantity, 
-        ci.prebuilt_candle_id, 
-        cc.total_price AS custom_price, 
-        pc.price AS prebuilt_price,
-        pc.name AS prebuilt_name,
-        pc.stock_quantity
+        ci.quantity, ci.prebuilt_candle_id, ci.custom_candle_id,
+        cc.total_price AS custom_price, cc.type AS custom_type,
+        pc.price AS prebuilt_price, pc.name AS prebuilt_name, pc.stock_quantity,
+        cs.name AS cup_name, ms.name AS mold_name,
+        sc.name AS scent_name,
+        sz.size_ml AS cup_size,
+        col.name AS cup_color,
+        (SELECT GROUP_CONCAT(CONCAT('L', layer_index, ': ', c.name) SEPARATOR ' | ') 
+         FROM custom_candle_layers ccl 
+         JOIN colors c ON ccl.color_id = c.id 
+         WHERE ccl.custom_candle_id = cc.id 
+         ORDER BY ccl.layer_index) AS wax_colors
       FROM cart_items ci
       LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
       LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
+      LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
+      LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
+      LEFT JOIN scents sc ON cc.scent_id = sc.id
+      LEFT JOIN cup_sizes sz ON cc.cup_size_id = sz.id
+      LEFT JOIN cup_colors col ON cc.cup_color_id = col.id
       WHERE ci.cart_id = ?
     `;
 
@@ -936,37 +952,52 @@ app.post('/checkout', (req, res) => {
       if (err) return res.status(500).json({ error: 'Failed to fetch cart items: ' + err.message });
       if (items.length === 0) return res.status(400).json({ error: 'Your cart is empty!' });
 
-      // 3. THE FINAL BOUNCER: Check stock one last time right before they pay!
       for (let item of items) {
         if (item.prebuilt_candle_id && item.quantity > item.stock_quantity) {
-          return res.status(400).json({ 
-            error: `Sorry, "${item.prebuilt_name}" only has ${item.stock_quantity} left in stock. Please remove it from your cart to proceed.` 
-          });
+          return res.status(400).json({ error: `Sorry, "${item.prebuilt_name}" only has ${item.stock_quantity} left.` });
         }
       }
 
-      // If they passed the bouncer, calculate the total!
       let orderTotal = 0;
-      items.forEach(item => {
-        const price = item.prebuilt_price || item.custom_price || 0;
-        orderTotal += price * item.quantity;
-      });
+      items.forEach(item => orderTotal += (item.prebuilt_price || item.custom_price || 0) * item.quantity);
 
-      // 4. Create the official Order! (Status 1 = Processing)
       db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, orderTotal], (err, orderResult) => {
         if (err) return res.status(500).json({ error: 'Failed to create order: ' + err.message });
-        
-        // 5. Deduct the stock for any prebuilt candles they bought (ONLY happens after order is confirmed!)
-        items.forEach(item => {
-          if (item.prebuilt_candle_id) {
-            db.query('UPDATE prebuilt_candles SET stock_quantity = stock_quantity - ? WHERE id = ?', [item.quantity, item.prebuilt_candle_id]);
+        const newOrderId = orderResult.insertId;
+
+        // FORMAT THE RECEIPT DETAILS!
+        const orderItemsValues = items.map(item => {
+          let itemType = 'prebuilt';
+          let itemName = item.prebuilt_name || 'Unknown Item';
+          let unitPrice = item.prebuilt_price || 0;
+          let details = 'Standard Pre-built';
+
+          if (item.custom_candle_id) {
+            itemType = item.custom_type || 'cup';
+            itemName = item.custom_type === 'cup' ? `${item.cup_name}` : `${item.mold_name}`;
+            unitPrice = item.custom_price || 0;
+            
+            // Generate the specific recipe for the candle maker!
+            if (item.custom_type === 'cup') {
+              details = `Scent: ${item.scent_name}, Size: ${item.cup_size}ml, Jar: ${item.cup_color}, Wax: ${item.wax_colors}`;
+            } else {
+              details = `Scent: ${item.scent_name}, Layers: [${item.wax_colors}]`;
+            }
           }
+          return [newOrderId, itemType, itemName, details, unitPrice, item.quantity];
         });
 
-        // 6. Empty the cart!
-        db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], (err) => {
-          if (err) console.error("Failed to clear cart items", err);
-          res.status(201).json({ message: 'Order placed successfully!', orderId: orderResult.insertId });
+        db.query('INSERT INTO order_items (order_id, item_type, item_name, details, unit_price, quantity) VALUES ?', [orderItemsValues], (err) => {
+          if (err) console.error("Failed to save order items", err);
+
+          items.forEach(item => {
+            if (item.prebuilt_candle_id) {
+              db.query('UPDATE prebuilt_candles SET stock_quantity = stock_quantity - ? WHERE id = ?', [item.quantity, item.prebuilt_candle_id]);
+            }
+          });
+          db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], () => {
+            res.status(201).json({ message: 'Order placed successfully!', orderId: newOrderId });
+          });
         });
       });
     });
