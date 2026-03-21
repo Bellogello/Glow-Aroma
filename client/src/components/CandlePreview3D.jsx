@@ -1,13 +1,20 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-// 1. We add 'modelUrl' to the props
-const CandlePreview3D = ({ cupColor, waxColor, cupSize, modelUrl }) => {
+const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, ref) => {
   const canvasRef = useRef(null);
   const meshesRef = useRef({});
   const rendererRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    getSnapshot: () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      return canvas.toDataURL('image/png', 0.6);
+    }
+  }));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -24,9 +31,10 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize, modelUrl }) => {
       canvas,
       antialias: !isMobile,
       powerPreference: 'high-performance',
+      preserveDrawingBuffer: true, // ← needed for screenshots
     });
     renderer.setSize(size, size);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5));
     renderer.shadowMap.enabled = !isMobile;
     rendererRef.current = renderer;
 
@@ -47,10 +55,9 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize, modelUrl }) => {
     controls.target.set(0, 1, 0);
     controls.update();
 
-    // 2. Determine which model to load!
-    const finalModelUrl = modelUrl 
+    const finalModelUrl = modelUrl
       ? (modelUrl.startsWith('http') ? modelUrl : `http://localhost:5000${modelUrl}`)
-      : '/candle.glb'; // Default fallback for the Custom Builder
+      : '/candle.glb';
 
     const loader = new GLTFLoader();
     loader.load(
@@ -82,7 +89,6 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize, modelUrl }) => {
           });
         }
 
-        // Apply colors if already selected before model loaded
         if (cupColor && meshesRef.current['cup']) {
           meshesRef.current['cup'].traverse((child) => {
             if (child.isMesh) child.material.color.set(cupColor);
@@ -102,7 +108,7 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize, modelUrl }) => {
     let lastTime = 0;
     const animate = (time) => {
       frameId = requestAnimationFrame(animate);
-      if (time - lastTime < 32) return; // cap at ~30fps
+      if (time - lastTime < 32) return;
       lastTime = time;
       controls.update();
       renderer.render(scene, camera);
@@ -113,9 +119,8 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize, modelUrl }) => {
       cancelAnimationFrame(frameId);
       renderer.dispose();
     };
-  }, [modelUrl]); // 3. Added modelUrl as a dependency so it re-renders if the link changes
+  }, [modelUrl]);
 
-  // Cup color changes
   useEffect(() => {
     const node = meshesRef.current['cup'];
     if (node && cupColor) {
@@ -125,7 +130,6 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize, modelUrl }) => {
     }
   }, [cupColor]);
 
-  // Wax color changes
   useEffect(() => {
     const node = meshesRef.current['wax'];
     if (node && waxColor) {
@@ -135,7 +139,6 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize, modelUrl }) => {
     }
   }, [waxColor]);
 
-  // Cup size changes
   useEffect(() => {
     const scales = { small: 0.75, medium: 1.0, large: 1.3 };
     const s = scales[cupSize] || 1.0;
@@ -159,6 +162,6 @@ const CandlePreview3D = ({ cupColor, waxColor, cupSize, modelUrl }) => {
       }}
     />
   );
-};
+});
 
 export default CandlePreview3D;

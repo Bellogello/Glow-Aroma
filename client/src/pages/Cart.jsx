@@ -115,15 +115,29 @@ const Cart = () => {
                 
                 {/* 1. IMAGE SECTION (Left) */}
                 <div className="cart-item-image">
-                  {item.is_custom ? (
-                    <div className="custom-candle-placeholder">✨</div>
+                {item.is_custom ? (
+                  item.snapshot ? (
+                    <img
+                      src={item.snapshot}
+                      alt="Custom candle preview"
+                      style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        objectFit: 'cover', 
+                        borderRadius: '8px',
+                        display: 'block'
+                      }}
+                    />
                   ) : (
+                    <div className="custom-candle-placeholder">✨</div>
+                  )
+                ) : (
                     item.image && (
-                      <img 
-                        src={item.image.startsWith('http') ? item.image : `http://localhost:5000${item.image}`} 
-                        alt={item.name} 
+                      <img
+                        src={item.image.startsWith('http') ? item.image : `http://localhost:5000${item.image}`}
+                        alt={item.name}
                       />
-                    ) 
+                    )
                   )}
                 </div>
 

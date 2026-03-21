@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../components/Navbar';
-import candle from "../assets/candle.png";
 import "../styles/create.css";
 import CandlePreview3D from '../components/CandlePreview3D';
 import useTitle from '../components/useTitles';
@@ -10,7 +9,8 @@ const Create = () => {
 
   useTitle("Create Your Own");
 
-  // --- CORE DATA STATES (Now completely dynamic!) ---
+  const previewRef = useRef(null);
+
   const [scents, setScents] = useState([]);
   const [colors, setColors] = useState([]);
   const [cupShapes, setCupShapes] = useState([]);
@@ -18,7 +18,6 @@ const Create = () => {
   const [cupColors, setCupColors] = useState([]);
   const [moldShapes, setMoldShapes] = useState([]);
 
-  // --- USER SELECTION STATES ---
   const [candleType, setCandleType] = useState('cup'); 
   const [quantity, setQuantity] = useState(1);
   const [selectedScentId, setSelectedScentId] = useState("default");
@@ -31,7 +30,6 @@ const Create = () => {
   const [selectedMoldShape, setSelectedMoldShape] = useState("default");
   const [moldLayers, setMoldLayers] = useState([]); 
 
-  // --- FETCH REAL DATA FROM MARIA DB ---
   useEffect(() => {
     fetch('http://localhost:5000/scents')
       .then(res => res.json())
@@ -64,7 +62,6 @@ const Create = () => {
       .catch(err => console.error("Error fetching mold shapes:", err));
   }, []);
 
-  // --- DYNAMIC MOLD LAYERS EFFECT ---
   useEffect(() => {
     if (selectedMoldShape !== "default") {
       const shape = moldShapes.find(m => m.id.toString() === selectedMoldShape.toString());
@@ -75,10 +72,6 @@ const Create = () => {
       setMoldLayers([]);
     }
   }, [selectedMoldShape, moldShapes]);
-  useEffect(() => {
-  if (colors.length > 0) console.log('color sample:', colors[0]);
-  if (cupColors.length > 0) console.log('cupColor sample:', cupColors[0]);
-}, [colors, cupColors]);
 
   const handleLayerColorChange = (index, colorId) => {
     const newLayers = [...moldLayers];
@@ -86,18 +79,14 @@ const Create = () => {
     setMoldLayers(newLayers);
   };
 
-  // --- SUBMIT FUNCTION ---
-const handleConfirm = async () => {
-    // 1. Validate Scent
+  const handleConfirm = async () => {
     if (selectedScentId === "default") return alert("Please pick a scent!");
 
     let totalPrice = 0;
     
-    // Add scent price
     const scent = scents.find(s => s.id.toString() === selectedScentId.toString());
     if (scent) totalPrice += Number(scent.price);
 
-    // 2. Validate & Calculate based on Type
     if (candleType === 'cup') {
       if (selectedCupShape === "default" || selectedCupSize === "default" || selectedCupColor === "default" || selectedCandleColor === "default") {
         return alert("Please fill out all Cup options!");
@@ -118,31 +107,31 @@ const handleConfirm = async () => {
       const shape = moldShapes.find(s => s.id.toString() === selectedMoldShape.toString());
       if (shape) totalPrice += Number(shape.base_price);
 
-      // Loop through every layer and add the cost of that specific color
       moldLayers.forEach(layerColorId => {
         const color = colors.find(c => c.id.toString() === layerColorId.toString());
         if (color) totalPrice += Number(color.price);
       });
     }
 
-    // 3. Check Login Status
     const userId = localStorage.getItem("userId");
     if (!userId) return alert("You need to be logged in to add stuff to your cart!");
 
-    // 4. Package the data for the backend
+    // Grab snapshot from the 3D canvas
+    const snapshot = previewRef.current?.getSnapshot() || null;
+
     const payload = {
       type: candleType,
       userId,
       quantity,
       scentId: selectedScentId,
-      totalPrice: Number(totalPrice.toFixed(2)), // Clean it up to 2 decimal places
+      totalPrice: Number(totalPrice.toFixed(2)),
+      snapshot,
       ...(candleType === 'cup' 
         ? { cupShapeId: selectedCupShape, cupSizeId: selectedCupSize, cupColorId: selectedCupColor, candleColorId: selectedCandleColor }
         : { moldShapeId: selectedMoldShape, layers: moldLayers }
       )
     };
 
-    // 5. Actually send it to the database!
     try {
       const response = await fetch('http://localhost:5000/cart/add', {
         method: 'POST',
@@ -154,8 +143,6 @@ const handleConfirm = async () => {
 
       if (response.ok) {
         alert("Success! Your custom candle was added to the cart.");
-        
-        // Optional: Reset the form so they can build another one!
         setQuantity(1);
         setSelectedScentId("default");
         setSelectedCupShape("default");
@@ -182,26 +169,25 @@ const handleConfirm = async () => {
       <div className='creation'>
         <div className='candle-div'>
           <CandlePreview3D
-  cupColor={
-    cupColors.find(c => c.id.toString() === selectedCupColor.toString())?.hex_code
-    ?? '#ffffff'
-  }
-  waxColor={
-    colors.find(c => c.id.toString() === selectedCandleColor.toString())?.hex_code
-    ?? '#ffffff'
-  }
-  cupSize={
-    selectedCupSize === 'default' ? 'medium' :
-    (() => {
-      const s = cupSizes.find(s => s.id.toString() === selectedCupSize.toString());
-      if (!s) return 'medium';
-      const ml = Number(s.size_ml);
-      if (ml <= 200) return 'small';
-      if (ml <= 400) return 'medium';
-      return 'large';
-    })()
-  }
-/>
+            ref={previewRef}
+            cupColor={
+              cupColors.find(c => c.id.toString() === selectedCupColor.toString())?.hex_code ?? '#ffffff'
+            }
+            waxColor={
+              colors.find(c => c.id.toString() === selectedCandleColor.toString())?.hex_code ?? '#ffffff'
+            }
+            cupSize={
+              selectedCupSize === 'default' ? 'medium' :
+              (() => {
+                const s = cupSizes.find(s => s.id.toString() === selectedCupSize.toString());
+                if (!s) return 'medium';
+                const ml = Number(s.size_ml);
+                if (ml <= 200) return 'small';
+                if (ml <= 400) return 'medium';
+                return 'large';
+              })()
+            }
+          />
         </div>
         
         <div className='choices'> 

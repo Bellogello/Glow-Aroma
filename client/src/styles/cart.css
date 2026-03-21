@@ -1,5 +1,5 @@
 body {
-    background-color: #fdfbf7; /* Slightly brighter, cleaner background */
+    background-color: #fdfbf7;
     font-family: "Averia Libre", system-ui;
 }
 
@@ -82,11 +82,11 @@ button:hover {
   align-items: center;
   gap: 2rem;
   background-color: #ffffff;
-  border-radius: 1.5rem; /* Softer, rounder corners */
+  border-radius: 1.5rem;
   padding: 1.5rem 2rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 10px 30px rgba(74, 55, 40, 0.06); /* Warm, floating shadow */
-  border: none; /* Removed the harsh line */
+  box-shadow: 0 10px 30px rgba(74, 55, 40, 0.06);
+  border: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -95,27 +95,40 @@ button:hover {
   box-shadow: 0 15px 35px rgba(74, 55, 40, 0.09);
 }
 
-/* Image Section */
-.cart-item-image img, .custom-candle-placeholder {
+/* Image Section — fixed size container for both prebuilt and custom */
+.cart-item-image {
   width: 120px;
   height: 120px;
-  object-fit: cover;
+  min-width: 120px;
+  min-height: 120px;
   border-radius: 1rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Gives the image depth */
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  flex-shrink: 0;
+}
+
+.cart-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 1rem;
 }
 
 .custom-candle-placeholder {
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, #f5efe1, #e0dcd3);
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: 3rem;
-  border: none;
+  border-radius: 1rem;
 }
 
 /* Details Section */
 .cart-item-details {
-  flex-grow: 1; /* Pushes the controls to the far right */
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -160,11 +173,11 @@ button:hover {
 .quantity-controls {
   display: flex;
   align-items: center;
-  background-color: #f5efe1; /* Soft cream background */
+  background-color: #f5efe1;
   border-radius: 3rem;
   padding: 0.3rem 0.5rem;
   border: none;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.03); /* Indented look */
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
 }
 
 .btn-qty {
@@ -274,13 +287,9 @@ button:hover {
   
   .cart-item-image {
     width: 100%;
-    display: flex;
-    justify-content: center;
-  }
-
-  .cart-item-image img, .custom-candle-placeholder {
-    width: 100%;
     height: 200px;
+    min-width: unset;
+    min-height: unset;
   }
 
   .cart-item-details {
