@@ -7,12 +7,21 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, r
   const canvasRef = useRef(null);
   const meshesRef = useRef({});
   const rendererRef = useRef(null);
+  const sceneRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
     getSnapshot: () => {
       const canvas = canvasRef.current;
-      if (!canvas) return null;
-      return canvas.toDataURL('image/png', 0.6);
+      const renderer = rendererRef.current;
+      const scene = sceneRef.current;
+      if (!canvas || !renderer || !scene) return null;
+
+      const tempCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+      tempCamera.position.set(0, 6, 4);
+      tempCamera.lookAt(0, 1, 0);
+
+      renderer.render(scene, tempCamera);
+      return canvas.toDataURL('image/png');
     }
   }));
 
@@ -23,6 +32,7 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, r
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#fdf6f0');
+    sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
     camera.position.set(0, 6, 4);
@@ -31,7 +41,7 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, r
       canvas,
       antialias: !isMobile,
       powerPreference: 'high-performance',
-      preserveDrawingBuffer: true, // ← needed for screenshots
+      preserveDrawingBuffer: true,
     });
     renderer.setSize(size, size);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5));
