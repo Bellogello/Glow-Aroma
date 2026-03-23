@@ -1,92 +1,125 @@
 body {
-    background-color: #fdfbf7; /* Slightly brighter, cleaner background */
+<<<<<<< Updated upstream
+    background-color: #fdfbf7;
+=======
+    background-color: #f5efe1;
+>>>>>>> Stashed changes
     font-family: "Averia Libre", system-ui;
 }
+.top{
+position: static;
+width: 100%;
+height: 191px;
 
-.top {
-    position: static;
-    width: 100%;
-    height: 191px;
-    background: #D2C9B8;
+background: #D2C9B8;
 }
-
-button:hover {
+button:hover{
     color: #76594C;
 }
 
-/* --- ICONS --- */
-.cart, .profile {
+.cart{
+    height: 53px;
+    width: 53px;
+    background: url(../assets/cart.png);
     display: inline-block;
     width: 53px;
     height: 53px;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.15));
-    transition: all 0.3s ease;
+    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
+
 }
-
-.cart { background-image: url(../assets/cart.png); }
-.profile { background-image: url(../assets/profile.png); }
-
-.cart:hover {
+.cart:hover{
+    height: 53px;
+    width: 53px;
     background-image: url(../assets/cart_light.png);
     background-size: contain;
-    filter: drop-shadow(0px 6px 8px rgba(0, 0, 0, 0.2));
+    background-color: transparent;
+    border: transparent;
+    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
 }
-
-.profile:hover {
-    background-image: url(../assets/profile_light.png);
+.profile{
+    height: 53px;
+    width: 53px;
+    background: url(../assets/profile.png);
+    display: inline-block;
+    width: 53px;
+    height: 53px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
+}
+.profile:hover{
+    height: 53px;
+    width: 53px;
     background-size: contain;
-    filter: drop-shadow(0px 6px 8px rgba(0, 0, 0, 0.2));
-}
+    background-image: url(../assets/profile_light.png);
+    background-color: transparent;
+    border: transparent;
+    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
 
-/* --- NAV LINKS --- */
-.home, .contact, .products {
+    
+}
+.home{
     font-family: "Averia Libre", system-ui;
     font-size: 27px;
-    color: #5a4a3a;
-    text-decoration: none;
-    transition: color 0.3s ease;
-}
-
-.home:hover, .contact:hover, .products:hover {
-    color: #D2C9B8;
+    color: #5c4033;
     text-decoration: none;
 }
+.home:hover{
+    color: #76594C;
+    text-decoration: none;
+}
+.contact{
+    font-family: "Averia Libre", system-ui;
+    font-size: 27px;
+    color: #5c4033;
+    text-decoration: none;
 
-/* ========================================= */
-/* --- LUXURY BOUTIQUE CART LAYOUT ---       */
-/* ========================================= */
+}
+.contact:hover{
+    color: #76594C;
+    text-decoration: none;
 
-.cart-content, .cart-content * { box-sizing: border-box; }
+}
+.products{
+    font-family: "Averia Libre", system-ui;
+    font-size: 27px;
+    color: #5c4033;
+    text-decoration: none;
+}
+.products:hover{
+    color: #76594C;
+    text-decoration: none;
+}
 
+/* --- CART PAGE STYLES --- */
+
+/* Centers the whole cart area */
 .cart-content {
-  width: 90%; 
-  max-width: 55rem; 
-  margin: 3rem auto;
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 0 20px;
 }
 
-.cart-page-title {
-  color: #4a3728;
-  font-weight: 800;
-  font-size: 2.2rem;
-  margin-bottom: 2.5rem;
+/* The message when the cart is empty */
+.cart-content h3 {
   text-align: center;
-  letter-spacing: 0.05rem;
+  color: #5a4a3a;
+  margin-top: 50px;
 }
 
-/* --- THE ITEM CARD --- */
+/* Individual Cart Item Cards */
 .cart-item {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
   background-color: #ffffff;
-  border-radius: 1.5rem; /* Softer, rounder corners */
+<<<<<<< Updated upstream
+  border-radius: 1.5rem;
   padding: 1.5rem 2rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 10px 30px rgba(74, 55, 40, 0.06); /* Warm, floating shadow */
-  border: none; /* Removed the harsh line */
+  box-shadow: 0 10px 30px rgba(74, 55, 40, 0.06);
+  border: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -95,174 +128,176 @@ button:hover {
   box-shadow: 0 15px 35px rgba(74, 55, 40, 0.09);
 }
 
-/* Image Section */
-.cart-item-image img, .custom-candle-placeholder {
+/* Image Section — fixed size container for both prebuilt and custom */
+.cart-item-image {
   width: 120px;
   height: 120px;
-  object-fit: cover;
+  min-width: 120px;
+  min-height: 120px;
   border-radius: 1rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Gives the image depth */
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  flex-shrink: 0;
+}
+
+.cart-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 1rem;
 }
 
 .custom-candle-placeholder {
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, #f5efe1, #e0dcd3);
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: 3rem;
-  border: none;
+  border-radius: 1rem;
 }
 
 /* Details Section */
 .cart-item-details {
-  flex-grow: 1; /* Pushes the controls to the far right */
+  flex-grow: 1;
+=======
+  border-radius: 20px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05); /* Soft premium shadow */
+>>>>>>> Stashed changes
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-}
-
-.cart-item-details h3 {
-  margin: 0;
-  color: #4a3728;
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: 0.02rem;
-}
-
-.custom-specs p {
-  margin: 0;
-  font-size: 0.95rem;
-  color: #8c7e70;
-}
-
-.custom-specs span {
-  font-weight: 600;
+  gap: 12px;
   color: #5a4a3a;
 }
 
-.cart-item-price {
-  font-weight: bold;
-  font-size: 1.3rem;
-  color: #76594C;
+/* Item Title */
+.cart-item h3 {
   margin: 0;
-  margin-top: 0.5rem;
+  color: #5a4a3a;
+  border-bottom: 2px solid #f5efe1; /* Soft line under the title */
+  padding-bottom: 15px;
+  margin-bottom: 5px;
 }
 
-/* Actions Section */
-.cart-item-actions {
+/* Quantity Controls Area */
+.quantity-wrapper {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1.2rem;
+  align-items: center;
+  gap: 15px;
+  margin-top: 10px;
 }
 
-/* Refined Quantity Pill */
+/* The pill-shaped box holding the + and - buttons */
 .quantity-controls {
   display: flex;
   align-items: center;
-  background-color: #f5efe1; /* Soft cream background */
+<<<<<<< Updated upstream
+  background-color: #f5efe1;
   border-radius: 3rem;
   padding: 0.3rem 0.5rem;
   border: none;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.03); /* Indented look */
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+=======
+  background-color: #fdfbf7;
+  border-radius: 50px;
+  padding: 5px 10px;
+  border: 1px solid #e0dcd3;
+>>>>>>> Stashed changes
 }
 
+/* The + and - buttons */
 .btn-qty {
-  background: #ffffff;
+  background: none;
   border: none;
-  font-size: 1.2rem;
-  color: #4a3728;
+  font-size: 20px;
+  color: #5a4a3a;
   cursor: pointer;
-  width: 2.2rem;
-  height: 2.2rem;
+  width: 35px;
+  height: 35px;
   display: flex;
   justify-content: center;
   align-items: center;
   border-radius: 50%;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: background-color 0.2s;
 }
 
-.btn-qty:hover:not(:disabled) {
-  background-color: #4a3728;
-  color: #ffffff;
+.btn-qty:hover {
+  background-color: #D2C9B8;
 }
 
 .qty-amount {
   font-weight: bold;
-  font-size: 1.2rem;
-  min-width: 2.5rem;
+  min-width: 30px;
   text-align: center;
-  color: #4a3728;
 }
 
-.stock-warning {
-  color: #dc3545;
-  font-size: 0.85rem;
-  font-weight: bold;
-  background: #fff8f8;
-  padding: 0.2rem 0.6rem;
-  border-radius: 1rem;
-}
-
-/* Remove Text Link */
-.btn-remove-text {
-  background: none;
-  border: none;
-  color: #b5aaa0;
-  font-size: 0.95rem;
-  text-decoration: none;
+/* The Remove Button */
+.btn-remove {
+  align-self: flex-start;
+  background-color: transparent;
+  border: 2px solid #5a4a3a;
+  color: #5a4a3a;
+  padding: 8px 20px;
+  border-radius: 50px;
   cursor: pointer;
-  transition: color 0.2s ease;
-  padding: 0;
-  font-weight: 600;
-  letter-spacing: 0.05rem;
-  text-transform: uppercase;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  margin-top: 10px;
 }
 
-.btn-remove-text:hover {
-  color: #dc3545;
+.btn-remove:hover {
+  background-color: #5a4a3a;
+  color: white;
 }
 
-/* --- CHECKOUT SUMMARY BAR --- */
+/* The Total / Checkout Box at the bottom */
 .cart-summary {
-  background-color: #ffffff;
-  border-radius: 1.5rem;
-  padding: 2rem 2.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 3rem;
-  margin-bottom: 4rem;
-  box-shadow: 0 10px 30px rgba(74, 55, 40, 0.08);
+  background-color: #D2C9B8;
+  border-radius: 30px;
+  padding: 40px;
+  text-align: center;
+  margin-top: 50px;
+  color: #5a4a3a;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05);
 }
 
 .cart-summary h2 {
-  margin: 0;
-  color: #4a3728;
-  font-weight: 800;
-  font-size: 1.8rem;
+  margin-bottom: 25px;
+  font-weight: bold;
 }
 
+/* The Checkout Button matching your brand */
 .cart-summary .btn-primary {
-  background-color: #4a3728 !important;
+  background-color: #5a4a3a !important;
   border: none !important;
-  color: #fdfbf7;
-  padding: 1.2rem 3.5rem;
-  border-radius: 3rem;
-  font-size: 1.1rem;
+  color: white;
+  padding: 15px 30px;
+  border-radius: 50px;
+  font-size: 18px;
   font-weight: bold;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(74, 55, 40, 0.2);
+  transition: background-color 0.2s;
+  width: 100%;
+  max-width: 350px;
 }
 
 .cart-summary .btn-primary:hover {
-  background-color: #76594C !important;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(74, 55, 40, 0.3);
+  background-color: #43362a !important;
+}
+.empty-cart-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  text-align: center;
 }
 
+<<<<<<< Updated upstream
 /* --- MOBILE RESPONSIVENESS --- */
 @media (max-width: 650px) {
   .cart-item {
@@ -274,13 +309,9 @@ button:hover {
   
   .cart-item-image {
     width: 100%;
-    display: flex;
-    justify-content: center;
-  }
-
-  .cart-item-image img, .custom-candle-placeholder {
-    width: 100%;
     height: 200px;
+    min-width: unset;
+    min-height: unset;
   }
 
   .cart-item-details {
@@ -308,13 +339,43 @@ button:hover {
   .cart-summary .btn-primary {
     width: 100%;
   }
+=======
+/* The Animation */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+>>>>>>> Stashed changes
 }
 
-/* --- EMPTY CART STATE --- */
-.empty-cart-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 50vh; text-align: center; }
-@keyframes float { 0% { transform: translateY(0); } 50% { transform: translateY(-0.8rem); } 100% { transform: translateY(0); } }
-.floating-icon { margin-bottom: 1.5rem; animation: float 3.5s ease-in-out infinite; }
-.empty-cart-text { color: #4a3728; font-size: 2.2rem; margin-bottom: 0.5rem; font-weight: 800;}
-.empty-cart-container p { color: #8c7e70; font-size: 1.1rem; }
-.shop-now-btn { margin-top: 2rem; padding: 1rem 3rem; background-color: #4a3728; color: #fdfbf7; border: none; border-radius: 3rem; transition: all 0.3s ease; text-decoration: none; font-weight: bold; box-shadow: 0 4px 15px rgba(74, 55, 40, 0.2); }
-.shop-now-btn:hover { background-color: #76594C; transform: translateY(-2px); color: #fdfbf7; box-shadow: 0 6px 20px rgba(74, 55, 40, 0.3); }
+.floating-icon {
+  font-size: 5rem;
+  margin-bottom: 20px;
+  animation: float 3s ease-in-out infinite; /* Smooth, slow loop */
+  filter: drop-shadow(0 10px 15px rgba(74, 55, 40, 0.2));
+}
+
+.empty-cart-text {
+  font-family: 'Playfair Display', serif;
+  color: #4a3728;
+  font-size: 1.5rem;
+}
+
+.shop-now-btn {
+  display: inline-flex;    
+  align-items: center;     
+  justify-content: center; 
+  margin-top: 25px;
+  padding: 12px 30px;
+  background-color: #4a3728;
+  color: #f5efe1;
+  border: none;
+  border-radius: 25px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.shop-now-btn:hover {
+  background-color: #76594C;
+  transform: scale(1.05);
+}

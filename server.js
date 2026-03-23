@@ -4,42 +4,33 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt'); 
 const cors = require('cors');
 
-// --- NEW IMPORTS FOR UPLOADS ---
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
 require('dotenv').config();
 
-// 1. CREATE THE APP FIRST!
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
 
-// 2. NOW WE CAN USE THE APP FOR UPLOADS
 if (!fs.existsSync('./uploads')) {
     fs.mkdirSync('./uploads');
 }
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 3. SET UP MULTER STORAGE (UPGRADED HYBRID NAMING)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/'); 
   },
   filename: (req, file, cb) => {
-    // 1. Grab the product name from the form, or use 'candle' if it's missing
     const rawName = req.body.name || 'candle';
-    
-    // 2. Slugify the name: lowercase it, replace spaces with hyphens, and remove weird symbols
     const safeName = rawName
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-') // Replaces everything that isn't a letter or number with a hyphen
-      .replace(/^-+|-+$/g, '');    // Trims any extra hyphens off the ends
-
-    // 3. Stick it all together! Example: lavender-bliss-1710684534212.jpg
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
     const finalFilename = `${safeName}-${Date.now()}${path.extname(file.originalname)}`;
-    
     cb(null, finalFilename);
   }
 });
@@ -48,9 +39,6 @@ const upload = multer({ storage: storage });
 const SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 
-// ==========================================
-// --- DATABASE CONNECTION ---
-// ==========================================
 const db = mysql.createConnection({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -123,7 +111,6 @@ app.get('/products', (req, res) => {
   });
 });
 
-// 2. GET A SINGLE PRODUCT (Used by your new Product Details page)
 app.get('/products/:id', (req, res) => {
   const { id } = req.params;
   db.query('SELECT * FROM prebuilt_candles WHERE id = ?', [id], (err, results) => {
@@ -134,7 +121,7 @@ app.get('/products/:id', (req, res) => {
 });
 
 // ==========================================
-// --- USERS (SIGNUP) ---
+// --- USERS ---
 // ==========================================
 
 app.get('/users', (req, res) => {
@@ -143,22 +130,16 @@ app.get('/users', (req, res) => {
     res.json(results);
   });
 });
-// Fetch a single user's profile (Used for Auto-Fill and Profile page)
+
 app.get('/users/:id', (req, res) => {
   const { id } = req.params;
-  
-  // We only select safe data (no passwords!)
   db.query('SELECT name, email, phone FROM users WHERE id = ?', [id], (err, results) => {
     if (err) return res.status(500).json({ error: 'Database error: ' + err.message });
-    
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-    
-    // Send back the exact user object
+    if (results.length === 0) return res.status(404).json({ error: 'User not found.' });
     res.json(results[0]);
   });
 });
+
 app.post('/users', (req, res) => {
   const { name, email, phone, password_hash } = req.body;
 
@@ -176,7 +157,7 @@ app.post('/users', (req, res) => {
 });
 
 // ==========================================
-// --- SIGN IN (LOGIN) ---
+// --- SIGN IN ---
 // ==========================================
 
 app.post('/signin', (req, res) => {
@@ -191,8 +172,6 @@ app.post('/signin', (req, res) => {
 
     const user = results[0];
 
-    // --- LEGACY CHECK FIX ---
-    // If the database password doesn't look like a bcrypt hash (starts with $2), check plain text!
     if (!user.password_hash.startsWith('$2')) {
       if (password === user.password_hash) {
         const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
@@ -202,7 +181,6 @@ app.post('/signin', (req, res) => {
       }
     }
 
-    // Otherwise, do the secure bcrypt check
     bcrypt.compare(password, user.password_hash, (compareErr, isMatch) => {
       if (compareErr) return res.status(500).json({ error: 'Auth error.' });
 
@@ -234,7 +212,6 @@ app.post('/auth/google', async (req, res) => {
   }
 
   try {
-    // 1. Ask Google's API for the user's profile info using the token
     const googleResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${access_token}` }
     });
@@ -244,14 +221,12 @@ app.post('/auth/google', async (req, res) => {
     }
 
     const googleUser = await googleResponse.json();
-    const { email, name } = googleUser; // Google gives us their real name and email!
+    const { email, name } = googleUser;
 
-    // 2. Check if this email already exists in our MariaDB database
     db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
       if (err) return res.status(500).json({ error: 'Database error: ' + err.message });
 
       if (results.length > 0) {
-        // --- RETURNING USER ---
         const user = results[0];
         const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
         
@@ -263,15 +238,11 @@ app.post('/auth/google', async (req, res) => {
           roleId: user.role_id,
         });
       } else {
-        // --- BRAND NEW USER ---
-        // They didn't provide a password, but our DB requires one. 
-        // We generate a random one and hash it so it's safe.
         const randomPassword = Math.random().toString(36).slice(-10);
         
         bcrypt.hash(randomPassword, SALT_ROUNDS, (hashErr, hashed) => {
           if (hashErr) return res.status(500).json({ error: 'Hashing failed.' });
 
-          // Insert them as a standard Customer (role_id = 1)
           const sql = 'INSERT INTO users (name, email, password_hash, role_id) VALUES (?, ?, ?, 1)';
           db.query(sql, [name, email, hashed], (insertErr, result) => {
             if (insertErr) return res.status(500).json({ error: insertErr.message });
@@ -297,14 +268,16 @@ app.post('/auth/google', async (req, res) => {
 });
 
 // ==========================================
-// --- CART: ADD ITEM (UPDATED WITH STRICT MATH FIX) ---
+// --- CART: ADD ITEM ---
 // ==========================================
 
 app.post('/cart/add', (req, res) => {
-  const { userId, type, scentId, quantity = 1, prebuiltCandleId, totalPrice = 0, cupShapeId, cupSizeId, cupColorId, candleColorId, moldShapeId, layers } = req.body;
+  const { userId, type, scentId, quantity = 1, prebuiltCandleId, totalPrice = 0, cupShapeId, cupSizeId, cupColorId, candleColorId, moldShapeId, layers, snapshot } = req.body;
+  
+  console.log('snapshot received:', snapshot ? 'YES, length: ' + snapshot.length : 'NO');
+
   if (!userId) return res.status(401).json({ error: 'You must be logged in!' });
 
-  // STRICT MATH: Force the incoming quantity to be a real number!
   const parsedQty = Number(quantity);
 
   db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
@@ -336,11 +309,9 @@ app.post('/cart/add', (req, res) => {
           if (err) return res.status(500).json({ error: 'Stock check error: ' + err.message });
           if (stockResults.length === 0) return res.status(404).json({ error: 'Product not found.' });
 
-          // STRICT MATH: Force the database values to be real numbers!
           const stock = Number(stockResults[0].stock_quantity);
           const currentCartQty = Number(stockResults[0].current_cart_qty);
 
-          // The Bouncer is now doing actual math: 19 + 1 = 20!
           if (currentCartQty + parsedQty > stock) {
              return res.status(400).json({ error: `Cannot add to cart! Only ${stock} left in stock.` });
           }
@@ -360,9 +331,7 @@ app.post('/cart/add', (req, res) => {
           if (err) return res.status(500).json({ error: 'Check error: ' + err.message });
 
           if (existingItems.length > 0) {
-            // STRICT MATH: Stop "19" + 1 from becoming "191" in the database update!
             const newQuantity = Number(existingItems[0].quantity) + parsedQty;
-            
             db.query('UPDATE cart_items SET quantity = ? WHERE id = ?', [newQuantity, existingItems[0].id], (err) => {
                 if (err) return res.status(500).json({ error: 'Update error: ' + err.message });
                 res.json({ message: 'Updated candle quantity in cart!' });
@@ -380,8 +349,8 @@ app.post('/cart/add', (req, res) => {
     function executeInsertCustom(cartId) {
       if (type === 'cup') {
         db.query(
-          "INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size_id, cup_color_id, total_price) VALUES ('cup', ?, ?, ?, ?, ?)",
-          [scentId, cupShapeId, cupSizeId, cupColorId, totalPrice],
+          "INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size_id, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
+          [scentId, cupShapeId, cupSizeId, cupColorId, totalPrice, snapshot || null],
           (err, candleResult) => {
             if (err) return res.status(500).json({ error: 'Candle error: ' + err.message });
 
@@ -397,8 +366,8 @@ app.post('/cart/add', (req, res) => {
         );
       } else if (type === 'mold') {
         db.query(
-          "INSERT INTO custom_candles (type, scent_id, mold_shape_id, total_price) VALUES ('mold', ?, ?, ?)",
-          [scentId, moldShapeId, totalPrice],
+          "INSERT INTO custom_candles (type, scent_id, mold_shape_id, total_price, preview_image) VALUES ('mold', ?, ?, ?, ?)",
+          [scentId, moldShapeId, totalPrice, snapshot || null],
           (err, candleResult) => {
             if (err) return res.status(500).json({ error: 'Mold error: ' + err.message });
 
@@ -420,6 +389,7 @@ app.post('/cart/add', (req, res) => {
     }
   });
 });
+
 // ==========================================
 // --- CART: GET USER'S CART ---
 // ==========================================
@@ -433,6 +403,7 @@ app.get('/cart/:userId', (req, res) => {
       ci.quantity,
       cc.type AS candle_type,
       cc.total_price AS custom_price,
+      cc.preview_image AS snapshot,
       cs.name AS cup_shape_name,
       csz.size_ml,
       ccol.name AS cup_color_name,
@@ -477,6 +448,7 @@ app.get('/cart/:userId', (req, res) => {
           cart_item_id: item.cart_item_id,
           quantity: item.quantity,
           is_custom: true,
+          snapshot: item.snapshot,
           name: `${item.cup_shape_name} (${item.size_ml}ml)`,
           color: `Cup: ${item.cup_color_name} | Wax: ${item.wax_colors}`,
           scent: item.scent_name,
@@ -488,6 +460,7 @@ app.get('/cart/:userId', (req, res) => {
           cart_item_id: item.cart_item_id,
           quantity: item.quantity,
           is_custom: true,
+          snapshot: item.snapshot,
           name: `${item.mold_shape_name} Mold`,
           color: `Layers: ${item.wax_colors}`,
           scent: item.scent_name,
@@ -596,7 +569,7 @@ app.put('/admin/orders/:id/status', (req, res) => {
     res.json({ message: 'Order status updated successfully.' });
   });
 });
-// --- ADMIN: GET ORDER ITEMS ---
+
 app.get('/admin/orders/:id/items', (req, res) => {
   db.query('SELECT * FROM order_items WHERE order_id = ?', [req.params.id], (err, results) => {
     if (err) return res.status(500).json({ error: 'Failed to fetch items: ' + err.message });
@@ -639,7 +612,6 @@ app.post('/admin/add-staff', (req, res) => {
       if (hashErr) return res.status(500).json({ message: 'Hashing failed.' });
 
       const sql = 'INSERT INTO users (name, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, ?)';
-      
       db.query(sql, [name, email, phone, hashed, role_id], (err, result) => {
         if (err) return res.status(500).json({ message: 'Failed to add staff: ' + err.message });
 
@@ -674,7 +646,6 @@ app.delete('/admin/staff/:id', (req, res) => {
 // --- ADMIN: PRODUCTS ---
 // ==========================================
 
-// --- ADMIN: ADD PRODUCT (WITH IMAGE UPLOAD) ---
 app.post('/admin/products', upload.single('image'), (req, res) => {
   const { name, price, stock_quantity, description } = req.body;
   const image_url = req.file ? `/uploads/${req.file.filename}` : null;
@@ -686,7 +657,6 @@ app.post('/admin/products', upload.single('image'), (req, res) => {
   const sql = 'INSERT INTO prebuilt_candles (name, price, stock_quantity, description, image_url) VALUES (?, ?, ?, ?, ?)';
   db.query(sql, [name, parseFloat(price), parseInt(stock_quantity), description || null, image_url], (err, result) => {
       if (err) return res.status(500).json({ message: 'Failed to add product: ' + err.message });
-      
       res.status(201).json({ 
         message: 'Product added successfully.', 
         newProduct: { id: result.insertId, name, price, stock_quantity, description, image_url } 
@@ -694,11 +664,9 @@ app.post('/admin/products', upload.single('image'), (req, res) => {
   });
 });
 
-// --- ADMIN: EDIT PRODUCT (WITH IMAGE UPLOAD) ---
 app.put('/admin/products/:id', upload.single('image'), (req, res) => {
   const { id } = req.params;
   const { name, price, stock_quantity, description, existing_image_url } = req.body;
-  
   const image_url = req.file ? `/uploads/${req.file.filename}` : (existing_image_url || null);
 
   const sql = 'UPDATE prebuilt_candles SET name = ?, price = ?, stock_quantity = ?, description = ?, image_url = ? WHERE id = ?';
@@ -708,7 +676,6 @@ app.put('/admin/products/:id', upload.single('image'), (req, res) => {
   });
 });
 
-// DELETE A PRODUCT
 app.delete('/admin/products/:id', (req, res) => {
   const { id } = req.params;
   db.query('DELETE FROM prebuilt_candles WHERE id = ?', [id], (err) => {
@@ -720,6 +687,7 @@ app.delete('/admin/products/:id', (req, res) => {
 // ==========================================
 // --- USER: DELETE ACCOUNT ---
 // ==========================================
+
 app.delete('/admin/delete-account', (req, res) => {
   const { userId, password } = req.body;
 
@@ -743,7 +711,6 @@ app.delete('/admin/delete-account', (req, res) => {
       bcrypt.compare(password, storedPassword, (compareErr, isMatch) => {
         if (compareErr) return res.status(500).json({ error: 'Auth error.' });
         if (!isMatch) return res.status(401).json({ error: 'Incorrect password.' });
-        
         deleteUser();
       });
     }
@@ -756,7 +723,6 @@ app.delete('/admin/delete-account', (req, res) => {
           const cartId = cartResults[0].id;
           db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], (err) => {
             if (err) return res.status(500).json({ error: 'Cart items delete error: ' + err.message });
-            
             db.query('DELETE FROM carts WHERE id = ?', [cartId], (err) => {
               if (err) return res.status(500).json({ error: 'Cart delete error: ' + err.message });
               executeFinalDelete();
@@ -778,7 +744,7 @@ app.delete('/admin/delete-account', (req, res) => {
 });
 
 // ==========================================
-// --- DISCOUNT CODES (ADMIN ROUTES) ---
+// --- DISCOUNT CODES ---
 // ==========================================
 
 app.get('/admin/discount-codes', async (req, res) => {
@@ -798,15 +764,7 @@ app.post('/admin/discount-codes', async (req, res) => {
             `INSERT INTO discount_codes 
             (code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at) 
             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [
-                code, 
-                discount_type, 
-                discount_value, 
-                min_order_amount || 0, 
-                max_order_amount || null, 
-                max_uses || null, 
-                expires_at || null
-            ]
+            [code, discount_type, discount_value, min_order_amount || 0, max_order_amount || null, max_uses || null, expires_at || null]
         );
         res.status(201).json({ message: "Discount code created" });
     } catch (err) {
@@ -819,7 +777,7 @@ app.post('/admin/discount-codes', async (req, res) => {
 });
 
 app.patch('/admin/discount-codes/:id', async (req, res) => {
-    const { id } = params;
+    const { id } = req.params;
     const { is_active } = req.body;
     try {
         await db.promise().query('UPDATE discount_codes SET is_active = ? WHERE id = ?', [is_active, id]);
@@ -842,16 +800,14 @@ app.delete('/admin/discount-codes/:id', async (req, res) => {
 });
 
 // ==========================================
-// CUSTOMER MESSAGES ROUTES
+// --- CUSTOMER MESSAGES ---
 // ==========================================
 
 app.post('/messages', (req, res) => {
     const { name, email, phone, message } = req.body; 
-    
     if (!name || !email || !message) {
         return res.status(400).json({ error: 'All fields are required.' });
     }
-
     db.query(
         'INSERT INTO contact_messages (name, email, phone, message) VALUES (?, ?, ?, ?)',
         [name, email, phone || null, message], 
@@ -877,7 +833,6 @@ app.get('/admin/messages', (req, res) => {
 
 app.delete('/admin/messages/:id', (req, res) => {
     const { id } = req.params;
-    
     db.query('DELETE FROM contact_messages WHERE id = ?', [id], (err) => {
         if (err) {
             console.error("Delete Message Error:", err);
@@ -891,7 +846,6 @@ app.delete('/admin/messages/:id', (req, res) => {
 // --- USER ADDRESS BOOK ---
 // ==========================================
 
-// Get all saved addresses for a user
 app.get('/addresses/:userId', (req, res) => {
   db.query('SELECT * FROM user_addresses WHERE user_id = ?', [req.params.userId], (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -899,11 +853,9 @@ app.get('/addresses/:userId', (req, res) => {
   });
 });
 
-// Save a new address for a user
 app.post('/addresses/:userId', (req, res) => {
   const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
   const sql = 'INSERT INTO user_addresses (user_id, full_name, phone, governorate, area, street, building, floor_apt, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  
   db.query(sql, [req.params.userId, fullName, phone, governorate, area, street, building, floorApt, notes || null], (err, result) => {
     if (err) return res.status(500).json({ error: err.message });
     res.status(201).json({ message: 'Address saved!', addressId: result.insertId });
@@ -911,8 +863,9 @@ app.post('/addresses/:userId', (req, res) => {
 });
 
 // ==========================================
-// --- CHECKOUT: PLACE ORDER ---
+// --- CHECKOUT ---
 // ==========================================
+
 app.post('/checkout', (req, res) => {
   const { userId, shippingDetails } = req.body;
   if (!userId) return res.status(401).json({ error: 'You must be logged in to checkout.' });
@@ -922,7 +875,6 @@ app.post('/checkout', (req, res) => {
     if (cartResults.length === 0) return res.status(400).json({ error: 'Your cart is empty!' });
     const cartId = cartResults[0].id;
 
-    // UPGRADED: Fetch the exact DNA of the custom candles (Scent, Size, Color, Wax Layers)
     const cartItemsSql = `
       SELECT 
         ci.quantity, ci.prebuilt_candle_id, ci.custom_candle_id,
@@ -965,7 +917,6 @@ app.post('/checkout', (req, res) => {
         if (err) return res.status(500).json({ error: 'Failed to create order: ' + err.message });
         const newOrderId = orderResult.insertId;
 
-        // FORMAT THE RECEIPT DETAILS!
         const orderItemsValues = items.map(item => {
           let itemType = 'prebuilt';
           let itemName = item.prebuilt_name || 'Unknown Item';
@@ -976,8 +927,6 @@ app.post('/checkout', (req, res) => {
             itemType = item.custom_type || 'cup';
             itemName = item.custom_type === 'cup' ? `${item.cup_name}` : `${item.mold_name}`;
             unitPrice = item.custom_price || 0;
-            
-            // Generate the specific recipe for the candle maker!
             if (item.custom_type === 'cup') {
               details = `Scent: ${item.scent_name}, Size: ${item.cup_size}ml, Jar: ${item.cup_color}, Wax: ${item.wax_colors}`;
             } else {
@@ -1003,6 +952,7 @@ app.post('/checkout', (req, res) => {
     });
   });
 });
+
 // ==========================================
 // --- START SERVER ---
 // ==========================================
