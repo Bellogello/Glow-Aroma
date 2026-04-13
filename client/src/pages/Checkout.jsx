@@ -10,7 +10,6 @@ const Checkout = () => {
   useTitle("Checkout | Glow Aroma");
   const navigate = useNavigate();
 
-
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -23,8 +22,8 @@ const Checkout = () => {
   // --- Address Book State ---
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('new');
-  const [selectedAddressId, setSelectedAddressId] = useState('new');
 
+  // Form State
   const [shippingDetails, setShippingDetails] = useState({
     fullName: '', phone: '', governorate: '', area: '', street: '', building: '', floorApt: '', notes: ''
   });
@@ -35,33 +34,6 @@ const Checkout = () => {
       navigate('/signin');
       return;
     }
-
-    fetch(`http://localhost:5000/cart/${userId}`)
-      .then(res => res.json())
-      .then(data => { if (!data.error) setCartItems(data); });
-
-    fetch(`http://localhost:5000/users/${userId}`)
-      .then(res => res.json())
-      .then(user => {
-        setShippingDetails(prev => ({ ...prev, fullName: user.name, phone: user.phone || '' }));
-      });
-
-    fetch(`http://localhost:5000/addresses/${userId}`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setSavedAddresses(data);
-          if (data.length > 0) setSelectedAddressId(data[0].id);
-        } else {
-          console.error("Backend sent an error instead of addresses:", data.error);
-          setSavedAddresses([]);
-        }
-      })
-      .catch(err => {
-        console.error("Network error fetching addresses:", err);
-        setSavedAddresses([]);
-      })
-      .finally(() => setLoading(false));
 
     // Load initial data
     Promise.all([
@@ -90,14 +62,11 @@ const Checkout = () => {
     const userId = localStorage.getItem("userId");
     if (cartItems.length === 0) return alert("Your cart is empty!");
 
-
     setIsProcessing(true);
 
     try {
       let finalDetails = {};
 
-      if (selectedAddressId === 'new') {
-        const addressRes = await fetch(`http://localhost:5000/addresses/${userId}`, {
       // 1. Handle Address Resolution
       if (selectedAddressId === 'new') {
         const addrRes = await fetch(`http://localhost:5000/addresses/${userId}`, {
@@ -105,22 +74,10 @@ const Checkout = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(shippingDetails)
         });
-
-        if (!addressRes.ok) {
-          const errorData = await addressRes.json();
-          throw new Error(`Database Error: ${errorData.error || "Unknown error"}`);
         if (!addrRes.ok) {
           const err = await addrRes.json();
           throw new Error(err.error || "Failed to save address");
         }
-        finalShippingDetails = shippingDetails;
-      } else {
-        const pickedAddress = savedAddresses.find(addr => addr.id === selectedAddressId);
-        finalShippingDetails = {
-          fullName: pickedAddress.full_name, phone: pickedAddress.phone,
-          governorate: pickedAddress.governorate, area: pickedAddress.area,
-          street: pickedAddress.street, building: pickedAddress.building,
-          floorApt: pickedAddress.floor_apt, notes: pickedAddress.notes
         finalDetails = shippingDetails;
       } else {
         const picked = savedAddresses.find(a => a.id === selectedAddressId);
@@ -132,19 +89,14 @@ const Checkout = () => {
         };
       }
 
-      const response = await fetch('http://localhost:5000/checkout', {
       // 2. Create Order in Backend (Database)
       const orderRes = await fetch('http://localhost:5000/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, shippingDetails: finalShippingDetails, paymentMethod })
         body: JSON.stringify({ userId, shippingDetails: finalDetails, paymentMethod })
       });
       const orderData = await orderRes.json();
 
-      if (response.ok) {
-        alert(`🎉 Order placed successfully! Your Order ID is #${data.orderId}`);
-        navigate('/');
       if (!orderRes.ok) throw new Error(orderData.error);
 
       // 3. Handle Payment Logic
@@ -177,14 +129,6 @@ const Checkout = () => {
     }
   };
 
-  if (loading) return (
-    <div className="home-container">
-      <Navbar />
-      <div className="checkout-loading"><h2>Preparing checkout...</h2></div>
-      <Footer />
-    </div>
-  );
-
   const orderTotal = cartItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
 
   if (loading) return <div className="loading-screen">Preparing checkout...</div>;
@@ -212,46 +156,7 @@ const Checkout = () => {
         <h1 className="checkout-page-title">Complete Your Order</h1>
 
         <div className="checkout-grid">
-          {/* LEFT: Address selection */}
           <div className="checkout-form-section">
-            <h2>Select Delivery Address</h2>
-
-            <div className="address-selector">
-              {savedAddresses.map(addr => (
-                <label key={addr.id} className={`address-card ${selectedAddressId === addr.id ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="addressSelection"
-                    checked={selectedAddressId === addr.id}
-                    onChange={() => setSelectedAddressId(addr.id)}
-                  />
-                  <div className="address-card-info">
-                    <strong>{addr.full_name}</strong> - <span>{addr.phone}</span>
-                    <p>{addr.building}, {addr.street}, {addr.area}, {addr.governorate}</p>
-                  </div>
-                </label>
-              ))}
-
-              <label className={`address-card ${selectedAddressId === 'new' ? 'selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="addressSelection"
-                  checked={selectedAddressId === 'new'}
-                  onChange={() => setSelectedAddressId('new')}
-                />
-                <div className="address-card-info">
-                  <strong>+ Add New Address</strong>
-                </div>
-              </label>
-            </div>
-
-            <form id="checkout-form" onSubmit={handlePlaceOrder}>
-              {selectedAddressId === 'new' && (
-                <div className="new-address-slide-down">
-                  <AddressForm formData={shippingDetails} onChange={handleInputChange} />
-                </div>
-              )}
-            </form>
             <section className="address-section">
               <h2>1. Delivery Address</h2>
               <div className="address-selector">
@@ -287,7 +192,6 @@ const Checkout = () => {
             </section>
           </div>
 
-          {/* RIGHT: Order summary + payment + place order */}
           <div className="checkout-summary-section">
             <h2>Order Summary</h2>
             <div className="summary-items">
@@ -305,35 +209,6 @@ const Checkout = () => {
               </div>
             </div>
 
-            {/* Payment options — lives inside the summary card */}
-            <div className="payment-options">
-              <p className="payment-options-label">Payment Method</p>
-              <label className={`payment-option-card ${paymentMethod === 'cod' ? 'selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="cod"
-                  checked={paymentMethod === 'cod'}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                />
-                💵 Cash on Delivery
-              </label>
-              <label className={`payment-option-card ${paymentMethod === 'online' ? 'selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="online"
-                  checked={paymentMethod === 'online'}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                />
-                💳 Online Payment
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              form="checkout-form"
-              className="btn-place-order"
             <button 
               className="btn-place-order" 
               onClick={handlePlaceOrder} 
@@ -341,10 +216,6 @@ const Checkout = () => {
             >
               {isProcessing ? "Processing..." : paymentMethod === 'online' ? "Pay Now" : "Place Order"}
             </button>
-
-            <p className="secure-checkout-note">
-              🔒 {paymentMethod === 'cod' ? 'Cash on Delivery' : 'Secure Online'} Checkout
-            </p>
           </div>
         </div>
       </div>

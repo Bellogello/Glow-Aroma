@@ -272,3 +272,28 @@
   border-color: var(--your-accent-color);
   background: #fdf6f0; /* match your cozy theme */
 }
+.payment-iframe-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.iframe-container {
+  background: white;
+  width: 90%;
+  max-width: 800px;
+  border-radius: 8px;
+  padding: 20px;
+}
+.close-iframe {
+  margin-bottom: 10px;
+  background: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  cursor: pointer;
+  border-radius: 4px;
+}
