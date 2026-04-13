@@ -5,7 +5,7 @@ import Footer from '../components/Footer';
 import useTitle from '../components/useTitles';
 import AddressForm from '../components/AddressForm';
 import '../styles/Checkout.css';
-import PaymentSection from '../components/PaymentSection';
+import PaymentSection from '../components/paymentsec';
 
 const Checkout = () => {
   useTitle("Checkout | Glow Aroma");
