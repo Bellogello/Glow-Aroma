@@ -226,7 +226,16 @@ const Checkout = () => {
     </div>
     
   );
-  git
+  <div className="payment-options">
+  <label>
+    <input type="radio" value="cod" checked={paymentMethod === 'cod'} 
+      onChange={(e) => setPaymentMethod(e.target.value)} /> Cash on Delivery
+  </label>
+  <label>
+    <input type="radio" value="online" checked={paymentMethod === 'online'} 
+      onChange={(e) => setPaymentMethod(e.target.value)} /> Online Payment
+  </label>
+</div>
 };
 
 export default Checkout;
