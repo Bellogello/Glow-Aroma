@@ -246,3 +246,29 @@
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+.payment-options {
+  margin: 20px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.payment-options-label {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.payment-option-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.payment-option-card.selected {
+  border-color: var(--your-accent-color);
+  background: #fdf6f0; /* match your cozy theme */
+}
