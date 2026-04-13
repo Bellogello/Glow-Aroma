@@ -5,6 +5,7 @@ import Footer from '../components/Footer';
 import useTitle from '../components/useTitles';
 import AddressForm from '../components/AddressForm';
 import '../styles/Checkout.css';
+import PaymentSection from '../components/PaymentSection';
 
 const Checkout = () => {
   useTitle("Checkout | Glow Aroma");
@@ -13,6 +14,7 @@ const Checkout = () => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('cod');
 
   // --- NEW: Address Book State ---
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -222,7 +224,9 @@ const Checkout = () => {
       </div>
       <Footer />
     </div>
+    
   );
+  git
 };
 
 export default Checkout;
