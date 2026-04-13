@@ -7,6 +7,8 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const axios = require('axios');
 
 require('dotenv').config();
 
@@ -53,6 +55,65 @@ db.connect((err) => {
   }
   console.log('Connected to the glow_aroma_db database!');
 });
+
+// ==========================================
+// --- PAYMOB HELPERS ---
+// ==========================================
+
+const PAYMOB_BASE = 'https://accept.paymob.com/api';
+
+async function paymobGetAuthToken() {
+  const res = await axios.post(`${PAYMOB_BASE}/auth/tokens`, {
+    api_key: process.env.PAYMOB_API_KEY
+  });
+  return res.data.token;
+}
+
+async function paymobRegisterOrder(authToken, amountCents, merchantOrderId, items) {
+  const res = await axios.post(`${PAYMOB_BASE}/ecommerce/orders`, {
+    auth_token: authToken,
+    delivery_needed: false,
+    amount_cents: amountCents,
+    currency: 'EGP',
+    merchant_order_id: String(merchantOrderId),
+    items: items
+  });
+  return res.data.id;
+}
+
+async function paymobGetPaymentKey(authToken, paymobOrderId, amountCents, billingData) {
+  const res = await axios.post(`${PAYMOB_BASE}/acceptance/payment_keys`, {
+    auth_token: authToken,
+    amount_cents: amountCents,
+    expiration: 3600,
+    order_id: paymobOrderId,
+    billing_data: billingData,
+    currency: 'EGP',
+    integration_id: parseInt(process.env.PAYMOB_INTEGRATION_ID)
+  });
+  return res.data.token;
+}
+
+function paymobVerifyHmac(data, receivedHmac) {
+  const fields = [
+    'amount_cents', 'created_at', 'currency', 'error_occured',
+    'has_parent_transaction', 'id', 'integration_id', 'is_3d_secure',
+    'is_auth', 'is_capture', 'is_refunded', 'is_standalone_payment',
+    'is_voided', 'order', 'owner', 'pending', 'source_data.pan',
+    'source_data.sub_type', 'source_data.type', 'success'
+  ];
+  const str = fields.map(f => {
+    const val = f.split('.').reduce((obj, k) => obj?.[k], data);
+    return val ?? '';
+  }).join('');
+
+  const computed = crypto
+    .createHmac('sha512', process.env.PAYMOB_HMAC_SECRET)
+    .update(str)
+    .digest('hex');
+
+  return computed === receivedHmac;
+}
 
 // ==========================================
 // --- CANDLE BUILDER ROUTES ---
@@ -951,6 +1012,92 @@ app.post('/checkout', (req, res) => {
       });
     });
   });
+});
+
+// ==========================================
+// --- PAYMOB: INITIATE ONLINE PAYMENT ---
+// ==========================================
+
+app.post('/paymob/initiate', async (req, res) => {
+  const { userId, shippingDetails, orderId, amountCents, items } = req.body;
+
+  if (!orderId || !amountCents) {
+    return res.status(400).json({ error: 'orderId and amountCents are required.' });
+  }
+
+  try {
+    const authToken = await paymobGetAuthToken();
+    const paymobOrderId = await paymobRegisterOrder(authToken, amountCents, orderId, items || []);
+
+    const nameParts = (shippingDetails.fullName || 'Guest User').split(' ');
+    const billingData = {
+      first_name: nameParts[0] || 'NA',
+      last_name: nameParts.slice(1).join(' ') || 'NA',
+      phone_number: shippingDetails.phone || 'NA',
+      apartment: shippingDetails.floorApt || 'NA',
+      floor: 'NA',
+      street: shippingDetails.street || 'NA',
+      building: shippingDetails.building || 'NA',
+      city: shippingDetails.area || 'NA',
+      state: shippingDetails.governorate || 'NA',
+      country: 'EG',
+      postal_code: 'NA',
+      shipping_method: 'NA',
+      email: 'customer@glowaroma.com'
+    };
+
+    const paymentToken = await paymobGetPaymentKey(authToken, paymobOrderId, amountCents, billingData);
+
+    res.json({
+      paymentToken,
+      iframeId: process.env.PAYMOB_IFRAME_ID
+    });
+  } catch (err) {
+    console.error('Paymob initiation error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Payment initiation failed. Please try again.' });
+  }
+});
+
+// ==========================================
+// --- PAYMOB: TRANSACTION CALLBACK ---
+// ==========================================
+// Set this URL in your Paymob dashboard under:
+// Developers > Payment Integrations > [your integration] > Transaction Processed Callback
+// During dev: https://YOUR_NGROK.ngrok.io/paymob/callback
+// In production: https://yourdomain.com/paymob/callback
+
+app.post('/paymob/callback', async (req, res) => {
+  const { hmac } = req.query;
+  const data = req.body?.obj;
+
+  if (!data) {
+    console.error('Paymob callback: no obj in body');
+    return res.sendStatus(200); // always 200 so Paymob doesn't retry forever
+  }
+
+  if (!paymobVerifyHmac(data, hmac)) {
+    console.error('Paymob callback: HMAC verification failed!');
+    return res.sendStatus(200);
+  }
+
+  console.log(`Paymob callback: order ${data.order?.merchant_order_id}, success=${data.success}`);
+
+  if (data.success === true) {
+    const merchantOrderId = data.order?.merchant_order_id;
+    if (merchantOrderId) {
+      try {
+        await db.promise().query(
+          'UPDATE orders SET payment_status = ? WHERE id = ?',
+          ['paid', merchantOrderId]
+        );
+        console.log(`Order #${merchantOrderId} marked as paid.`);
+      } catch (dbErr) {
+        console.error('Failed to update order payment status:', dbErr.message);
+      }
+    }
+  }
+
+  res.sendStatus(200);
 });
 
 // ==========================================

@@ -5,20 +5,23 @@ import Footer from '../components/Footer';
 import useTitle from '../components/useTitles';
 import AddressForm from '../components/AddressForm';
 import '../styles/Checkout.css';
-import PaymentSection from '../components/paymentsec';
 
 const Checkout = () => {
   useTitle("Checkout | Glow Aroma");
   const navigate = useNavigate();
-  
+
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('cod');
+  
+  // --- Payment State ---
+  const [paymentMethod, setPaymentMethod] = useState('cod'); // 'cod' or 'online'
+  const [paymobToken, setPaymobToken] = useState(null);
+  const [paymobIframeId, setPaymobIframeId] = useState(null);
 
-  // --- NEW: Address Book State ---
+  // --- Address Book State ---
   const [savedAddresses, setSavedAddresses] = useState([]);
-  const [selectedAddressId, setSelectedAddressId] = useState('new'); 
+  const [selectedAddressId, setSelectedAddressId] = useState('new');
 
   // Form State
   const [shippingDetails, setShippingDetails] = useState({
@@ -32,39 +35,22 @@ const Checkout = () => {
       return;
     }
 
-    // 1. Fetch Cart
-    fetch(`http://localhost:5000/cart/${userId}`)
-      .then(res => res.json())
-      .then(data => { if (!data.error) setCartItems(data); });
-
-    // 2. Fetch User Profile to AUTO-FILL the name and phone!
-    fetch(`http://localhost:5000/users/${userId}`)
-      .then(res => res.json())
-      .then(user => {
-        setShippingDetails(prev => ({ ...prev, fullName: user.name, phone: user.phone || '' }));
-      });
-
-    // 3. Fetch Saved Addresses (The Address Book!)
-    fetch(`http://localhost:5000/addresses/${userId}`)
-      .then(res => res.json())
-      .then(data => {
-        // Did the backend send an actual array, or an error object?
-        if (Array.isArray(data)) {
-          setSavedAddresses(data);
-          if (data.length > 0) {
-            setSelectedAddressId(data[0].id); // Auto-select their first address
-          }
-        } else {
-          console.error("Backend sent an error instead of addresses:", data.error);
-          setSavedAddresses([]); // Force it to be an empty array so React doesn't crash!
-        }
-      })
-      .catch(err => {
-        console.error("Network error fetching addresses:", err);
-        setSavedAddresses([]); 
-      })
-      .finally(() => setLoading(false));
-
+    // Load initial data
+    Promise.all([
+      fetch(`http://localhost:5000/cart/${userId}`).then(res => res.json()),
+      fetch(`http://localhost:5000/users/${userId}`).then(res => res.json()),
+      fetch(`http://localhost:5000/addresses/${userId}`).then(res => res.json())
+    ]).then(([cart, user, addresses]) => {
+      if (!cart.error) setCartItems(cart);
+      if (!user.error) setShippingDetails(prev => ({ ...prev, fullName: user.name, phone: user.phone || '' }));
+      
+      if (Array.isArray(addresses)) {
+        setSavedAddresses(addresses);
+        if (addresses.length > 0) setSelectedAddressId(addresses[0].id);
+      }
+    })
+    .catch(err => console.error("Initialization error:", err))
+    .finally(() => setLoading(false));
   }, [navigate]);
 
   const handleInputChange = (e) => {
@@ -72,117 +58,138 @@ const Checkout = () => {
   };
 
   const handlePlaceOrder = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const userId = localStorage.getItem("userId");
     if (cartItems.length === 0) return alert("Your cart is empty!");
-    
+
     setIsProcessing(true);
 
     try {
-      let finalShippingDetails = {};
+      let finalDetails = {};
 
-      // If they are entering a BRAND NEW address, save it to their address book first!
-    if (selectedAddressId === 'new') {
-        const addressRes = await fetch(`http://localhost:5000/addresses/${userId}`, {
+      // 1. Handle Address Resolution
+      if (selectedAddressId === 'new') {
+        const addrRes = await fetch(`http://localhost:5000/addresses/${userId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(shippingDetails)
         });
-        
-        // UPGRADE: Grab the exact error message from the backend database!
-        if (!addressRes.ok) {
-          const errorData = await addressRes.json();
-          throw new Error(`Database Error: ${errorData.error || "Unknown error"}`);
+        if (!addrRes.ok) {
+          const err = await addrRes.json();
+          throw new Error(err.error || "Failed to save address");
         }
-        finalShippingDetails = shippingDetails;
-      } 
-      // If they picked a saved address, grab it from the list
-      else {
-        const pickedAddress = savedAddresses.find(addr => addr.id === selectedAddressId);
-        finalShippingDetails = {
-          fullName: pickedAddress.full_name, phone: pickedAddress.phone,
-          governorate: pickedAddress.governorate, area: pickedAddress.area,
-          street: pickedAddress.street, building: pickedAddress.building,
-          floorApt: pickedAddress.floor_apt, notes: pickedAddress.notes
+        finalDetails = shippingDetails;
+      } else {
+        const picked = savedAddresses.find(a => a.id === selectedAddressId);
+        finalDetails = {
+          fullName: picked.full_name, phone: picked.phone,
+          governorate: picked.governorate, area: picked.area,
+          street: picked.street, building: picked.building,
+          floorApt: picked.floor_apt, notes: picked.notes
         };
       }
 
-      // Finally, place the order!
-      const response = await fetch('http://localhost:5000/checkout', {
+      // 2. Create Order in Backend (Database)
+      const orderRes = await fetch('http://localhost:5000/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, shippingDetails: finalShippingDetails })
+        body: JSON.stringify({ userId, shippingDetails: finalDetails, paymentMethod })
       });
+      const orderData = await orderRes.json();
 
-      const data = await response.json();
+      if (!orderRes.ok) throw new Error(orderData.error);
 
-      if (response.ok) {
-        alert(`🎉 Order placed successfully! Your Order ID is #${data.orderId}`);
-        navigate('/'); 
+      // 3. Handle Payment Logic
+      if (paymentMethod === 'online') {
+        const orderTotal = cartItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
+        
+        const pmRes = await fetch('http://localhost:5000/paymob/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            shippingDetails: finalDetails,
+            orderId: orderData.orderId,
+            amountCents: Math.round(orderTotal * 100),
+            items: cartItems.map(i => ({ name: i.name, amount_cents: Math.round(i.price * 100), quantity: i.quantity }))
+          })
+        });
+
+        const pmData = await pmRes.json();
+        setPaymobToken(pmData.paymentToken);
+        setPaymobIframeId(pmData.iframeId);
       } else {
-        alert("Checkout failed: " + data.error);
+        alert(`🎉 Order placed! Order ID: #${orderData.orderId}`);
+        navigate('/');
       }
     } catch (error) {
-      console.error("Error during checkout:", error);
-      alert("Something went wrong. Please try again.");
+      alert(error.message);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (loading) return <div className="home-container"><Navbar /><div className="checkout-loading"><h2>Preparing checkout...</h2></div><Footer /></div>;
-
   const orderTotal = cartItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
+
+  if (loading) return <div className="loading-screen">Preparing checkout...</div>;
 
   return (
     <div className="home-container checkout-bg">
       <Navbar />
+      
+      {/* PAYMOB IFRAME MODAL */}
+      {paymobToken && (
+        <div className="payment-iframe-overlay">
+          <div className="iframe-container">
+            <button className="close-iframe" onClick={() => setPaymobToken(null)}>Close & Return</button>
+            <iframe
+              title="Paymob Payment"
+              src={`https://accept.paymob.com/api/acceptance/iframes/${paymobIframeId}?payment_token=${paymobToken}`}
+              width="100%"
+              height="600px"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="checkout-wrapper">
         <h1 className="checkout-page-title">Complete Your Order</h1>
 
         <div className="checkout-grid">
           <div className="checkout-form-section">
-            <h2>Select Delivery Address</h2>
-
-            {/* ADDRESS SELECTOR */}
-            <div className="address-selector">
-              {savedAddresses.map(addr => (
-                <label key={addr.id} className={`address-card ${selectedAddressId === addr.id ? 'selected' : ''}`}>
-                  <input 
-                    type="radio" 
-                    name="addressSelection" 
-                    checked={selectedAddressId === addr.id} 
-                    onChange={() => setSelectedAddressId(addr.id)} 
-                  />
-                  <div className="address-card-info">
-                    <strong>{addr.full_name}</strong> - <span>{addr.phone}</span>
-                    <p>{addr.building}, {addr.street}, {addr.area}, {addr.governorate}</p>
-                  </div>
+            <section className="address-section">
+              <h2>1. Delivery Address</h2>
+              <div className="address-selector">
+                {savedAddresses.map(addr => (
+                  <label key={addr.id} className={`address-card ${selectedAddressId === addr.id ? 'selected' : ''}`}>
+                    <input type="radio" name="addr" checked={selectedAddressId === addr.id} onChange={() => setSelectedAddressId(addr.id)} />
+                    <div className="address-card-info">
+                      <strong>{addr.full_name}</strong>
+                      <p>{addr.street}, {addr.area}</p>
+                    </div>
+                  </label>
+                ))}
+                <label className={`address-card ${selectedAddressId === 'new' ? 'selected' : ''}`}>
+                  <input type="radio" name="addr" checked={selectedAddressId === 'new'} onChange={() => setSelectedAddressId('new')} />
+                  <div className="address-card-info"><strong>+ Add New Address</strong></div>
                 </label>
-              ))}
+              </div>
+              {selectedAddressId === 'new' && <AddressForm formData={shippingDetails} onChange={handleInputChange} />}
+            </section>
 
-              <label className={`address-card ${selectedAddressId === 'new' ? 'selected' : ''}`}>
-                <input 
-                  type="radio" 
-                  name="addressSelection" 
-                  checked={selectedAddressId === 'new'} 
-                  onChange={() => setSelectedAddressId('new')} 
-                />
-                <div className="address-card-info">
-                  <strong>+ Add New Address</strong>
-                </div>
-              </label>
-            </div>
-
-            {/* If "Add New" is selected, show the form! */}
-            <form id="checkout-form" onSubmit={handlePlaceOrder}>
-              {selectedAddressId === 'new' && (
-                <div className="new-address-slide-down">
-                  <AddressForm formData={shippingDetails} onChange={handleInputChange} />
-                </div>
-              )}
-            </form>
-
+            <section className="payment-section-box">
+              <h2>2. Payment Method</h2>
+              <div className="payment-options">
+                <label className={`pay-option ${paymentMethod === 'cod' ? 'active' : ''}`}>
+                  <input type="radio" value="cod" checked={paymentMethod === 'cod'} onChange={(e) => setPaymentMethod(e.target.value)} />
+                  Cash on Delivery
+                </label>
+                <label className={`pay-option ${paymentMethod === 'online' ? 'active' : ''}`}>
+                  <input type="radio" value="online" checked={paymentMethod === 'online'} onChange={(e) => setPaymentMethod(e.target.value)} />
+                  Online Card / Wallet
+                </label>
+              </div>
+            </section>
           </div>
 
           <div className="checkout-summary-section">
@@ -190,20 +197,12 @@ const Checkout = () => {
             <div className="summary-items">
               {cartItems.map(item => (
                 <div key={item.cart_item_id} className="summary-item">
-                  <div className="summary-item-info">
-                    <span className="summary-qty">{item.quantity}x</span>
-                    <span className="summary-name">{item.name}</span>
-                  </div>
-                  <span className="summary-price">{(Number(item.price) * item.quantity).toFixed(2)} L.E.</span>
+                  <span>{item.quantity}x {item.name}</span>
+                  <span>{(item.price * item.quantity).toFixed(2)} L.E.</span>
                 </div>
               ))}
             </div>
-
             <div className="summary-totals">
-              <div className="totals-row">
-                <span>Subtotal</span>
-                <span>{orderTotal.toFixed(2)} L.E.</span>
-              </div>
               <div className="totals-row grand-total">
                 <span>Total</span>
                 <span>{orderTotal.toFixed(2)} L.E.</span>
@@ -211,31 +210,18 @@ const Checkout = () => {
             </div>
 
             <button 
-              type="submit"
-              form="checkout-form"
               className="btn-place-order" 
+              onClick={handlePlaceOrder} 
               disabled={isProcessing || cartItems.length === 0}
             >
-              {isProcessing ? "Processing..." : "Place Order"}
+              {isProcessing ? "Processing..." : paymentMethod === 'online' ? "Pay Now" : "Place Order"}
             </button>
-            <p className="secure-checkout-note">🔒 Secure Cash on Delivery Checkout</p>
           </div>
         </div>
       </div>
       <Footer />
     </div>
-    
   );
-  <div className="payment-options">
-  <label>
-    <input type="radio" value="cod" checked={paymentMethod === 'cod'} 
-      onChange={(e) => setPaymentMethod(e.target.value)} /> Cash on Delivery
-  </label>
-  <label>
-    <input type="radio" value="online" checked={paymentMethod === 'online'} 
-      onChange={(e) => setPaymentMethod(e.target.value)} /> Online Payment
-  </label>
-</div>
 };
 
 export default Checkout;
