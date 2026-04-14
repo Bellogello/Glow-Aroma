@@ -12,6 +12,10 @@ const axios = require('axios');
 
 require('dotenv').config();
 
+app.get('/', (req, res) => {
+  res.send('API is alive and kicking!');
+});
+
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
