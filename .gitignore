@@ -2,3 +2,6 @@ node_modules/
 .env
 dist/
 .DS_Store
+uploads/
+client/.env
+client/.env.production
