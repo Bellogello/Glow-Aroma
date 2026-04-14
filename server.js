@@ -322,63 +322,81 @@ app.post('/addresses/:userId', (req, res) => {
 });
 
 // ==========================================
-// --- 8. CART & CHECKOUT ENGINE ---
+// --- FIXED CART FETCH ROUTE ---
 // ==========================================
-
-app.post('/cart/add', (req, res) => {
-    const { userId, type, scentId, quantity = 1, prebuiltCandleId, totalPrice, cupShapeId, cupSizeId, cupColorId, candleColorId, moldShapeId, layers, snapshot } = req.body;
-    
-    db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, results) => {
-        const cartId = results[0]?.id;
-        
-        const processItem = (cId) => {
-            if (prebuiltCandleId) {
-                db.query('INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?', [cId, prebuiltCandleId, quantity, quantity], () => res.json({ message: 'Item Added' }));
-            } else {
-                // Custom candle logic
-                db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, total_price, preview_image) VALUES (?, ?, ?, ?, ?)", [type, scentId, cupShapeId, totalPrice, snapshot], (err, result) => {
-                    const customId = result.insertId;
-                    db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cId, customId, quantity], () => res.json({ message: 'Custom candle added' }));
-                });
-            }
-        };
-
-        if (!cartId) {
-            db.query('INSERT INTO carts (user_id) VALUES (?)', [userId], (err, r) => processItem(r.insertId));
-        } else processItem(cartId);
-    });
-});
-
 app.get('/cart/:userId', (req, res) => {
+    const userId = req.params.userId;
     const sql = `
-        SELECT ci.id AS cart_item_id, ci.quantity, cc.total_price AS custom_price, cc.preview_image AS snapshot,
-        pc.name AS prebuilt_name, pc.price AS prebuilt_price, pc.image_url AS prebuilt_image
+        SELECT 
+            ci.id AS cart_item_id, 
+            ci.quantity, 
+            ci.prebuilt_candle_id,
+            ci.custom_candle_id,
+            pc.name AS prebuilt_name, 
+            pc.price AS prebuilt_price, 
+            pc.image_url AS prebuilt_image,
+            cc.total_price AS custom_price, 
+            cc.preview_image AS snapshot,
+            cc.type AS candle_type
         FROM cart_items ci
-        LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
         LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
+        LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
         JOIN carts ct ON ci.cart_id = ct.id
         WHERE ct.user_id = ?`;
-    db.query(sql, [req.params.userId], (err, results) => {
+
+    db.query(sql, [userId], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
+        
+        // Map data to a consistent format the frontend expects
+        const formatted = results.map(item => ({
+            cart_item_id: item.cart_item_id,
+            quantity: item.quantity,
+            id: item.prebuilt_candle_id || item.custom_candle_id,
+            name: item.prebuilt_name || (item.candle_type === 'cup' ? 'Custom Cup Candle' : 'Custom Mold Candle'),
+            price: item.prebuilt_name ? item.prebuilt_price : item.custom_price,
+            image: item.prebuilt_name ? item.prebuilt_image : item.snapshot,
+            is_custom: !!item.candle_type
+        }));
+        res.json(formatted);
     });
 });
 
+// ==========================================
+// --- FIXED CHECKOUT POST ROUTE ---
+// ==========================================
 app.post('/checkout', (req, res) => {
-    const { userId, total, items } = req.body;
+    const { userId, items, total } = req.body;
+    
+    if (!items || items.length === 0) {
+        return res.status(400).json({ error: "No items provided in checkout request" });
+    }
+
     db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, total], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        const orderId = result.insertId;
-        const itemRows = items.map(i => [orderId, i.item_type || 'prebuilt', i.name, i.price, i.quantity]);
+        if (err) return res.status(500).json({ error: "Order creation failed" });
         
-        db.query('INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity) VALUES ?', [itemRows], () => {
+        const orderId = result.insertId;
+        
+        // Ensure unit_price and item_name are mapped correctly from the frontend payload
+        const itemValues = items.map(i => [
+            orderId, 
+            i.is_custom ? 'custom' : 'prebuilt', 
+            i.name, 
+            i.price, 
+            i.quantity
+        ]);
+
+        const itemSql = `INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity) VALUES ?`;
+        
+        db.query(itemSql, [itemValues], (err) => {
+            if (err) return res.status(500).json({ error: "Failed to save order items" });
+
+            // Clear the cart
             db.query('DELETE FROM cart_items WHERE cart_id = (SELECT id FROM carts WHERE user_id = ?)', [userId], () => {
-                res.status(201).json({ message: 'Order Placed', orderId });
+                res.status(201).json({ message: 'Success', orderId });
             });
         });
     });
 });
-
 // ==========================================
 // --- 9. PAYMENTS & FINISHING ---
 // ==========================================
