@@ -419,19 +419,33 @@ app.get('/admin/messages', (req, res) => {
 // ==========================================
 
 app.post('/checkout', (req, res) => {
-    const { userId, total } = req.body;
+    const { userId, total, items } = req.body;
     db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
         if (err || cartResults.length === 0) return res.status(400).json({ error: 'Empty Cart' });
         const cartId = cartResults[0].id;
 
         db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, total], (err, result) => {
-            if (err) return res.status(500).json({ error: 'Order Creation Failed' });
+            if (err) {
+                console.error("Order Insert Error:", err); // This will tell you exactly what failed in Railway
+                return res.status(500).json({ error: 'Order Creation Failed' });
+            }
             const orderId = result.insertId;
 
-            // --- CLEAR CART AFTER ORDER ---
-            db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], (delErr) => {
-                res.status(201).json({ message: 'Order Placed', orderId });
-            });
+            if (items && items.length > 0) {
+                const values = items.map(i => [orderId, i.is_custom ? 'custom' : 'prebuilt', i.name, i.price, i.quantity]);
+                db.query('INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity) VALUES ?', [values], (itemErr) => {
+                    if (itemErr) console.error("Order Items Error:", itemErr);
+                    
+                    // --- CLEAR CART AFTER ORDER ---
+                    db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], () => {
+                        res.status(201).json({ message: 'Order Placed', orderId });
+                    });
+                });
+            } else {
+                db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], () => {
+                    res.status(201).json({ message: 'Order Placed', orderId });
+                });
+            }
         });
     });
 });
