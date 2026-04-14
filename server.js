@@ -17,7 +17,7 @@ const app = express();
 // --- MIDDLEWARE CONFIGURATION ---
 // ==========================================
 app.use(cors({
-    origin: '*',
+    origin: true,
     credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
