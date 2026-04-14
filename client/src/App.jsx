@@ -15,6 +15,7 @@ import Signup from './pages/Sign-up';
 import ProductDetails from './pages/ProductDetails';
 import Checkout from './pages/Checkout';
 import Dashboard from './pages/Dashboard';
+import OrderSuccess from './pages/OrderSuccess';
 
 const stripePromise = loadStripe('pk_test_51TLsHTFTbNVdlFGS8I4gWECo2WMYrPt9uci7WvSBet1AUBUJbVYNdCXlML8mmgPfJquqtZCsx8PBA15Ifv3zoqZd00IMWU0jTR');
 
@@ -33,7 +34,7 @@ function App() {
         <Route path="/Sign-up" element={<Signup />} />
         <Route path="/Dashboard" element={<Dashboard />} />
         <Route path="/product/:id" element={<ProductDetails />} />
-
+        <Route path="/order-success" element={<OrderSuccess />} />
         <Route 
           path="/checkout" 
           element={

@@ -18,6 +18,7 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState('cod'); // 'cod' or 'online'
   const [paymobToken, setPaymobToken] = useState(null);
   const [paymobIframeId, setPaymobIframeId] = useState(null);
+  const [pendingOrderId, setPendingOrderId] = useState(null); // <-- NEW: Tracks un-paid online orders
 
   // --- Address Book State ---
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -60,46 +61,58 @@ const Checkout = () => {
   const handlePlaceOrder = async (e) => {
     if (e) e.preventDefault();
     const userId = localStorage.getItem("userId");
-    if (cartItems.length === 0) return alert("Your cart is empty!");
+    
+    // Check if cart is empty ONLY if we are not retrying a pending payment
+    if (cartItems.length === 0 && !pendingOrderId) return alert("Your cart is empty!");
 
     setIsProcessing(true);
 
     try {
       let finalDetails = {};
+      let currentOrderId = pendingOrderId; // Use existing order if they are retrying
 
-      // 1. Handle Address Resolution
-      if (selectedAddressId === 'new') {
-        const addrRes = await fetch(`http://localhost:5000/addresses/${userId}`, {
+      // 1. Resolve Address & Create Order (Only if we haven't created it yet)
+      if (!currentOrderId) {
+        if (selectedAddressId === 'new') {
+          const addrRes = await fetch(`http://localhost:5000/addresses/${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(shippingDetails)
+          });
+          if (!addrRes.ok) {
+            const err = await addrRes.json();
+            throw new Error(err.error || "Failed to save address");
+          }
+          finalDetails = shippingDetails;
+        } else {
+          const picked = savedAddresses.find(a => a.id === selectedAddressId);
+          finalDetails = {
+            fullName: picked.full_name, phone: picked.phone,
+            governorate: picked.governorate, area: picked.area,
+            street: picked.street, building: picked.building,
+            floorApt: picked.floor_apt, notes: picked.notes
+          };
+        }
+
+        // Create Order in Backend (Database)
+        const orderRes = await fetch('http://localhost:5000/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(shippingDetails)
+          body: JSON.stringify({ userId, shippingDetails: finalDetails, paymentMethod })
         });
-        if (!addrRes.ok) {
-          const err = await addrRes.json();
-          throw new Error(err.error || "Failed to save address");
+        const orderData = await orderRes.json();
+
+        if (!orderRes.ok) throw new Error(orderData.error);
+        
+        currentOrderId = orderData.orderId;
+        
+        // Save to state so we don't duplicate it if they close the iframe
+        if (paymentMethod === 'online') {
+          setPendingOrderId(currentOrderId);
         }
-        finalDetails = shippingDetails;
-      } else {
-        const picked = savedAddresses.find(a => a.id === selectedAddressId);
-        finalDetails = {
-          fullName: picked.full_name, phone: picked.phone,
-          governorate: picked.governorate, area: picked.area,
-          street: picked.street, building: picked.building,
-          floorApt: picked.floor_apt, notes: picked.notes
-        };
       }
 
-      // 2. Create Order in Backend (Database)
-      const orderRes = await fetch('http://localhost:5000/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, shippingDetails: finalDetails, paymentMethod })
-      });
-      const orderData = await orderRes.json();
-
-      if (!orderRes.ok) throw new Error(orderData.error);
-
-      // 3. Handle Payment Logic
+      // 2. Handle Payment Logic
       if (paymentMethod === 'online') {
         const orderTotal = cartItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
         
@@ -108,19 +121,21 @@ const Checkout = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId,
-            shippingDetails: finalDetails,
-            orderId: orderData.orderId,
+            shippingDetails: finalDetails, // Pass the details for Paymob
+            orderId: currentOrderId,       // Pass the EXACT order ID
             amountCents: Math.round(orderTotal * 100),
             items: cartItems.map(i => ({ name: i.name, amount_cents: Math.round(i.price * 100), quantity: i.quantity }))
           })
         });
 
         const pmData = await pmRes.json();
+        if (!pmRes.ok) throw new Error(pmData.error || "Failed to initiate payment");
+
         setPaymobToken(pmData.paymentToken);
         setPaymobIframeId(pmData.iframeId);
       } else {
-        alert(`🎉 Order placed! Order ID: #${orderData.orderId}`);
-        navigate('/');
+        // COD logic: immediately push to success page
+        navigate(`/order-success?success=true&order=${currentOrderId}`);
       }
     } catch (error) {
       alert(error.message);
@@ -212,7 +227,7 @@ const Checkout = () => {
             <button 
               className="btn-place-order" 
               onClick={handlePlaceOrder} 
-              disabled={isProcessing || cartItems.length === 0}
+              disabled={isProcessing || (cartItems.length === 0 && !pendingOrderId)}
             >
               {isProcessing ? "Processing..." : paymentMethod === 'online' ? "Pay Now" : "Place Order"}
             </button>

@@ -1,0 +1,95 @@
+.success-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 70vh;
+  padding: 40px 20px;
+  background-color: #f9f9f9;
+}
+
+.status-card {
+  background: white;
+  padding: 50px 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.icon-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 20px;
+  font-size: 40px;
+  font-weight: bold;
+}
+
+.success-icon {
+  background-color: #e6f7eb;
+  color: #28a745;
+}
+
+.error-icon {
+  background-color: #fce8e8;
+  color: #dc3545;
+}
+
+.status-card h1 {
+  font-size: 28px;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.status-message {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.order-details-box {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  border: 1px dashed #ccc;
+}
+
+.order-details-box p {
+  margin: 0;
+  font-size: 16px;
+  color: #444;
+}
+
+.btn-continue-shopping,
+.btn-retry-payment {
+  display: inline-block;
+  padding: 14px 30px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-continue-shopping {
+  background-color: #333;
+  color: white;
+}
+
+.btn-continue-shopping:hover {
+  background-color: #555;
+}
+
+.btn-retry-payment {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-retry-payment:hover {
+  background-color: #c82333;
+}
