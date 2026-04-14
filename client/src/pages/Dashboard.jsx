@@ -5,6 +5,8 @@ import Navbar from '../components/Navbar';
 import '../styles/Dashboard.css';
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
+// 1. Import the "Central Brain"
+import { API_BASE_URL } from '../config';
 
 const Dashboard = () => {
   useTitle("Dashboard");
@@ -52,13 +54,10 @@ const Dashboard = () => {
   const [dialogSuccess, setDialogSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // ==========================================
-  // --- INITIALIZATION ---
-  // ==========================================
   useEffect(() => {
     const uId = localStorage.getItem('userId');
     setIsAuthorized(true);
-    setUserRole('3'); // Forcing Super Admin for testing
+    setUserRole('3'); 
     setUserId(uId);
     fetchDashboardData();
   }, [navigate]);
@@ -66,12 +65,13 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
+      // 2. Updated all bulk fetches to use API_BASE_URL
       const [prodRes, orderRes, staffRes, discountRes, msgRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL}/products`),
-        fetch(`${import.meta.env.VITE_API_URL}/admin/orders`),
-        fetch(`${import.meta.env.VITE_API_URL}/admin/staff`),
-        fetch(`${import.meta.env.VITE_API_URL}/admin/discount-codes`),
-        fetch(`${import.meta.env.VITE_API_URL}/admin/messages`),
+        fetch(`${API_BASE_URL}/products`),
+        fetch(`${API_BASE_URL}/admin/orders`),
+        fetch(`${API_BASE_URL}/admin/staff`),
+        fetch(`${API_BASE_URL}/admin/discount-codes`),
+        fetch(`${API_BASE_URL}/admin/messages`),
       ]);
       
       const [prodData, orderData, staffData, discountData, msgData] = await Promise.all([
@@ -94,14 +94,13 @@ const Dashboard = () => {
   const getStatusLabel = (s) => s === 1 ? 'Processing' : s === 2 ? 'Shipped' : 'Delivered';
   const getStatusBg = (s) => s === 1 ? 'warning' : s === 2 ? 'info' : 'success';
 
-  // ==========================================
   // --- STAFF FUNCTIONS ---
-  // ==========================================
   const handleOpenAddStaff = () => { setStaffForm({ name: '', email: '', phone: '', password: '', role_id: '2' }); resetDialogState(); setShowAddStaffDialog(true); };
   const handleAddStaff = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/add-staff`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(staffForm) });
+      // 3. Updated Staff Add
+      const res = await fetch(`${API_BASE_URL}/admin/add-staff`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(staffForm) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add staff member.');
       setDialogSuccess('Staff member added successfully!');
@@ -112,16 +111,15 @@ const Dashboard = () => {
   const handleRemoveStaff = async (memberId) => {
     if (!window.confirm('Are you sure you want to remove this admin?')) return;
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/staff/${memberId}`, { method: 'DELETE' });
+      // 4. Updated Staff Remove
+      const res = await fetch(`${API_BASE_URL}/admin/staff/${memberId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to remove staff member.');
       setStaff((prev) => prev.filter((m) => m.id !== memberId));
     } catch (err) { alert(`Error: ${err.message}`); }
   };
 
-  // ==========================================
   // --- PRODUCT FUNCTIONS ---
-  // ==========================================
   const handleOpenAddProduct = () => { setProductForm({ name: '', price: '', stock_quantity: '', description: '', image: null }); resetDialogState(); setShowAddProductDialog(true); };
   const handleAddProduct = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
@@ -133,7 +131,8 @@ const Dashboard = () => {
     if (productForm.image) formData.append('image', productForm.image);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/products`, { method: 'POST', body: formData });
+      // 5. Updated Product Add
+      const res = await fetch(`${API_BASE_URL}/admin/products`, { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add product.');
       setDialogSuccess('Product added successfully!');
@@ -158,7 +157,8 @@ const Dashboard = () => {
     if (editProductForm.image) formData.append('image', editProductForm.image);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/products/${editProductForm.id}`, { method: 'PUT', body: formData });
+      // 6. Updated Product Update
+      const res = await fetch(`${API_BASE_URL}/admin/products/${editProductForm.id}`, { method: 'PUT', body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update product.');
       setDialogSuccess('Product updated successfully!');
@@ -169,7 +169,8 @@ const Dashboard = () => {
   const handleDeleteProduct = async (id) => {
     if (!window.confirm('Are you sure you want to completely remove this product?')) return;
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/products/${id}`, { method: 'DELETE' });
+      // 7. Updated Product Delete
+      const res = await fetch(`${API_BASE_URL}/admin/products/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to delete product.');
       setProducts((prev) => prev.filter((p) => p.id !== id));
@@ -177,9 +178,7 @@ const Dashboard = () => {
     } catch (err) { alert(`Error: ${err.message}`); }
   };
 
-  // ==========================================
   // --- ORDER FUNCTIONS ---
-  // ==========================================
   const handleOpenOrderDialog = async (order) => { 
     setSelectedOrder(order); 
     setNewStatusId(String(order.status_id)); 
@@ -188,7 +187,8 @@ const Dashboard = () => {
     setShowOrderDialog(true); 
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/orders/${order.id}/items`);
+      // 8. Updated Order Items Fetch
+      const res = await fetch(`${API_BASE_URL}/admin/orders/${order.id}/items`);
       const data = await res.json();
       if (!data.error) setSelectedOrderItems(data);
     } catch (err) {
@@ -203,7 +203,8 @@ const Dashboard = () => {
     setDialogSuccess('');
     
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/orders/${selectedOrder.id}/status`, { 
+      // 9. Updated Order Status Update
+      const res = await fetch(`${API_BASE_URL}/admin/orders/${selectedOrder.id}/status`, { 
         method: 'PUT', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ status_id: Number(newStatusId) }) 
@@ -223,14 +224,13 @@ const Dashboard = () => {
     }
   };
 
-  // ==========================================
   // --- ACCOUNT & DISCOUNT FUNCTIONS ---
-  // ==========================================
   const handleOpenDeleteAccount = () => { setDeletePassword(''); resetDialogState(); setShowDeleteAccountDialog(true); };
   const handleDeleteAccount = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError('');
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/delete-account`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, password: deletePassword }) });
+      // 10. Updated Admin Delete Account
+      const res = await fetch(`${API_BASE_URL}/admin/delete-account`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, password: deletePassword }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.message || 'Failed to delete account.');
       alert('Account successfully deleted. You will now be logged out.');
@@ -252,7 +252,8 @@ const Dashboard = () => {
     if (!code.trim() || !discount_value) { setDialogError('Code and discount value are required.'); return; }
     setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/discount-codes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim().toUpperCase(), discount_type, discount_value: Number(discount_value), min_order_amount: min_order_amount ? Number(min_order_amount) : null, max_order_amount: max_order_amount ? Number(max_order_amount) : null, max_uses: max_uses ? Number(max_uses) : null, expires_at: expires_at || null }) });
+      // 11. Updated Discount Create
+      const res = await fetch(`${API_BASE_URL}/admin/discount-codes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim().toUpperCase(), discount_type, discount_value: Number(discount_value), min_order_amount: min_order_amount ? Number(min_order_amount) : null, max_order_amount: max_order_amount ? Number(max_order_amount) : null, max_uses: max_uses ? Number(max_uses) : null, expires_at: expires_at || null }) });
       if (!res.ok) throw new Error('Failed to create discount code.');
       setDialogSuccess('Discount code created successfully!');
       fetchDashboardData();
@@ -261,21 +262,24 @@ const Dashboard = () => {
   };
   const handleToggleDiscount = async (id, currentActive) => {
     try {
-      await fetch(`${import.meta.env.VITE_API_URL}/admin/discount-codes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !currentActive }) });
+      // 12. Updated Discount Toggle
+      await fetch(`${API_BASE_URL}/admin/discount-codes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !currentActive }) });
       fetchDashboardData();
     } catch (err) { console.error(err.message); }
   };
   const handleDeleteDiscount = async (id) => {
     if (!window.confirm('Delete this code permanently?')) return;
     try {
-      await fetch(`${import.meta.env.VITE_API_URL}/admin/discount-codes/${id}`, { method: 'DELETE' });
+      // 13. Updated Discount Delete
+      await fetch(`${API_BASE_URL}/admin/discount-codes/${id}`, { method: 'DELETE' });
       fetchDashboardData();
     } catch (err) { console.error(err.message); }
   };
   const handleDeleteMessage = async (id) => {
     if (!window.confirm('Delete this message permanently?')) return;
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/messages/${id}`, { method: 'DELETE' });
+      // 14. Updated Message Delete
+      const res = await fetch(`${API_BASE_URL}/admin/messages/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setMessages((prev) => prev.filter((m) => m.id !== id));
         setShowViewMessageDialog(false);
@@ -285,9 +289,6 @@ const Dashboard = () => {
 
   if (!isAuthorized) return null;
 
-  // ==========================================
-  // --- MAIN RENDER ---
-  // ==========================================
   return (
     <>
       <div className="home-container dashboard-bg">
@@ -338,7 +339,7 @@ const Dashboard = () => {
                           <td>{product.id}</td>
                           <td>
                             {product.image_url && (
-                              <img src={product.image_url.startsWith('http') ? product.image_url : `${import.meta.env.VITE_API_URL}${product.image_url}`} alt={product.name} style={{width: '30px', height: '30px', objectFit: 'cover', borderRadius: '4px', marginRight: '10px'}} />
+                              <img src={product.image_url.startsWith('http') ? product.image_url : `${API_BASE_URL}${product.image_url}`} alt={product.name} style={{width: '30px', height: '30px', objectFit: 'cover', borderRadius: '4px', marginRight: '10px'}} />
                             )}
                             <strong>{product.name}</strong>
                           </td>
@@ -469,11 +470,7 @@ const Dashboard = () => {
         <Footer />
       </div>
 
-      {/* ========================================== */}
-      {/* DIALOGS */}
-      {/* ========================================== */}
-
-      {/* VIEW ORDER DIALOG (WITH RECEIPT) */}
+      {/* VIEW ORDER DIALOG */}
       {showOrderDialog && selectedOrder && (
         <div className="dialog-overlay">
           <div className="dialog-box">
@@ -496,7 +493,6 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* THE ITEMIZED RECEIPT */}
               <div className="mb-4 p-3 rounded" style={{ backgroundColor: '#fdfbf7', border: '1px solid #e0dcd3' }}>
                 <h6 className="fw-bold mb-3" style={{ color: '#4a3728' }}>Order Items</h6>
                 {selectedOrderItems.length === 0 ? (
@@ -510,8 +506,6 @@ const Dashboard = () => {
                             <span className="fw-bold text-dark">{item.quantity}x</span> {item.item_name}
                             {item.item_type !== 'prebuilt' && <span className="badge bg-secondary ms-2" style={{ fontSize: '0.65rem'}}>Custom</span>}
                           </div>
-                          
-                          {/* THE NEW RECEIPT DETAILS FOR CUSTOM CANDLES */}
                           {item.details && item.details !== 'Standard Pre-built' && item.details !== 'See order details' && (
                             <div className="text-muted mt-1" style={{ fontSize: '0.85rem', marginLeft: '1.5rem', lineHeight: '1.4' }}>
                               {item.details}

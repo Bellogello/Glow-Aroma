@@ -1,7 +1,7 @@
 import React from 'react';
 import '../styles/AddressForm.css';
 
-// 1. THE STATIC DICTIONARY: Fast, reliable, and zero API calls needed.
+// 1. THE STATIC DICTIONARY: Always works regardless of .env or backend status
 const egyptLocations = {
   "Cairo": ["Nasr City", "Maadi", "Heliopolis", "New Cairo (Tagamoa)", "Zamalek", "Downtown", "Madinaty", "Shorouk", "Rehab", "Shoubra", "Mokattam", "Other"],
   "Giza": ["6th of October", "Sheikh Zayed", "Mohandeseen", "Dokki", "Agouza", "Haram", "Faisal", "Imbaba", "Other"],
@@ -19,8 +19,9 @@ const egyptLocations = {
 
 const AddressForm = ({ formData, onChange }) => {
   
-  // 2. DYNAMIC LOOKUP: Get the areas based on what Governorate they selected
-  const availableAreas = egyptLocations[formData.governorate] || [];
+  // Safety check: ensure formData exists before looking up governorate
+  const currentGov = formData?.governorate || '';
+  const availableAreas = egyptLocations[currentGov] || [];
 
   return (
     <div className="address-form-wrapper">
@@ -32,7 +33,7 @@ const AddressForm = ({ formData, onChange }) => {
             name="fullName" 
             required 
             placeholder="e.g. Amina Hassan" 
-            value={formData.fullName || ''} 
+            value={formData?.fullName || ''} 
             onChange={onChange} 
           />
         </div>
@@ -43,7 +44,7 @@ const AddressForm = ({ formData, onChange }) => {
             name="phone" 
             required 
             placeholder="01X XXXX XXXX" 
-            value={formData.phone || ''} 
+            value={formData?.phone || ''} 
             onChange={onChange} 
           />
         </div>
@@ -52,7 +53,7 @@ const AddressForm = ({ formData, onChange }) => {
       <div className="form-row">
         <div className="form-group flex-fill">
           <label>Governorate</label>
-          <select name="governorate" required value={formData.governorate || ''} onChange={onChange}>
+          <select name="governorate" required value={currentGov} onChange={onChange}>
             <option value="">Select Governorate...</option>
             {Object.keys(egyptLocations).map(gov => (
               <option key={gov} value={gov}>{gov}</option>
@@ -62,15 +63,14 @@ const AddressForm = ({ formData, onChange }) => {
         
         <div className="form-group flex-fill">
           <label>Area / District</label>
-          {/* 3. CONDITIONAL DROPDOWN: Swapped the text input for a dynamic select! */}
           <select 
             name="area" 
             required 
-            value={formData.area || ''} 
+            value={formData?.area || ''} 
             onChange={onChange}
-            disabled={!formData.governorate} // Locks the dropdown until a governorate is picked
+            disabled={!currentGov} 
           >
-            <option value="">{formData.governorate ? "Select Area..." : "Select Governorate first"}</option>
+            <option value="">{currentGov ? "Select Area..." : "Select Governorate first"}</option>
             {availableAreas.map(area => (
               <option key={area} value={area}>{area}</option>
             ))}
@@ -85,7 +85,7 @@ const AddressForm = ({ formData, onChange }) => {
           name="street" 
           required 
           placeholder="e.g. 9th Street, Degla" 
-          value={formData.street || ''} 
+          value={formData?.street || ''} 
           onChange={onChange} 
         />
       </div>
@@ -98,7 +98,7 @@ const AddressForm = ({ formData, onChange }) => {
             name="building" 
             required 
             placeholder="e.g. Building 12" 
-            value={formData.building || ''} 
+            value={formData?.building || ''} 
             onChange={onChange} 
           />
         </div>
@@ -109,7 +109,7 @@ const AddressForm = ({ formData, onChange }) => {
             name="floorApt" 
             required 
             placeholder="e.g. Floor 3, Apt 11" 
-            value={formData.floorApt || ''} 
+            value={formData?.floorApt || ''} 
             onChange={onChange} 
           />
         </div>
@@ -121,7 +121,7 @@ const AddressForm = ({ formData, onChange }) => {
           name="notes" 
           rows="2" 
           placeholder="e.g. Next to the pharmacy, please call before arriving..." 
-          value={formData.notes || ''} 
+          value={formData?.notes || ''} 
           onChange={onChange}
         ></textarea>
       </div>

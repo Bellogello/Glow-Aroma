@@ -1,16 +1,16 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import HeroSlideshow from "../components/heroslideshow";
 import Footer from '../components/Footer';
 import '../styles/Home.css';
-import { useEffect } from 'react';
-
+// 1. Import the "Central Brain"
+import { API_BASE_URL } from '../config';
 
 const Home = () => {
   useEffect(() => {
-      document.title = "Glow Aroma";
-    }, []);
+    document.title = "Glow Aroma";
+  }, []);
 
   const scrollRef = useRef(null);
   const navigate = useNavigate();
@@ -31,7 +31,8 @@ const Home = () => {
     }
 
     try {
-      const response = await fetch("${import.meta.env.VITE_API_URL}/cart/add", {
+      // 2. Used API_BASE_URL and fixed the template literal backticks
+      const response = await fetch(`${API_BASE_URL}/cart/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -45,10 +46,14 @@ const Home = () => {
       });
 
       if (response.ok) {
-        navigate('/cart'); // Immediate redirect
+        navigate('/cart'); 
+      } else {
+        const errorData = await response.json();
+        alert("Failed to add to cart: " + (errorData.error || "Unknown error"));
       }
     } catch (error) {
       console.error("Quick buy failed:", error);
+      alert("Server connection failed. Try again later.");
     }
   };
 

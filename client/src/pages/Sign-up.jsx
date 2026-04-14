@@ -1,41 +1,39 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // FIX: Brought in useNavigate
+import { Link, useNavigate } from 'react-router-dom'; 
 import Navbar from '../components/Navbar';
 import '../styles/signup.css'
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
 import validator from 'validator';
 
-
-  const Signup = () => {
-
+const Signup = () => {
   useTitle("Sign up");
+
+  // SAFE URL LOGIC: Bypasses the Windows/OneDrive ".env" issue
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://glow-aroma-production.up.railway.app';
+
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
   
-  const navigate = useNavigate(); // FIX: Initialized the navigator
+  const navigate = useNavigate();
 
-const handleSignup = async (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
 
-    // 1. The clean, professional email check
+    // 1. Validations
     if (!validator.isEmail(email)) {
       alert("Please enter a valid email address.");
       return; 
     }
 
-    // 2. Password match check
     if (password !== repeatPassword) {
       alert("Your passwords do not match!");
       return; 
     }
 
-    // 3. Password length check
-// 3. The Ultimate Password Strength Check
-    // You can customize these numbers! I set symbols to 0 so it's not too annoying for a candle shop.
     const isStrong = validator.isStrongPassword(password, {
       minLength: 8,
       minLowercase: 1,
@@ -49,17 +47,17 @@ const handleSignup = async (e) => {
       return; 
     }
 
-    // 4. Build the payload for the database
+    // 2. Build the payload
     const newUserData = {
       name: name,
       email: email,
-      // THE FIX: If phone is empty, send a true null instead of ""
       phone: phone.trim() === '' ? null : phone, 
       password_hash: password 
     };
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
+      // FIX: Using API_BASE_URL to ensure the request goes to Railway
+      const response = await fetch(`${API_BASE_URL}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,19 +68,17 @@ const handleSignup = async (e) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Auto-Login: grab the token and set the user session
         localStorage.setItem("token", data.token);
         localStorage.setItem("userName", data.userName);
         localStorage.setItem("roleId", "1"); 
         
-        // Teleport them straight to their profile
         navigate('/profile'); 
       } else {
         alert("Error: " + (data.error || data.message));
       }
     } catch (error) {
       console.error("Failed to push data:", error);
-      alert("Server error. Please try again later.");
+      alert("Server error. Please check your internet connection.");
     }
   };
 
@@ -90,15 +86,10 @@ const handleSignup = async (e) => {
     <div className="home-container">
       <Navbar />
       
-      {/* 1. Centers the card on the screen */}
       <div className="login-wrapper">
-        
-        {/* 2. The matching beige card */}
         <div className="login-card-beige">
-          
           <form onSubmit={handleSignup}>
             
-            {/* 3. A special row just for the side-by-side inputs */}
             <div className="form-row">
               <input 
                 type="text" 
@@ -118,15 +109,14 @@ const handleSignup = async (e) => {
             </div>
             
             <div className="form-group">
-            <input 
-              type="email" 
-              className="custom-pill-input" 
-
-              placeholder="Email Address" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              required 
-            />
+              <input 
+                type="email" 
+                className="custom-pill-input" 
+                placeholder="Email Address" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
+              />
             </div>
             
             <div className="form-group">
@@ -151,10 +141,8 @@ const handleSignup = async (e) => {
               />
             </div>
           
-            {/* 4. The Submit Button */}
             <button type="submit" className="btn custom-pill-btn">Create Account</button>
 
-            {/* 5. Pulled the link inside the card and centered it! */}
             <div className="signup-link-container">
               <Link to="/Sign-in" className="signup-link">Already Have an Account? Sign In</Link>
             </div>

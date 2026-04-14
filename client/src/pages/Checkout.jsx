@@ -5,6 +5,8 @@ import Footer from '../components/Footer';
 import useTitle from '../components/useTitles';
 import AddressForm from '../components/AddressForm';
 import '../styles/Checkout.css';
+// 1. Import the "Central Brain"
+import { API_BASE_URL } from '../config';
 
 const Checkout = () => {
   useTitle("Checkout | Glow Aroma");
@@ -15,10 +17,10 @@ const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   
   // --- Payment State ---
-  const [paymentMethod, setPaymentMethod] = useState('cod'); // 'cod' or 'online'
+  const [paymentMethod, setPaymentMethod] = useState('cod'); 
   const [paymobToken, setPaymobToken] = useState(null);
   const [paymobIframeId, setPaymobIframeId] = useState(null);
-  const [pendingOrderId, setPendingOrderId] = useState(null); // <-- NEW: Tracks un-paid online orders
+  const [pendingOrderId, setPendingOrderId] = useState(null); 
 
   // --- Address Book State ---
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -36,11 +38,11 @@ const Checkout = () => {
       return;
     }
 
-    // Load initial data
+    // 2. Used API_BASE_URL for initial loading
     Promise.all([
-      fetch(`${import.meta.env.VITE_API_URL}/cart/${userId}`).then(res => res.json()),
-      fetch(`${import.meta.env.VITE_API_URL}/users/${userId}`).then(res => res.json()),
-      fetch(`${import.meta.env.VITE_API_URL}/addresses/${userId}`).then(res => res.json())
+      fetch(`${API_BASE_URL}/cart/${userId}`).then(res => res.json()),
+      fetch(`${API_BASE_URL}/users/${userId}`).then(res => res.json()),
+      fetch(`${API_BASE_URL}/addresses/${userId}`).then(res => res.json())
     ]).then(([cart, user, addresses]) => {
       if (!cart.error) setCartItems(cart);
       if (!user.error) setShippingDetails(prev => ({ ...prev, fullName: user.name, phone: user.phone || '' }));
@@ -62,19 +64,18 @@ const Checkout = () => {
     if (e) e.preventDefault();
     const userId = localStorage.getItem("userId");
     
-    // Check if cart is empty ONLY if we are not retrying a pending payment
     if (cartItems.length === 0 && !pendingOrderId) return alert("Your cart is empty!");
 
     setIsProcessing(true);
 
     try {
       let finalDetails = {};
-      let currentOrderId = pendingOrderId; // Use existing order if they are retrying
+      let currentOrderId = pendingOrderId; 
 
-      // 1. Resolve Address & Create Order (Only if we haven't created it yet)
+      // 3. Resolve Address & Create Order (Using API_BASE_URL)
       if (!currentOrderId) {
         if (selectedAddressId === 'new') {
-          const addrRes = await fetch(`${import.meta.env.VITE_API_URL}/addresses/${userId}`, {
+          const addrRes = await fetch(`${API_BASE_URL}/addresses/${userId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(shippingDetails)
@@ -94,8 +95,7 @@ const Checkout = () => {
           };
         }
 
-        // Create Order in Backend (Database)
-        const orderRes = await fetch(`${import.meta.env.VITE_API_URL}/checkout`, {
+        const orderRes = await fetch(`${API_BASE_URL}/checkout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, shippingDetails: finalDetails, paymentMethod })
@@ -106,23 +106,22 @@ const Checkout = () => {
         
         currentOrderId = orderData.orderId;
         
-        // Save to state so we don't duplicate it if they close the iframe
         if (paymentMethod === 'online') {
           setPendingOrderId(currentOrderId);
         }
       }
 
-      // 2. Handle Payment Logic
+      // 4. Handle Paymob Initiation (Using API_BASE_URL)
       if (paymentMethod === 'online') {
         const orderTotal = cartItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
         
-        const pmRes = await fetch(`${import.meta.env.VITE_API_URL}/paymob/initiate`, {
+        const pmRes = await fetch(`${API_BASE_URL}/paymob/initiate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId,
-            shippingDetails: finalDetails, // Pass the details for Paymob
-            orderId: currentOrderId,       // Pass the EXACT order ID
+            shippingDetails: finalDetails, 
+            orderId: currentOrderId,      
             amountCents: Math.round(orderTotal * 100),
             items: cartItems.map(i => ({ name: i.name, amount_cents: Math.round(i.price * 100), quantity: i.quantity }))
           })
@@ -134,7 +133,6 @@ const Checkout = () => {
         setPaymobToken(pmData.paymentToken);
         setPaymobIframeId(pmData.iframeId);
       } else {
-        // COD logic: immediately push to success page
         navigate(`/order-success?success=true&order=${currentOrderId}`);
       }
     } catch (error) {
@@ -152,7 +150,6 @@ const Checkout = () => {
     <div className="home-container checkout-bg">
       <Navbar />
       
-      {/* PAYMOB IFRAME MODAL */}
       {paymobToken && (
         <div className="payment-iframe-overlay">
           <div className="iframe-container">

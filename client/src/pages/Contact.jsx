@@ -3,6 +3,8 @@ import Navbar from '../components/Navbar';
 import '../styles/contact.css';
 import Footer from '../components/Footer';
 import useTitle from '../components/useTitles';
+// 1. Import the "Central Brain"
+import { API_BASE_URL } from '../config';
 
 const Contact = () => {
   useTitle("Contact");
@@ -22,7 +24,8 @@ const Contact = () => {
     const userId = localStorage.getItem("userId");
     
     if (userId) {
-      fetch(`${import.meta.env.VITE_API_URL}/users/${userId}`)
+      // 2. Used API_BASE_URL for user auto-fill
+      fetch(`${API_BASE_URL}/users/${userId}`)
         .then(res => res.json())
         .then(data => {
           if (!data.error) {
@@ -48,7 +51,8 @@ const Contact = () => {
     setFeedback({ type: '', text: '' });
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/messages`, {
+      // 3. Used API_BASE_URL for sending messages
+      const response = await fetch(`${API_BASE_URL}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,7 +69,6 @@ const Contact = () => {
 
       if (response.ok) {
         setFeedback({ type: 'success', text: 'Message sent successfully! We will get back to you soon.' });
-        // THE FIX: Only clear the message box, keep the rest!
         setFormData(prev => ({ ...prev, message: '' }));
       } else {
         setFeedback({ type: 'error', text: data.error || 'Failed to send message.' });

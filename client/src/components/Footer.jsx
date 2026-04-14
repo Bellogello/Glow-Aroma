@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Instagram } from 'lucide-react'; // Clean, modern icon
+import { Instagram } from 'lucide-react'; 
 import '../styles/Footer.css';
 
 const Footer = () => {

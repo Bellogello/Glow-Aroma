@@ -12,12 +12,18 @@ function AppNavbar() {
   const location = useLocation(); 
 
   useEffect(() => {
-    // Check if they are Admin (2) or Super Admin (3)
-    // const roleId = String(localStorage.getItem('roleId'));
-    // setIsAdmin(roleId === '2' || roleId === '3');
+    // 1. Auth & Role Check Logic
+    // In a real scenario, we check the roleId stored during sign-in
+    const roleId = localStorage.getItem('roleId');
     
-    setIsAdmin(true); // TEMPORARY: Show link to everyone
+    // TEMPORARY: Keeping your override so you can test the Dashboard easily on Windows
+    // To go back to strict mode, change this to: setIsAdmin(roleId === '2' || roleId === '3');
+    setIsAdmin(true); 
+    
   }, [location]);
+
+  // 2. Navigation Helper: Closes the mobile menu when a link is clicked
+  const closeMenu = () => setExpanded(false);
 
   return (
     <Navbar 
@@ -28,7 +34,7 @@ function AppNavbar() {
       onToggle={() => setExpanded(!expanded)}
     >
       <Container>
-        <Navbar.Brand as={Link} to="/">
+        <Navbar.Brand as={Link} to="/" onClick={closeMenu}>
           <img src={logo} alt="Glow Aroma Logo" className="logo" />
         </Navbar.Brand>
 
@@ -36,26 +42,39 @@ function AppNavbar() {
 
         <Navbar.Collapse id="responsive-navbar-nav">
           <Nav className="ms-auto align-items-center">
+            
+            {/* 3. Conditional Admin Link */}
             {isAdmin && (
               <Nav.Link 
                 as={Link} 
                 to="/Dashboard" 
                 className="dashboard-link"
-                onClick={() => setExpanded(false)}
+                onClick={closeMenu}
               >
                 Dashboard
               </Nav.Link>
             )}
-            <Nav.Link as={Link} to="/" onClick={() => setExpanded(false)}>Home</Nav.Link>
-            
 
-            <Nav.Link as={Link} to="/contact" onClick={() => setExpanded(false)}>Contact</Nav.Link>
-            <Nav.Link as={Link} to="/products" onClick={() => setExpanded(false)}>Products</Nav.Link>
+            <Nav.Link as={Link} to="/" onClick={closeMenu}>Home</Nav.Link>
+            <Nav.Link as={Link} to="/contact" onClick={closeMenu}>Contact</Nav.Link>
+            <Nav.Link as={Link} to="/products" onClick={closeMenu}>Products</Nav.Link>
             
-
+            {/* 4. Action Icons */}
             <div className="icon-group">
-              <Nav.Link as={Link} to="/cart" className="cart" onClick={() => setExpanded(false)}></Nav.Link>
-              <Nav.Link as={Link} to="/profile" className="profile" onClick={() => setExpanded(false)}></Nav.Link>
+              <Nav.Link 
+                as={Link} 
+                to="/cart" 
+                className="cart" 
+                onClick={closeMenu}
+                aria-label="View Cart"
+              ></Nav.Link>
+              <Nav.Link 
+                as={Link} 
+                to="/profile" 
+                className="profile" 
+                onClick={closeMenu}
+                aria-label="View Profile"
+              ></Nav.Link>
             </div>
           </Nav>
         </Navbar.Collapse>

@@ -3,9 +3,10 @@ import Navbar from '../components/Navbar';
 import "../styles/create.css";
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
+// 1. Import the "Central Brain"
+import { API_BASE_URL } from '../config';
 
 const Create = () => {
-
   useTitle("Create Your Own");
 
   const [scents, setScents] = useState([]);
@@ -20,22 +21,23 @@ const Create = () => {
   const [selectedCandleColor, setSelectedCandleColor] = useState("default");
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/scents`)
+    // 2. Updated all initial data fetches to use API_BASE_URL
+    fetch(`${API_BASE_URL}/scents`)
       .then(res => res.json())
       .then(data => setScents(data))
       .catch(err => console.error("Error fetching scents:", err));
 
-    fetch(`${import.meta.env.VITE_API_URL}/colors`)
+    fetch(`${API_BASE_URL}/colors`)
       .then(res => res.json())
       .then(data => setColors(data))
       .catch(err => console.error("Error fetching colors:", err));
 
-    fetch(`${import.meta.env.VITE_API_URL}/cup-sizes`)
+    fetch(`${API_BASE_URL}/cup-sizes`)
       .then(res => res.json())
       .then(data => setCupSizes(data))
       .catch(err => console.error("Error fetching cup sizes:", err));
 
-    fetch(`${import.meta.env.VITE_API_URL}/cup-colors`)
+    fetch(`${API_BASE_URL}/cup-colors`)
       .then(res => res.json())
       .then(data => setCupColors(data))
       .catch(err => console.error("Error fetching cup colors:", err));
@@ -67,14 +69,15 @@ const Create = () => {
       quantity,
       scentId: selectedScentId,
       totalPrice: Number(totalPrice.toFixed(2)),
-      cupShapeId: 1, // default shape since we removed that option
+      cupShapeId: 1, 
       cupSizeId: selectedCupSize,
       cupColorId: selectedCupColor,
       candleColorId: selectedCandleColor,
     };
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/cart/add`, {
+      // 3. Updated Cart Addition fetch to use API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/cart/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -92,7 +95,7 @@ const Create = () => {
       }
     } catch (error) {
       console.error("Failed to add to cart:", error);
-      alert("Server is acting up. Did you make sure it's running?");
+      alert("Server is acting up. Make sure the backend is awake!");
     }
   };
 

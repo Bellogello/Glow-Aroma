@@ -14,13 +14,13 @@ const OrderSuccess = () => {
   const isSuccess = searchParams.get('success') === 'true';
   
   // Paymob sends the order ID as 'id', or you might pass it from COD as 'order'
-  const orderId = searchParams.get('order') || searchParams.get('id') || Math.floor(10000 + Math.random() * 90000);
+  const orderId = searchParams.get('order') || searchParams.get('id') || "Pending";
 
   // Clear the cart from localStorage if the order was successful
   useEffect(() => {
-    if (!hasPaymobParams || isSuccess) {
-      // Assuming you might be storing cart data locally, clear it here.
-      // localStorage.removeItem('cart'); 
+    if (isSuccess || !hasPaymobParams) {
+      // If you decide to add a 'clear cart' endpoint later, you'd call it here
+      console.log("Order successful, ready to clear cart session.");
     }
   }, [hasPaymobParams, isSuccess]);
 

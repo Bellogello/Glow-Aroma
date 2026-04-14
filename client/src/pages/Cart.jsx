@@ -5,6 +5,8 @@ import '../styles/cart.css';
 import { ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import useTitle from '../components/useTitles';
+// 1. Import the "Central Brain"
+import { API_BASE_URL } from '../config';
 
 const Cart = () => {
   useTitle("Cart");
@@ -19,7 +21,8 @@ const Cart = () => {
       return; 
     }
 
-    fetch(`${import.meta.env.VITE_API_URL}/cart/${userId}`)
+    // 2. Used API_BASE_URL here
+    fetch(`${API_BASE_URL}/cart/${userId}`)
       .then(res => res.json())
       .then(data => {
         if (data.error) {
@@ -39,7 +42,8 @@ const Cart = () => {
 
   const handleQuantityChange = async (cartItemId, action) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/cart/update/${cartItemId}`, {
+      // 3. Used API_BASE_URL here
+      const response = await fetch(`${API_BASE_URL}/cart/update/${cartItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
@@ -64,7 +68,8 @@ const Cart = () => {
 
   const handleRemove = async (cartItemId) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/cart/remove/${cartItemId}`, {
+      // 4. Used API_BASE_URL here
+      const response = await fetch(`${API_BASE_URL}/cart/remove/${cartItemId}`, {
         method: 'DELETE',
       });
 
@@ -113,7 +118,6 @@ const Cart = () => {
             {cartItems.map(item => (
               <div key={item.cart_item_id} className="cart-item">
                 
-                {/* 1. IMAGE SECTION (Left) */}
                 <div className="cart-item-image">
                 {item.is_custom ? (
                   item.snapshot ? (
@@ -134,14 +138,14 @@ const Cart = () => {
                 ) : (
                     item.image && (
                       <img
-                        src={item.image.startsWith('http') ? item.image : `${import.meta.env.VITE_API_URL}${item.image}`}
+                        // 5. FIXED IMAGE PATH: Also used API_BASE_URL for images
+                        src={item.image.startsWith('http') ? item.image : `${API_BASE_URL}${item.image}`}
                         alt={item.name}
                       />
                     )
                   )}
                 </div>
 
-                {/* 2. DETAILS SECTION (Middle) */}
                 <div className="cart-item-details">
                   <h3>{item.name}</h3>
                   {item.is_custom && (
@@ -153,7 +157,6 @@ const Cart = () => {
                   <p className="cart-item-price">{Number(item.price).toFixed(2)} L.E.</p>
                 </div>
                 
-                {/* 3. ACTIONS SECTION (Right) */}
                 <div className="cart-item-actions">
                   <div className="quantity-controls">
                     <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'decrease')}>−</button>
@@ -174,7 +177,6 @@ const Cart = () => {
                   {item.quantity >= item.max_stock && !item.is_custom && (
                     <span className="stock-warning">Max Stock!</span>
                   )}
-                  {/* Swapped bulky button for a sleek text link */}
                   <button className="btn-remove-text" onClick={() => handleRemove(item.cart_item_id)}>Remove</button>
                 </div>
 

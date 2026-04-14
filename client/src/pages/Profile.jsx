@@ -4,20 +4,22 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import useTitle from '../components/useTitles';
 import '../styles/profile.css'; 
+// 1. Import the "Central Brain" to keep it consistent with the rest of the app
+import { API_BASE_URL } from '../config';
 
 const Profile = () => {
   useTitle("Profile");
   const navigate = useNavigate();
 
-  // 1. Auth Check
+  // Auth Check
   const token = localStorage.getItem("token");
   const userName = localStorage.getItem("userName");
 
-  // 2. State for Address
+  // State for Address
   const [isEditing, setIsEditing] = useState(false);
   const [address, setAddress] = useState(localStorage.getItem("userAddress") || "No address saved yet.");
 
-  // 3. Mock Data for Purchase History
+  // Mock Data for Purchase History (Keeping this as is for now)
   const [orders] = useState([
     { 
       id: "#8821", 
@@ -35,13 +37,15 @@ const Profile = () => {
     }
   ]);
 
+  // If no token, kick them to sign-in
   if (!token) {
     return <Navigate to="/Sign-in" replace />;
   }
 
   const handleLogout = () => {
     localStorage.clear(); 
-    window.location.href = "/";
+    // Use navigate for a smoother React experience
+    navigate('/');
   };
 
   const handleSaveAddress = () => {

@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom'; 
 import '../styles/ProductCard.css';
 import FallbackCandle from '../assets/candle.png'; 
+// 1. Import the "Central Brain"
+import { API_BASE_URL } from '../config';
 
 const ProductCard = ({ product }) => {
   const [isAdding, setIsAdding] = useState(false);
 
-  // 1. Check if it's completely out of stock!
-  const isOutOfStock = product.stock_quantity <= 0;
+  // Check if it's completely out of stock
+  const isOutOfStock = product?.stock_quantity <= 0;
 
   const handleAddToCart = async (e) => {
     e.preventDefault(); 
     
-    // Safety block
     if (isOutOfStock) return;
 
     const userId = localStorage.getItem("userId");
@@ -30,7 +31,8 @@ const ProductCard = ({ product }) => {
     };
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/cart/add`, { 
+      // 2. Used API_BASE_URL for the cart action
+      const response = await fetch(`${API_BASE_URL}/cart/add`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -52,8 +54,9 @@ const ProductCard = ({ product }) => {
 
   if (!product) return null;
 
+  // 3. Fixed Display Image logic to use API_BASE_URL
   const displayImage = product.image_url 
-    ? (product.image_url.startsWith('http') ? product.image_url : `${import.meta.env.VITE_API_URL}${product.image_url}`)
+    ? (product.image_url.startsWith('http') ? product.image_url : `${API_BASE_URL}${product.image_url}`)
     : FallbackCandle;
 
   return (
@@ -62,7 +65,6 @@ const ProductCard = ({ product }) => {
         
         <div className="image-wrapper">
           <img src={displayImage} className="candle-img" alt={product.name}/>
-          {/* 2. Show a Sold Out badge if stock is 0 */}
           {isOutOfStock && <div className="sold-out-badge">Sold Out</div>}
         </div>
       
@@ -70,7 +72,6 @@ const ProductCard = ({ product }) => {
             <h3 className="product-name">{product.name}</h3>
             <p className="price">{Number(product.price).toFixed(2)} L.E.</p>
             
-            {/* 3. Disable the button and change text if out of stock */}
             <button 
               className={`add-btn ${isOutOfStock ? 'disabled-btn' : ''}`} 
               onClick={handleAddToCart}

@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; 
-import { useGoogleLogin } from '@react-oauth/google'; // <-- NEW IMPORT
+import { useGoogleLogin } from '@react-oauth/google';
 import Navbar from '../components/Navbar';
 import '../styles/profile.css';
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
-
-  const Signin = () => {
-
+import { API_BASE_URL } from '../config';
+  
+const Signin = () => {
   useTitle("Sign in");
+  
+  // SAFE URL LOGIC: This prevents the "/undefined/signin" error on Windows
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://glow-aroma-production.up.railway.app';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-// Standard Email/Password Login
+  // Standard Email/Password Login
   const handleSignin = async (e) => {
-    e.preventDefault(); // Stop the page refresh
+    e.preventDefault(); 
 
     const loginData = {
       email: email,
@@ -23,8 +27,8 @@ import Footer from '../components/Footer';
     };
 
     try {
-      // FIX: Changed from /login to /signin to match your server.js
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/signin`, {
+      // Use the API_BASE_URL variable here
+      const response = await fetch(`${API_BASE_URL}/signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -32,32 +36,36 @@ import Footer from '../components/Footer';
         body: JSON.stringify(loginData),
       });
 
+      // Handle cases where the server might return non-JSON (like a 404 HTML page)
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new TypeError("Oops, we didn't get JSON from the server!");
+      }
+
       const data = await response.json();
 
       if (response.ok) {
-        // Save the wristband (JWT token) and user data
         localStorage.setItem("token", data.token);
-        localStorage.setItem("userName", data.userName); // Match your backend variable name
+        localStorage.setItem("userName", data.userName);
         localStorage.setItem("userId", data.userId);
-        localStorage.setItem("roleId", data.roleId);     // Crucial for your Admin Dashboard!
+        localStorage.setItem("roleId", data.roleId); 
         
-        // Teleport them instantly to the account/profile page
         navigate('/profile'); 
       } else {
-        // If the password or email is wrong, show them the error
-        alert("Login failed: " + data.error);
+        alert("Login failed: " + (data.error || "Unknown error"));
       }
     } catch (error) {
       console.error("Error signing in:", error);
+      alert("Connection error: Make sure the backend is awake!");
     }
   };
 
-// --- NEW GOOGLE LOGIN FUNCTION ---
+  // Google Login Function
   const loginWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        // Send the Google token to our Node backend
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
+        // Use the API_BASE_URL variable here too
+        const response = await fetch(`${API_BASE_URL}/auth/google`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -68,7 +76,6 @@ import Footer from '../components/Footer';
         const data = await response.json();
 
         if (response.ok) {
-          // Success! Save their info and teleport them to the profile
           localStorage.setItem("token", data.token);
           localStorage.setItem("userName", data.userName);
           localStorage.setItem("userId", data.userId);
@@ -118,18 +125,15 @@ import Footer from '../components/Footer';
           
             <button type="submit" className="btn custom-pill-btn">Sign In</button>
 
-            {/* --- NEW DIVIDER --- */}
             <div className="divider">
               <span>OR</span>
             </div>
 
-            {/* --- NEW GOOGLE BUTTON --- */}
             <button 
               type="button" 
               onClick={() => loginWithGoogle()} 
               className="btn custom-pill-btn google-btn"
             >
-              {/* Google SVG Logo */}
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20px" height="20px">
                 <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
                 <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>

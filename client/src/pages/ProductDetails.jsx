@@ -5,6 +5,8 @@ import Footer from '../components/Footer';
 import useTitle from '../components/useTitles';
 import FallbackCandle from '../assets/candle.png';
 import '../styles/ProductDetails.css';
+// 1. Import the "Central Brain"
+import { API_BASE_URL } from '../config';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -14,40 +16,36 @@ const ProductDetails = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
-  
-  // NEW: Track how many are already in the cart!
   const [inCartQuantity, setInCartQuantity] = useState(0);
 
   useTitle(product ? `${product.name} | Glow Aroma` : "Loading Product...");
 
   useEffect(() => {
-    // 1. Reset everything when the page loads a new product!
     setLoading(true);
     setQuantity(1);
     setInCartQuantity(0);
 
     const fetchProductAndCart = async () => {
       try {
-        // 2. Get the product
-        const prodRes = await fetch(`${import.meta.env.VITE_API_URL}/products/${id}`);
+        // 2. Used API_BASE_URL for product fetch
+        const prodRes = await fetch(`${API_BASE_URL}/products/${id}`);
         if (!prodRes.ok) throw new Error("Product not found");
         const prodData = await prodRes.json();
         setProduct(prodData);
 
-        // 3. Check the user's cart
         const userId = localStorage.getItem("userId");
         if (userId) {
-          const cartRes = await fetch(`${import.meta.env.VITE_API_URL}/cart/${userId}`);
+          // 3. Used API_BASE_URL for cart check
+          const cartRes = await fetch(`${API_BASE_URL}/cart/${userId}`);
           const cartData = await cartRes.json();
           
-          // 4. Add our armor: Check if it's an array to prevent crashes!
           if (Array.isArray(cartData)) {
             const existingItem = cartData.find(item => !item.is_custom && item.name === prodData.name);
             
             if (existingItem) {
               setInCartQuantity(existingItem.quantity);
             } else {
-              setInCartQuantity(0); // <-- THE MISSING FIX: Force it to 0 if not in cart!
+              setInCartQuantity(0); 
             }
           }
         }
@@ -77,7 +75,8 @@ const ProductDetails = () => {
     };
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/cart/add`, { 
+      // 4. Used API_BASE_URL for add-to-cart action
+      const response = await fetch(`${API_BASE_URL}/cart/add`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -101,11 +100,11 @@ const ProductDetails = () => {
   if (loading) return <div className="home-container"><Navbar /><div className="loading-state"><h2>Loading details...</h2></div><Footer /></div>;
   if (!product) return <div className="home-container"><Navbar /><div className="loading-state"><h2>Product not found.</h2></div><Footer /></div>;
 
+  // 5. Fixed Display Image logic to use API_BASE_URL
   const displayImage = product.image_url 
-    ? (product.image_url.startsWith('http') ? product.image_url : `${import.meta.env.VITE_API_URL}${product.image_url}`)
+    ? (product.image_url.startsWith('http') ? product.image_url : `${API_BASE_URL}${product.image_url}`)
     : FallbackCandle;
 
-  // THE MATH: Calculate exactly how many they are allowed to buy
   const availableToBuy = product.stock_quantity - inCartQuantity;
   const isCompletelySoldOut = product.stock_quantity <= 0;
   const isMaxedInCart = availableToBuy <= 0 && !isCompletelySoldOut;
@@ -143,7 +142,6 @@ const ProductDetails = () => {
               )}
             </div>
 
-            {/* Hide the add to cart section if they can't buy any more */}
             {!isCompletelySoldOut && !isMaxedInCart && (
               <div className="detail-actions">
                 <div className="detail-quantity-controls">
