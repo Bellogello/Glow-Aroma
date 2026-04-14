@@ -22,58 +22,66 @@ const Profile = () => {
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [editingId, setEditingId] = useState(null); 
   
+  // MATCHING CHECKOUT INITIALIZATION: Pre-filling the name and keeping keys exact
   const [newAddress, setNewAddress] = useState({
-    fullName: userName || '', phone: '', governorate: '', area: '', street: '', building: '', notes: ''
+    fullName: userName || '', 
+    phone: '', 
+    governorate: '', 
+    area: '', 
+    street: '', 
+    building: '', 
+    notes: ''
   });
 
   // --- ORDER HISTORY DATA ---
   const [orders] = useState([
-    { 
-      id: "#8821", 
-      date: "March 15, 2026", 
-      item: "Midnight Jasmine Jar", 
-      price: "350 L.E.", 
-      status: "Delivered" 
-    },
-    { 
-      id: "#8754", 
-      date: "Feb 10, 2026", 
-      item: "Vanilla Dream & Rose Petal", 
-      price: "660 L.E.", 
-      status: "Shipped" 
-    }
+    { id: "#8821", date: "March 15, 2026", item: "Midnight Jasmine Jar", price: "350 L.E.", status: "Delivered" },
+    { id: "#8754", date: "Feb 10, 2026", item: "Vanilla Dream & Rose Petal", price: "660 L.E.", status: "Shipped" }
   ]);
 
-  // --- INITIAL DATA FETCH ---
+  // --- INITIAL DATA FETCH (Identical Logic to Checkout) ---
   useEffect(() => {
     if (!userId) return;
-    fetchAddresses();
-  }, [userId]);
 
-  const fetchAddresses = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/addresses/${userId}`);
-      const data = await res.json();
-      if (Array.isArray(data)) setSavedAddresses(data);
-    } catch (err) {
-      console.error("Failed to load addresses:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const loadProfileData = async () => {
+      try {
+        // Fetch addresses and user details simultaneously like in Checkout
+        const [addrRes, userRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/addresses/${userId}`),
+          fetch(`${API_BASE_URL}/users/${userId}`)
+        ]);
+
+        const addresses = await addrRes.json();
+        const user = await userRes.json();
+
+        if (Array.isArray(addresses)) setSavedAddresses(addresses);
+        
+        // If the user has a phone number in their account, pre-fill it to trigger autocomplete
+        if (!user.error && user.phone) {
+          setNewAddress(prev => ({ ...prev, phone: user.phone }));
+        }
+      } catch (err) {
+        console.error("Initialization error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfileData();
+  }, [userId]);
 
   // --- ADDRESS ACTIONS ---
   const handleDeleteAddress = async (addressId) => {
-    if (!window.confirm("Delete this address?")) return;
+    if (!window.confirm("Are you sure you want to delete this address?")) return;
     try {
       const res = await fetch(`${API_BASE_URL}/addresses/${addressId}`, { method: 'DELETE' });
       if (res.ok) {
         setSavedAddresses(prev => prev.filter(addr => addr.id !== addressId));
       } else {
-        alert("Failed to delete address.");
+        alert("Failed to delete address. Check server logs.");
       }
     } catch (err) {
-      alert("Server error.");
+      alert("Server connection error.");
     }
   };
 
@@ -89,6 +97,10 @@ const Profile = () => {
       notes: addr.notes || ''
     });
     setIsAddingAddress(true);
+  };
+
+  const handleInputChange = (e) => {
+    setNewAddress({ ...newAddress, [e.target.name]: e.target.value });
   };
 
   const handleSaveNewAddress = async (e) => {
@@ -111,13 +123,17 @@ const Profile = () => {
       });
 
       if (res.ok) {
-        await fetchAddresses();
+        // Refresh the list from the database to ensure sync
+        const addrRes = await fetch(`${API_BASE_URL}/addresses/${userId}`);
+        const data = await addrRes.json();
+        setSavedAddresses(data);
+        
         setIsAddingAddress(false);
         setEditingId(null);
         setNewAddress({ fullName: userName, phone: '', governorate: '', area: '', street: '', building: '', notes: '' });
       }
     } catch (err) {
-      alert("Failed to save.");
+      alert("Failed to save changes.");
     }
   };
 
@@ -128,7 +144,6 @@ const Profile = () => {
       <Navbar />
       
       <div className="profile-wrapper">
-        {/* --- LEFT SIDEBAR --- */}
         <div className="profile-sidebar">
           <div className="avatar-circle">
             {userName ? userName.charAt(0).toUpperCase() : "U"}
@@ -139,7 +154,6 @@ const Profile = () => {
           </button>
         </div>
 
-        {/* --- RIGHT CONTENT --- */}
         <div className="profile-content">
           
           {/* SECTION: SHIPPING ADDRESSES */}
@@ -155,10 +169,12 @@ const Profile = () => {
 
             {isAddingAddress ? (
               <div className="add-address-container">
-                <AddressForm formData={newAddress} onChange={(e) => setNewAddress({...newAddress, [e.target.name]: e.target.value})} />
+                <h4 className="form-title">{editingId ? "Edit Address" : "New Address"}</h4>
+                {/* Form is wrapped in <form> inside AddressForm component */}
+                <AddressForm formData={newAddress} onChange={handleInputChange} />
                 <div className="profile-form-actions">
                   <button className="btn-save-address" onClick={handleSaveNewAddress}>
-                    {editingId ? "Update Address" : "Save Address"}
+                    {editingId ? "Update" : "Save"}
                   </button>
                   <button className="btn-cancel-minimal" onClick={() => { setIsAddingAddress(false); setEditingId(null); }}>
                     Cancel
@@ -196,39 +212,27 @@ const Profile = () => {
               <h3>Recent Purchases</h3>
             </div>
             <hr className="mini-divider" />
-            
             <div className="order-history-list">
-              {orders.length > 0 ? (
-                orders.map((order) => (
-                  <div key={order.id} className="history-item-row">
-                    <div className="order-info-left">
-                      <span className="order-number">{order.id}</span>
-                      <p className="order-product-name">{order.item}</p>
-                      <span className="order-timestamp">{order.date}</span>
-                    </div>
-                    
-                    <div className="order-info-right">
-                      <p className="order-price-tag">{order.price}</p>
-                      <span className={`status-badge ${order.status.toLowerCase()}`}>
-                        {order.status}
-                      </span>
-                    </div>
+              {orders.map((order) => (
+                <div key={order.id} className="history-item-row">
+                  <div className="order-info-left">
+                    <span className="order-number">{order.id}</span>
+                    <p className="order-product-name">{order.item}</p>
+                    <span className="order-timestamp">{order.date}</span>
                   </div>
-                ))
-              ) : (
-                <div className="order-item-placeholder">
-                  <p>No recent purchases found.</p>
-                  <button className="shop-now-btn" onClick={() => navigate('/products')}>
-                    Start Shopping
-                  </button>
+                  <div className="order-info-right">
+                    <p className="order-price-tag">{order.price}</p>
+                    <span className={`status-badge ${order.status.toLowerCase()}`}>
+                      {order.status}
+                    </span>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           </div>
 
         </div>
       </div>
-      
       <Footer />
     </div>
   );
