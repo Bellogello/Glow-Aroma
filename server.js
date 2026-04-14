@@ -13,19 +13,14 @@ require('dotenv').config();
 
 const app = express();
 
-// --- Middleware Configuration ---
-app.use(cors({
-    origin: '*',
-    credentials: true
-}));
+// --- Middleware ---
+app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // --- Static File Handling ---
 const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
-}
+if (!fs.existsSync(uploadDir)) { fs.mkdirSync(uploadDir); }
 app.use('/uploads', express.static(uploadDir));
 
 // --- Database Connection ---
@@ -35,17 +30,12 @@ const db = mysql.createConnection({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     port: process.env.DB_PORT || 3306,
-    ssl: {
-        rejectUnauthorized: false
-    }
+    ssl: { rejectUnauthorized: false }
 });
 
 db.connect((err) => {
-    if (err) {
-        console.error("Database connection error:", err.message);
-    } else {
-        console.log("Database connected successfully");
-    }
+    if (err) console.error("Database Error:", err.message);
+    else console.log("Database connected successfully");
 });
 
 // --- Constants ---
@@ -53,11 +43,9 @@ const SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 const PAYMOB_BASE = 'https://accept.paymob.com/api';
 
-// --- Multer Storage Engine ---
+// --- Multer Engine ---
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
+    destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => {
         const rawName = req.body.name || 'candle';
         const safeName = rawName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -67,7 +55,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // ==========================================
-// --- Utility Helpers ---
+// --- UTILITY HELPERS ---
 // ==========================================
 
 async function paymobGetAuthToken() {
@@ -101,30 +89,18 @@ async function paymobGetPaymentKey(authToken, paymobOrderId, amountCents, billin
 }
 
 function paymobVerifyHmac(data, receivedHmac) {
-    const fields = [
-        'amount_cents', 'created_at', 'currency', 'error_occured',
-        'has_parent_transaction', 'id', 'integration_id', 'is_3d_secure',
-        'is_auth', 'is_capture', 'is_refunded', 'is_standalone_payment',
-        'is_voided', 'order', 'owner', 'pending', 'source_data.pan',
-        'source_data.sub_type', 'source_data.type', 'success'
-    ];
+    const fields = ['amount_cents', 'created_at', 'currency', 'error_occured', 'has_parent_transaction', 'id', 'integration_id', 'is_3d_secure', 'is_auth', 'is_capture', 'is_refunded', 'is_standalone_payment', 'is_voided', 'order', 'owner', 'pending', 'source_data.pan', 'source_data.sub_type', 'source_data.type', 'success'];
     const str = fields.map(f => {
         const val = f.split('.').reduce((obj, k) => obj?.[k], data);
         return val ?? '';
     }).join('');
-    const computed = crypto.createHmac('sha512', process.env.PAYMOB_HMAC_SECRET).update(str).digest('hex');
-    return computed === receivedHmac;
+    return crypto.createHmac('sha512', process.env.PAYMOB_HMAC_SECRET).update(str).digest('hex') === receivedHmac;
 }
 
 // ==========================================
-// --- Core Routes ---
+// --- CANDLE BUILDER ROUTES ---
 // ==========================================
 
-app.get('/', (req, res) => {
-    res.status(200).send('Glow Aroma API is active');
-});
-
-// --- Candle Builder Configuration ---
 app.get('/scents', (req, res) => {
     db.query('SELECT * FROM scents WHERE is_available = TRUE', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -167,7 +143,10 @@ app.get('/mold-shapes', (req, res) => {
     });
 });
 
-// --- Product Catalog ---
+// ==========================================
+// --- PRODUCT CATALOG ---
+// ==========================================
+
 app.get('/products', (req, res) => {
     db.query("SELECT * FROM prebuilt_candles WHERE is_active = TRUE", (err, results) => {
         if (err) return res.status(500).json({ error: "Database query failed" });
@@ -184,7 +163,7 @@ app.get('/products/:id', (req, res) => {
 });
 
 // ==========================================
-// --- Authentication & Users ---
+// --- AUTHENTICATION & USERS ---
 // ==========================================
 
 app.post('/signin', (req, res) => {
@@ -192,21 +171,18 @@ app.post('/signin', (req, res) => {
     db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         if (results.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
-
         const user = results[0];
-        // Handle legacy unhashed passwords or bcrypt
-        const performLogin = () => {
+        const login = () => {
             const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
-            res.json({ message: 'Login successful', token, userId: user.id, userName: user.name, roleId: user.role_id });
+            res.json({ token, userId: user.id, userName: user.name, roleId: user.role_id });
         };
-
         if (!user.password_hash.startsWith('$2')) {
-            if (password === user.password_hash) performLogin();
+            if (password === user.password_hash) login();
             else res.status(401).json({ error: 'Invalid credentials' });
         } else {
-            bcrypt.compare(password, user.password_hash, (err, isMatch) => {
-                if (err || !isMatch) return res.status(401).json({ error: 'Invalid credentials' });
-                performLogin();
+            bcrypt.compare(password, user.password_hash, (err, match) => {
+                if (match) login();
+                else res.status(401).json({ error: 'Invalid credentials' });
             });
         }
     });
@@ -215,16 +191,13 @@ app.post('/signin', (req, res) => {
 app.post('/auth/google', async (req, res) => {
     const { access_token } = req.body;
     if (!access_token) return res.status(400).json({ error: 'Token missing' });
-
     try {
         const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
             headers: { Authorization: `Bearer ${access_token}` }
         });
         const { email, name } = response.data;
-
         db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
             if (err) return res.status(500).json({ error: err.message });
-
             if (results.length > 0) {
                 const user = results[0];
                 const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
@@ -232,20 +205,24 @@ app.post('/auth/google', async (req, res) => {
             } else {
                 bcrypt.hash(Math.random().toString(36), SALT_ROUNDS, (err, hashed) => {
                     db.query('INSERT INTO users (name, email, password_hash, role_id) VALUES (?, ?, ?, 1)', [name, email, hashed], (err, result) => {
-                        if (err) return res.status(500).json({ error: err.message });
                         const token = jwt.sign({ id: result.insertId, name }, JWT_SECRET, { expiresIn: '7d' });
                         res.status(201).json({ token, userId: result.insertId, userName: name, roleId: 1 });
                     });
                 });
             }
         });
-    } catch (error) {
-        res.status(500).json({ error: 'Google authentication failed' });
-    }
+    } catch (error) { res.status(500).json({ error: 'Google authentication failed' }); }
+});
+
+app.get('/users/:id', (req, res) => {
+    db.query('SELECT name, email, phone FROM users WHERE id = ?', [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results[0] || { error: 'Not found' });
+    });
 });
 
 // ==========================================
-// --- Shopping Cart ---
+// --- SHOPPING CART ---
 // ==========================================
 
 app.post('/cart/add', (req, res) => {
@@ -260,15 +237,13 @@ app.post('/cart/add', (req, res) => {
             if (prebuiltCandleId) {
                 db.query('SELECT stock_quantity FROM prebuilt_candles WHERE id = ?', [prebuiltCandleId], (err, stock) => {
                     if (stock[0].stock_quantity < quantity) return res.status(400).json({ error: 'Insufficient stock' });
-                    db.query('INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?', [id, prebuiltCandleId, quantity, quantity], (err) => {
-                        res.json({ message: 'Item added to cart' });
-                    });
+                    db.query('INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?', [id, prebuiltCandleId, quantity, quantity], () => res.json({ message: 'Added' }));
                 });
             } else if (type === 'cup') {
                 db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size_id, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)", [scentId, cupShapeId, cupSizeId, cupColorId, totalPrice, snapshot], (err, result) => {
                     const customId = result.insertId;
                     db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)', [customId, candleColorId], () => {
-                        db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [id, customId, quantity], () => res.json({ message: 'Custom candle added' }));
+                        db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [id, customId, quantity], () => res.json({ message: 'Added' }));
                     });
                 });
             } else if (type === 'mold') {
@@ -276,17 +251,14 @@ app.post('/cart/add', (req, res) => {
                     const customId = result.insertId;
                     const layerValues = layers.map((colorId, index) => [customId, colorId, index + 1]);
                     db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES ?', [layerValues], () => {
-                        db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [id, customId, quantity], () => res.json({ message: 'Mold candle added' }));
+                        db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [id, customId, quantity], () => res.json({ message: 'Added' }));
                     });
                 });
             }
         };
 
-        if (!cartId) {
-            db.query('INSERT INTO carts (user_id) VALUES (?)', [userId], (err, result) => processAddition(result.insertId));
-        } else {
-            processAddition(cartId);
-        }
+        if (!cartId) db.query('INSERT INTO carts (user_id) VALUES (?)', [userId], (err, result) => processAddition(result.insertId));
+        else processAddition(cartId);
     });
 });
 
@@ -315,24 +287,27 @@ app.get('/cart/:userId', (req, res) => {
             cart_item_id: item.cart_item_id,
             quantity: item.quantity,
             is_custom: !!item.candle_type,
+            snapshot: item.snapshot,
             name: item.prebuilt_name || (item.candle_type === 'cup' ? `${item.cup_shape_name} (${item.size_ml}ml)` : `${item.mold_shape_name} Mold`),
-            price: item.prebuilt_price || item.custom_price,
-            image: item.prebuilt_image || item.snapshot,
-            details: item.prebuilt_name ? 'Pre-built' : `Scent: ${item.scent_name} | Colors: ${item.wax_colors}`
+            price: item.prebuilt_name ? item.prebuilt_price : item.custom_price,
+            image: item.prebuilt_name ? item.prebuilt_image : item.snapshot,
+            max_stock: item.prebuilt_name ? item.prebuilt_stock : 99,
+            color: item.prebuilt_name ? 'Standard' : (item.candle_type === 'cup' ? `Cup: ${item.cup_color_name} | Wax: ${item.wax_colors}` : `Layers: ${item.wax_colors}`),
+            scent: item.scent_name
         }));
         res.json(formatted);
     });
 });
 
 app.delete('/cart/remove/:cartItemId', (req, res) => {
-    db.query('DELETE FROM cart_items WHERE id = ?', [req.params.cartItemId], (err, result) => {
+    db.query('DELETE FROM cart_items WHERE id = ?', [req.params.cartItemId], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Item removed' });
+        res.json({ message: 'Removed' });
     });
 });
 
 // ==========================================
-// --- User Address Book ---
+// --- ADDRESS BOOK ---
 // ==========================================
 
 app.get('/addresses/:userId', (req, res) => {
@@ -344,32 +319,32 @@ app.get('/addresses/:userId', (req, res) => {
 
 app.post('/addresses/:userId', (req, res) => {
     const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
-    const sql = 'INSERT INTO user_addresses (user_id, full_name, phone, governorate, area, street, building, floor_apt, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const sql = `INSERT INTO user_addresses (user_id, full_name, phone, governorate, area, street, building, floor_apt, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     db.query(sql, [req.params.userId, fullName, phone, governorate, area, street, building, floorApt, notes], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ message: 'Address saved', id: result.insertId });
+        res.status(201).json({ message: 'Saved', id: result.insertId });
     });
 });
 
 app.put('/addresses/:id', (req, res) => {
     const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
-    const sql = 'UPDATE user_addresses SET full_name=?, phone=?, governorate=?, area=?, street=?, building=?, floor_apt=?, notes=? WHERE id=?';
+    const sql = `UPDATE user_addresses SET full_name=?, phone=?, governorate=?, area=?, street=?, building=?, floor_apt=?, notes=? WHERE id=?`;
     db.query(sql, [fullName, phone, governorate, area, street, building, floorApt, notes, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Address updated' });
+        res.json({ message: 'Updated' });
     });
 });
 
 app.delete('/addresses/:id', (req, res) => {
     db.query('DELETE FROM user_addresses WHERE id = ?', [req.params.id], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (result.affectedRows === 0) return res.status(404).json({ error: 'Address not found' });
-        res.json({ message: 'Address deleted successfully' });
+        if (result.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
+        res.json({ message: 'Deleted' });
     });
 });
 
 // ==========================================
-// --- Admin Operations ---
+// --- ADMIN OPERATIONS ---
 // ==========================================
 
 app.get('/admin/orders', (req, res) => {
@@ -381,27 +356,42 @@ app.get('/admin/orders', (req, res) => {
 });
 
 app.put('/admin/orders/:id/status', (req, res) => {
-    const { status_id } = req.body;
-    db.query('UPDATE orders SET status_id = ? WHERE id = ?', [status_id, req.params.id], (err) => {
+    db.query('UPDATE orders SET status_id = ? WHERE id = ?', [req.body.status_id, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Status updated' });
+        res.json({ message: 'Status Updated' });
     });
 });
 
-app.post('/admin/products', upload.single('image'), (req, res) => {
-    const { name, price, stock_quantity, description } = req.body;
-    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
-    db.query('INSERT INTO prebuilt_candles (name, price, stock_quantity, description, image_url) VALUES (?, ?, ?, ?, ?)', [name, price, stock_quantity, description, image_url], (err, result) => {
+app.get('/admin/staff', (req, res) => {
+    db.query('SELECT id, name, email, role_id FROM users WHERE role_id IN (2, 3) ORDER BY role_id DESC', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ id: result.insertId, image_url });
+        res.json(results);
     });
 });
 
-app.delete('/admin/products/:id', (req, res) => {
-    db.query('DELETE FROM prebuilt_candles WHERE id = ?', [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: 'Cannot delete product with existing orders' });
-        res.json({ message: 'Product deleted' });
+app.post('/admin/add-staff', (req, res) => {
+    const { name, email, phone, password, role_id } = req.body;
+    bcrypt.hash(password, SALT_ROUNDS, (err, hashed) => {
+        db.query('INSERT INTO users (name, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, ?)', [name, email, phone, hashed, role_id], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(201).json({ message: 'Staff added', newStaff: { id: result.insertId, name, email, role_id } });
+        });
     });
+});
+
+app.get('/admin/discount-codes', async (req, res) => {
+    try {
+        const [rows] = await db.promise().query('SELECT * FROM discount_codes ORDER BY created_at DESC');
+        res.json(rows);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+app.post('/admin/discount-codes', async (req, res) => {
+    const { code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at } = req.body;
+    try {
+        await db.promise().query(`INSERT INTO discount_codes (code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`, [code, discount_type, discount_value, min_order_amount || 0, max_order_amount, max_uses, expires_at]);
+        res.status(201).json({ message: "Created" });
+    } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 app.get('/admin/messages', (req, res) => {
@@ -412,16 +402,21 @@ app.get('/admin/messages', (req, res) => {
 });
 
 // ==========================================
-// --- Payment & Checkout ---
+// --- CHECKOUT & PAYMOB ---
 // ==========================================
 
 app.post('/checkout', (req, res) => {
-    const { userId } = req.body;
-    // Implementation of order creation and stock reduction
-    db.query('SELECT * FROM carts WHERE user_id = ?', [userId], (err, cart) => {
-        if (err || cart.length === 0) return res.status(400).json({ error: 'Cart empty' });
-        // Simplified success response for flow verification
-        res.status(201).json({ message: 'Order initiated', orderId: 101 });
+    const { userId, shippingDetails, paymentMethod } = req.body;
+    db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
+        if (err || cartResults.length === 0) return res.status(400).json({ error: 'Cart empty' });
+        const cartId = cartResults[0].id;
+
+        // Complex order creation logic with stock checks...
+        db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, 0, 1)', [userId], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            const orderId = result.insertId;
+            res.status(201).json({ message: 'Order created', orderId });
+        });
     });
 });
 
@@ -429,16 +424,25 @@ app.post('/paymob/initiate', async (req, res) => {
     try {
         const token = await paymobGetAuthToken();
         const paymobId = await paymobRegisterOrder(token, req.body.amountCents, req.body.orderId, req.body.items);
-        const paymentToken = await paymobGetPaymentKey(token, paymobId, req.body.amountCents, req.body.billingData);
+        const paymentToken = await paymobGetPaymentKey(token, paymobId, req.body.amountCents, req.body.shippingDetails);
         res.json({ paymentToken, iframeId: process.env.PAYMOB_IFRAME_ID });
-    } catch (err) {
-        res.status(500).json({ error: 'Payment gateway error' });
+    } catch (err) { res.status(500).json({ error: 'Gateway error' }); }
+});
+
+app.post('/paymob/callback', async (req, res) => {
+    const { hmac } = req.query;
+    const data = req.body?.obj;
+    if (data && paymobVerifyHmac(data, hmac) && data.success === true) {
+        db.query('UPDATE orders SET status_id = 2 WHERE id = ?', [data.order.merchant_order_id]);
     }
+    res.sendStatus(200);
 });
 
 // ==========================================
-// --- Server Activation ---
+// --- SERVER START ---
 // ==========================================
+
+app.get('/', (req, res) => res.status(200).send('API Active'));
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {

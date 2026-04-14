@@ -1,21 +1,11 @@
 import React from 'react';
 import '../styles/AddressForm.css';
 
-const egyptLocations = {
-  "Cairo": ["Nasr City", "Maadi", "Heliopolis", "New Cairo (Tagamoa)", "Zamalek", "Downtown", "Madinaty", "Shorouk", "Rehab", "Shoubra", "Mokattam", "Other"],
-  "Giza": ["6th of October", "Sheikh Zayed", "Mohandeseen", "Dokki", "Agouza", "Haram", "Faisal", "Imbaba", "Other"],
-  "Alexandria": ["Smouha", "Sidi Gaber", "Miami", "Gleem", "Loran", "Camp Caesar", "Agami", "Borg El Arab", "Other"],
-  "Other": ["Other Area"]
-};
-
 const AddressForm = ({ formData, onChange }) => {
-  const currentGov = formData?.governorate || '';
-  const availableAreas = egyptLocations[currentGov] || [];
-
   return (
     <div className="address-form-wrapper profile-pill-form">
-      {/* 1. Wrapped in a form with autocomplete ON */}
-      <form autoComplete="on" onSubmit={(e) => e.preventDefault()}>
+      {/* 1. Use a real form tag with name and autocomplete on */}
+      <form name="address-book" autoComplete="on">
         
         <div className="form-row">
           <div className="form-group flex-fill">
@@ -23,114 +13,34 @@ const AddressForm = ({ formData, onChange }) => {
             <input 
               type="text" 
               name="fullName" 
-              id="fullName"
+              id="fullName" 
               autoComplete="name" 
-              required 
               className="custom-pill-input"
-              placeholder="e.g. Belal" 
               value={formData?.fullName || ''} 
               onChange={onChange} 
+              required 
             />
           </div>
+          
           <div className="form-group flex-fill">
             <label htmlFor="phone">Phone Number</label>
             <input 
               type="tel" 
-              name="phone" 
-              id="phone"
-              autoComplete="tel" 
-              required 
+              name="phone"  /* MUST be phone */
+              id="phone"    /* MUST be phone */
+              autoComplete="tel" /* Browser signal */
               className="custom-pill-input"
               placeholder="01X XXXX XXXX" 
               value={formData?.phone || ''} 
               onChange={onChange} 
+              required 
             />
           </div>
         </div>
 
-        <div className="form-row">
-          <div className="form-group flex-fill">
-            <label htmlFor="governorate">Governorate</label>
-            <select 
-              name="governorate" 
-              id="governorate"
-              required 
-              className="custom-pill-input pill-select" 
-              value={currentGov} 
-              onChange={onChange}
-            >
-              <option value="">Select Governorate...</option>
-              {Object.keys(egyptLocations).map(gov => (
-                <option key={gov} value={gov}>{gov}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="form-group flex-fill">
-            <label htmlFor="area">Area / District</label>
-            <select 
-              name="area" 
-              id="area"
-              required 
-              className="custom-pill-input pill-select"
-              value={formData?.area || ''} 
-              onChange={onChange}
-              disabled={!currentGov} 
-            >
-              <option value="">{currentGov ? "Select Area..." : "Select Governorate first"}</option>
-              {availableAreas.map(area => (
-                <option key={area} value={area}>{area}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+        {/* ... Rest of your fields following the id/htmlFor pattern ... */}
 
-        <div className="form-group">
-          <label htmlFor="street">Street Name</label>
-          <input 
-            type="text" 
-            name="street" 
-            id="street"
-            autoComplete="shipping street-address"
-            required 
-            className="custom-pill-input"
-            placeholder="e.g. 9th Street" 
-            value={formData?.street || ''} 
-            onChange={onChange} 
-          />
-        </div>
-
-        <div className="form-row">
-          <div className="form-group flex-fill">
-            <label htmlFor="building">Building & Floor/Apt</label>
-            <input 
-              type="text" 
-              name="building" 
-              id="building"
-              required 
-              className="custom-pill-input"
-              placeholder="e.g. Bldg 12, Floor 3" 
-              value={formData?.building || ''} 
-              onChange={onChange} 
-            />
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="notes">Landmark / Notes</label>
-          <textarea 
-            name="notes" 
-            id="notes"
-            rows="2" 
-            className="custom-pill-input pill-textarea"
-            placeholder="e.g. Next to the pharmacy..." 
-            value={formData?.notes || ''} 
-            onChange={onChange}
-          ></textarea>
-        </div>
       </form>
     </div>
   );
 };
-
-export default AddressForm;
