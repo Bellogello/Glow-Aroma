@@ -24,7 +24,7 @@ import Footer from '../components/Footer';
 
     try {
       // FIX: Changed from /login to /signin to match your server.js
-      const response = await fetch('${import.meta.env.VITE_API_URL}/signin', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,7 +57,7 @@ import Footer from '../components/Footer';
     onSuccess: async (tokenResponse) => {
       try {
         // Send the Google token to our Node backend
-        const response = await fetch('${import.meta.env.VITE_API_URL}/auth/google', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

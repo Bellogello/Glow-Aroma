@@ -77,7 +77,7 @@ const ProductDetails = () => {
     };
 
     try {
-      const response = await fetch('${import.meta.env.VITE_API_URL}/cart/add', { 
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/cart/add`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

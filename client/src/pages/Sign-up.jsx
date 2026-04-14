@@ -59,7 +59,7 @@ const handleSignup = async (e) => {
     };
 
     try {
-      const response = await fetch('${import.meta.env.VITE_API_URL}/users', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

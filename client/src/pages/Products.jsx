@@ -17,7 +17,7 @@ const Products = () => {
 
   // 2. Fetch the real inventory from your MySQL database
   useEffect(() => {
-    fetch('${import.meta.env.VITE_API_URL}/products')
+    fetch(`${import.meta.env.VITE_API_URL}/products`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {

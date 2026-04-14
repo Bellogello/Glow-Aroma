@@ -67,11 +67,11 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const [prodRes, orderRes, staffRes, discountRes, msgRes] = await Promise.all([
-        fetch('${import.meta.env.VITE_API_URL}/products'),
-        fetch('${import.meta.env.VITE_API_URL}/admin/orders'),
-        fetch('${import.meta.env.VITE_API_URL}/admin/staff'),
-        fetch('${import.meta.env.VITE_API_URL}/admin/discount-codes'),
-        fetch('${import.meta.env.VITE_API_URL}/admin/messages'),
+        fetch(`${import.meta.env.VITE_API_URL}/products`),
+        fetch(`${import.meta.env.VITE_API_URL}/admin/orders`),
+        fetch(`${import.meta.env.VITE_API_URL}/admin/staff`),
+        fetch(`${import.meta.env.VITE_API_URL}/admin/discount-codes`),
+        fetch(`${import.meta.env.VITE_API_URL}/admin/messages`),
       ]);
       
       const [prodData, orderData, staffData, discountData, msgData] = await Promise.all([
@@ -101,7 +101,7 @@ const Dashboard = () => {
   const handleAddStaff = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      const res = await fetch('${import.meta.env.VITE_API_URL}/admin/add-staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(staffForm) });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/add-staff`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(staffForm) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add staff member.');
       setDialogSuccess('Staff member added successfully!');
@@ -133,7 +133,7 @@ const Dashboard = () => {
     if (productForm.image) formData.append('image', productForm.image);
 
     try {
-      const res = await fetch('${import.meta.env.VITE_API_URL}/admin/products', { method: 'POST', body: formData });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/products`, { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add product.');
       setDialogSuccess('Product added successfully!');
@@ -252,7 +252,7 @@ const Dashboard = () => {
     if (!code.trim() || !discount_value) { setDialogError('Code and discount value are required.'); return; }
     setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      const res = await fetch('${import.meta.env.VITE_API_URL}/admin/discount-codes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim().toUpperCase(), discount_type, discount_value: Number(discount_value), min_order_amount: min_order_amount ? Number(min_order_amount) : null, max_order_amount: max_order_amount ? Number(max_order_amount) : null, max_uses: max_uses ? Number(max_uses) : null, expires_at: expires_at || null }) });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/discount-codes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim().toUpperCase(), discount_type, discount_value: Number(discount_value), min_order_amount: min_order_amount ? Number(min_order_amount) : null, max_order_amount: max_order_amount ? Number(max_order_amount) : null, max_uses: max_uses ? Number(max_uses) : null, expires_at: expires_at || null }) });
       if (!res.ok) throw new Error('Failed to create discount code.');
       setDialogSuccess('Discount code created successfully!');
       fetchDashboardData();
