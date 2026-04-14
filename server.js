@@ -438,14 +438,22 @@ app.post('/checkout', (req, res) => {
             }
 
             // 4. Map items safely (ADDED details mapping here)
-            const values = items.map(i => [
-                orderId, 
-                i.is_custom ? 'custom' : 'prebuilt', 
-                i.name || 'Candle', 
-                parseFloat(i.price) || 0, 
-                parseInt(i.quantity, 10) || 1,
-                i.details || i.color_info || 'Standard Pre-built' // <--- FALLBACK ADDED HERE
-            ]);
+              const values = items.map(i => {
+                // Determine exact ENUM match based on the item name
+                let exactItemType = 'prebuilt';
+                if (i.is_custom) {
+                    exactItemType = (i.name && i.name.toLowerCase().includes('mold')) ? 'mold' : 'cup';
+                }
+
+                return [
+                    orderId, 
+                    exactItemType, // <--- Now it sends 'cup', 'mold', or 'prebuilt'
+                    i.name || 'Candle', 
+                    parseFloat(i.price) || 0, 
+                    parseInt(i.quantity, 10) || 1,
+                    i.details || i.color_info || 'Standard Pre-built'
+                ];
+            });
 
             // 5. Insert Items (ADDED the `details` column to the query)
             const sql = 'INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity, details) VALUES ?';
