@@ -24,7 +24,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // ==========================================
-// --- STATIC FILE HANDLING ---
+// --- STATIC FILE SYSTEM (FOR PERSISTENCE) ---
 // ==========================================
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -46,19 +46,22 @@ const db = mysql.createConnection({
 
 db.connect((err) => {
     if (err) {
-        console.error("Critical Database Error:", err.message);
+        console.error("CRITICAL: Database connection failed:", err.message);
     } else {
-        console.log("Database connected successfully to " + process.env.DB_NAME);
+        console.log("SUCCESS: Connected to MySQL database:", process.env.DB_NAME);
     }
 });
 
 // ==========================================
-// --- CONSTANTS & CONFIG ---
+// --- CONSTANTS & SECURITY ---
 // ==========================================
 const SALT_ROUNDS = 10;
-const JWT_SECRET = process.env.JWT_SECRET || 'glow_aroma_secure_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'glow_aroma_2026_super_secret';
 const PAYMOB_BASE = 'https://accept.paymob.com/api';
 
+// ==========================================
+// --- MULTER STORAGE ENGINE ---
+// ==========================================
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => {
@@ -70,9 +73,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // ==========================================
-// --- UTILITY HELPERS ---
+// --- PAYMOB GATEWAY HELPERS ---
 // ==========================================
-
 async function paymobGetAuthToken() {
     const res = await axios.post(`${PAYMOB_BASE}/auth/tokens`, { api_key: process.env.PAYMOB_API_KEY });
     return res.data.token;
@@ -109,17 +111,13 @@ function paymobVerifyHmac(data, receivedHmac) {
         const val = f.split('.').reduce((obj, k) => obj?.[k], data);
         return val ?? '';
     }).join('');
-    const computed = crypto.createHmac('sha512', process.env.PAYMOB_HMAC_SECRET).update(str).digest('hex');
-    return computed === receivedHmac;
+    return crypto.createHmac('sha512', process.env.PAYMOB_HMAC_SECRET).update(str).digest('hex') === receivedHmac;
 }
 
 // ==========================================
-// --- CORE API ROUTES ---
+// --- CANDLE BUILDER (CUSTOMIZATION) ---
 // ==========================================
 
-app.get('/', (req, res) => res.status(200).send('Glow Aroma Production API Active'));
-
-// --- Candle Builder Assets ---
 app.get('/scents', (req, res) => {
     db.query('SELECT * FROM scents WHERE is_available = TRUE', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -162,7 +160,10 @@ app.get('/mold-shapes', (req, res) => {
     });
 });
 
-// --- Product Catalog ---
+// ==========================================
+// --- PRODUCT CATALOG ---
+// ==========================================
+
 app.get('/products', (req, res) => {
     db.query("SELECT * FROM prebuilt_candles WHERE is_active = TRUE", (err, results) => {
         if (err) return res.status(500).json({ error: "Catalog fetch failed" });
@@ -179,56 +180,55 @@ app.get('/products/:id', (req, res) => {
 });
 
 // ==========================================
-// --- USER AUTHENTICATION ---
+// --- AUTHENTICATION & PROFILE ---
 // ==========================================
 
 app.post('/signin', (req, res) => {
     const { email, password } = req.body;
     db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (results.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+        if (results.length === 0) return res.status(401).json({ error: 'Invalid Credentials' });
 
         const user = results[0];
-        const processLogin = () => {
-            const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
+        const loginSuccess = () => {
+            const token = jwt.sign({ id: user.id, name: user.name, role: user.role_id }, JWT_SECRET, { expiresIn: '7d' });
             res.json({ token, userId: user.id, userName: user.name, roleId: user.role_id });
         };
 
         if (!user.password_hash.startsWith('$2')) {
-            if (password === user.password_hash) return processLogin();
-            return res.status(401).json({ error: 'Invalid credentials' });
+            if (password === user.password_hash) return loginSuccess();
+            return res.status(401).json({ error: 'Invalid Credentials' });
         }
 
         bcrypt.compare(password, user.password_hash, (err, isMatch) => {
-            if (isMatch) processLogin();
-            else res.status(401).json({ error: 'Invalid credentials' });
+            if (isMatch) loginSuccess();
+            else res.status(401).json({ error: 'Invalid Credentials' });
         });
     });
 });
 
 app.get('/users/:id', (req, res) => {
-    db.query('SELECT id, name, email, phone FROM users WHERE id = ?', [req.params.id], (err, results) => {
+    db.query('SELECT id, name, email, phone, role_id FROM users WHERE id = ?', [req.params.id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(results[0] || { error: 'User Not Found' });
+        res.json(results[0] || { error: 'Not Found' });
     });
 });
 
 app.post('/auth/google', async (req, res) => {
     const { access_token } = req.body;
-    if (!access_token) return res.status(400).json({ error: 'Google Token Missing' });
     try {
         const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
             headers: { Authorization: `Bearer ${access_token}` }
         });
         const { email, name } = response.data;
-
         db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
             if (results.length > 0) {
                 const user = results[0];
                 const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
                 res.json({ token, userId: user.id, userName: user.name, roleId: user.role_id });
             } else {
-                bcrypt.hash(Math.random().toString(36), SALT_ROUNDS, (err, hashed) => {
+                const dummyPass = Math.random().toString(36);
+                bcrypt.hash(dummyPass, SALT_ROUNDS, (err, hashed) => {
                     db.query('INSERT INTO users (name, email, password_hash, role_id) VALUES (?, ?, ?, 1)', [name, email, hashed], (err, result) => {
                         const token = jwt.sign({ id: result.insertId, name }, JWT_SECRET, { expiresIn: '7d' });
                         res.status(201).json({ token, userId: result.insertId, userName: name, roleId: 1 });
@@ -240,7 +240,43 @@ app.post('/auth/google', async (req, res) => {
 });
 
 // ==========================================
-// --- SHOPPING CART LOGIC ---
+// --- ADDRESS BOOK (USER) ---
+// ==========================================
+
+app.get('/addresses/:userId', (req, res) => {
+    db.query('SELECT * FROM user_addresses WHERE user_id = ?', [req.params.userId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+app.post('/addresses/:userId', (req, res) => {
+    const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
+    const sql = `INSERT INTO user_addresses (user_id, full_name, phone, governorate, area, street, building, floor_apt, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.query(sql, [req.params.userId, fullName, phone, governorate, area, street, building, floorApt, notes], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ message: 'Saved', id: result.insertId });
+    });
+});
+
+app.put('/addresses/:id', (req, res) => {
+    const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
+    const sql = `UPDATE user_addresses SET full_name=?, phone=?, governorate=?, area=?, street=?, building=?, floor_apt=?, notes=? WHERE id=?`;
+    db.query(sql, [fullName, phone, governorate, area, street, building, floorApt, notes, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Updated' });
+    });
+});
+
+app.delete('/addresses/:id', (req, res) => {
+    db.query('DELETE FROM user_addresses WHERE id = ?', [req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: "Cannot delete address used in order history" });
+        res.json({ message: 'Deleted' });
+    });
+});
+
+// ==========================================
+// --- SHOPPING CART (COMPLEX LOGIC) ---
 // ==========================================
 
 app.post('/cart/add', (req, res) => {
@@ -302,11 +338,9 @@ app.get('/cart/:userId', (req, res) => {
             quantity: item.quantity,
             is_custom: !!item.candle_type,
             name: item.prebuilt_name || (item.candle_type === 'cup' ? `${item.cup_shape_name} (${item.size_ml}ml)` : `${item.mold_shape_name} Mold`),
-            price: item.prebuilt_price || item.custom_price,
-            image: item.prebuilt_image || item.snapshot,
-            max_stock: item.prebuilt_stock || 99,
-            color_info: item.candle_type ? `Wax: ${item.wax_colors}` : 'Standard',
-            scent: item.scent_name || 'Original'
+            price: item.prebuilt_name ? item.prebuilt_price : item.custom_price,
+            image: item.prebuilt_name ? item.prebuilt_image : item.snapshot,
+            details: item.candle_type ? `Scent: ${item.scent_name} | ${item.wax_colors}` : 'Pre-built Candle'
         }));
         res.json(data);
     });
@@ -320,57 +354,32 @@ app.delete('/cart/remove/:cartItemId', (req, res) => {
 });
 
 // ==========================================
-// --- ADDRESS BOOK ---
+// --- ADMIN DASHBOARD & STAFF ---
 // ==========================================
 
-app.get('/addresses/:userId', (req, res) => {
-    db.query('SELECT * FROM user_addresses WHERE user_id = ?', [req.params.userId], (err, results) => {
+app.get('/admin/orders', (req, res) => {
+    const sql = `
+        SELECT o.id, o.total, o.status_id, o.created_at, u.name AS customer_name 
+        FROM orders o 
+        JOIN users u ON o.user_id = u.id 
+        ORDER BY o.created_at DESC`;
+    db.query(sql, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
 });
-
-app.post('/addresses/:userId', (req, res) => {
-    const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
-    const sql = `INSERT INTO user_addresses (user_id, full_name, phone, governorate, area, street, building, floor_apt, notes) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.query(sql, [req.params.userId, fullName, phone, governorate, area, street, building, floorApt, notes], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ message: 'Saved', id: result.insertId });
-    });
-});
-
-app.put('/addresses/:id', (req, res) => {
-    const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
-    const sql = `UPDATE user_addresses SET full_name=?, phone=?, governorate=?, area=?, street=?, building=?, floor_apt=?, notes=? WHERE id=?`;
-    db.query(sql, [fullName, phone, governorate, area, street, building, floorApt, notes, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Updated' });
-    });
-});
-
-app.delete('/addresses/:id', (req, res) => {
-    db.query('DELETE FROM user_addresses WHERE id = ?', [req.params.id], (err, result) => {
-        if (err) return res.status(500).json({ error: "Linked to Order" });
-        if (result.affectedRows === 0) return res.status(404).json({ error: 'Address Not Found' });
-        res.json({ message: 'Deleted' });
-    });
-});
-
-// ==========================================
-// --- ADMIN DASHBOARD ---
-// ==========================================
 
 app.get('/admin/orders/:id/items', (req, res) => {
-    const orderId = req.params.id;
-    const sql = `SELECT * FROM order_items WHERE order_id = ?`;
-    
-    db.query(sql, [orderId], (err, results) => {
-        if (err) {
-            console.error("Fetch order items error:", err);
-            return res.status(500).json({ error: "Failed to fetch items" });
-        }
+    db.query('SELECT * FROM order_items WHERE order_id = ?', [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
         res.json(results);
+    });
+});
+
+app.put('/admin/orders/:id/status', (req, res) => {
+    db.query('UPDATE orders SET status_id = ? WHERE id = ?', [req.body.status_id, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Status Updated' });
     });
 });
 
@@ -391,19 +400,24 @@ app.post('/admin/add-staff', (req, res) => {
     });
 });
 
-app.get('/admin/discount-codes', async (req, res) => {
-    try {
-        const [rows] = await db.promise().query('SELECT * FROM discount_codes ORDER BY created_at DESC');
-        res.json(rows);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+// ==========================================
+// --- PROMO CODES & MESSAGES ---
+// ==========================================
+
+app.get('/admin/discount-codes', (req, res) => {
+    db.query('SELECT * FROM discount_codes ORDER BY created_at DESC', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
 });
 
-app.post('/admin/discount-codes', async (req, res) => {
+app.post('/admin/discount-codes', (req, res) => {
     const { code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at } = req.body;
-    try {
-        await db.promise().query(`INSERT INTO discount_codes (code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`, [code, discount_type, discount_value, min_order_amount || 0, max_order_amount, max_uses, expires_at]);
+    const sql = `INSERT INTO discount_codes (code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    db.query(sql, [code, discount_type, discount_value, min_order_amount || 0, max_order_amount, max_uses, expires_at], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
         res.status(201).json({ message: 'Promo Created' });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    });
 });
 
 app.get('/admin/messages', (req, res) => {
@@ -414,83 +428,60 @@ app.get('/admin/messages', (req, res) => {
 });
 
 // ==========================================
-// --- FULL CHECKOUT LOGIC ---
+// --- CHECKOUT & PAYMOB CALLBACKS ---
 // ==========================================
 
 app.post('/checkout', (req, res) => {
-  const { userId, shippingDetails, paymentMethod } = req.body;
-  if (!userId) return res.status(401).json({ error: 'User ID required' });
+    const { userId, total, items } = req.body;
+    db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartRes) => {
+        if (err || cartRes.length === 0) return res.status(400).json({ error: 'Cart Empty' });
+        const cartId = cartRes[0].id;
 
-  // 1. Get the User's Cart
-  db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
-    if (err || cartResults.length === 0) return res.status(400).json({ error: 'Cart not found' });
-    const cartId = cartResults[0].id;
+        db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, total], (err, orderRes) => {
+            if (err) return res.status(500).json({ error: 'Order Failed' });
+            const newId = orderRes.insertId;
 
-    // 2. Fetch all items in the cart to calculate total and check stock
-    const cartItemsSql = `
-      SELECT ci.quantity, ci.prebuilt_candle_id, ci.custom_candle_id,
-             pc.price AS prebuilt_price, pc.name AS prebuilt_name, pc.stock_quantity,
-             cc.total_price AS custom_price, cc.type AS custom_type
-      FROM cart_items ci
-      LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
-      LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
-      WHERE ci.cart_id = ?`;
-
-    db.query(cartItemsSql, [cartId], (err, items) => {
-      if (err || items.length === 0) return res.status(400).json({ error: 'Cart is empty' });
-
-      // 3. Calculate Total and check stock for prebuilt candles
-      let orderTotal = 0;
-      for (let item of items) {
-        if (item.prebuilt_candle_id && item.quantity > item.stock_quantity) {
-          return res.status(400).json({ error: `Insufficient stock for ${item.prebuilt_name}` });
-        }
-        orderTotal += (item.prebuilt_price || item.custom_price || 0) * item.quantity;
-      }
-
-      // 4. Create the Order
-      const insertOrderSql = 'INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)';
-      db.query(insertOrderSql, [userId, orderTotal], (err, orderResult) => {
-        if (err) return res.status(500).json({ error: 'Failed to create order record' });
-        const newOrderId = orderResult.insertId;
-
-        // 5. Move items from Cart to Order Items (Bulk Insert)
-        const orderItemsValues = items.map(item => [
-          newOrderId,
-          item.prebuilt_candle_id ? 'prebuilt' : item.custom_type,
-          item.prebuilt_name || (item.custom_type === 'cup' ? 'Custom Cup' : 'Custom Mold'),
-          item.prebuilt_price || item.custom_price,
-          item.quantity
-        ]);
-
-        const insertItemsSql = 'INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity) VALUES ?';
-        db.query(insertItemsSql, [orderItemsValues], (err) => {
-          if (err) console.error("Order items move failed:", err);
-
-          // 6. Update Stock for prebuilt candles
-          items.forEach(item => {
-            if (item.prebuilt_candle_id) {
-              db.query('UPDATE prebuilt_candles SET stock_quantity = stock_quantity - ? WHERE id = ?', [item.quantity, item.prebuilt_candle_id]);
-            }
-          });
-
-          // 7. --- THE FIX: CLEAR THE CART ---
-          db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], (delErr) => {
-            res.status(201).json({ 
-              message: 'Order placed successfully and cart cleared', 
-              orderId: newOrderId 
+            // Bulk Insert Order Items
+            const itemValues = items.map(i => [newId, i.item_type, i.name, i.price, i.quantity]);
+            db.query('INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity) VALUES ?', [itemValues], (err) => {
+                // Clear cart items
+                db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], () => {
+                    res.status(201).json({ message: 'Order Placed', orderId: newId });
+                });
             });
-          });
         });
-      });
     });
-  });
 });
+
+app.post('/paymob/initiate', async (req, res) => {
+    try {
+        const token = await paymobGetAuthToken();
+        const paymobId = await paymobRegisterOrder(token, req.body.amountCents, req.body.orderId, req.body.items);
+        const paymentToken = await paymobGetPaymentKey(token, paymobId, req.body.amountCents, req.body.shippingDetails);
+        res.json({ paymentToken, iframeId: process.env.PAYMOB_IFRAME_ID });
+    } catch (err) { res.status(500).json({ error: 'Gateway Connection Failed' }); }
+});
+
+app.post('/paymob/callback', async (req, res) => {
+    const { hmac } = req.query;
+    const data = req.body?.obj;
+    if (data && paymobVerifyHmac(data, hmac) && data.success === true) {
+        db.query('UPDATE orders SET status_id = 2 WHERE id = ?', [data.order.merchant_order_id]);
+    }
+    res.sendStatus(200);
+});
+
 // ==========================================
-// --- SERVER ACTIVATION ---
+// --- ERROR HANDLING & ACTIVATION ---
 // ==========================================
+app.get('/', (req, res) => res.status(200).send('Glow Aroma Backend API v2.0'));
+
+app.use((err, req, res, next) => {
+    console.error("Internal Server Error:", err.stack);
+    res.status(500).json({ error: 'Something went wrong on our end.' });
+});
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server listening on port ${PORT}`);
+    console.log(`🚀 API Server live on port ${PORT}`);
 });
