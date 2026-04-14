@@ -12,14 +12,16 @@ const axios = require('axios');
 
 require('dotenv').config();
 
-app.get('/', (req, res) => {
-  res.send('API is alive and kicking!');
-});
+
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
+
+app.get('/', (req, res) => {
+  res.send('API is alive and kicking!');
+});
 
 if (!fs.existsSync('./uploads')) {
     fs.mkdirSync('./uploads');
@@ -924,6 +926,7 @@ app.delete('/admin/messages/:id', (req, res) => {
 // --- USER ADDRESS BOOK ---
 // ==========================================
 
+// 1. GET: Fetch all addresses for a user
 app.get('/addresses/:userId', (req, res) => {
   db.query('SELECT * FROM user_addresses WHERE user_id = ?', [req.params.userId], (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -931,6 +934,7 @@ app.get('/addresses/:userId', (req, res) => {
   });
 });
 
+// 2. POST: Add a new address
 app.post('/addresses/:userId', (req, res) => {
   const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
   const sql = 'INSERT INTO user_addresses (user_id, full_name, phone, governorate, area, street, building, floor_apt, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
@@ -940,6 +944,28 @@ app.post('/addresses/:userId', (req, res) => {
   });
 });
 
+// 3. DELETE: Remove an address (FIXES YOUR "FAILED TO DELETE" ERROR)
+app.delete('/addresses/:id', (req, res) => {
+  const addressId = req.params.id;
+  db.query('DELETE FROM user_addresses WHERE id = ?', [addressId], (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (result.affectedRows === 0) return res.status(404).json({ error: "Address not found" });
+    res.json({ message: 'Address deleted successfully' });
+  });
+});
+
+// 4. PUT: Update an existing address (FOR THE EDIT BUTTON)
+app.put('/addresses/:id', (req, res) => {
+  const addressId = req.params.id;
+  const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
+  const sql = `UPDATE user_addresses 
+               SET full_name = ?, phone = ?, governorate = ?, area = ?, street = ?, building = ?, floor_apt = ?, notes = ? 
+               WHERE id = ?`;
+  db.query(sql, [fullName, phone, governorate, area, street, building, floorApt, notes, addressId], (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Address updated successfully' });
+  });
+});
 // ==========================================
 // --- CHECKOUT ---
 // ==========================================

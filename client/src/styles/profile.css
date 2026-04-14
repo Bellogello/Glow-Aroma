@@ -1,397 +1,321 @@
+
 body {
     background-color: #f5efe1;
     font-family: "Averia Libre", system-ui;
-}
-.top{
-  position: static;
-  width: 100%;
-  height: 191px;
-  background: #D2C9B8;
-}
-button:hover{
-    color: #76594C;
-}
-
-.cart{
-    height: 53px;
-    width: 53px;
-    background: url(../assets/cart.png);
-    display: inline-block;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
-}
-.cart:hover{
-    height: 53px;
-    width: 53px;
-    background-image: url(../assets/cart_light.png);
-    background-size: contain;
-    background-color: transparent;
-    border: transparent;
-    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
-}
-.profile{
-    height: 53px;
-    width: 53px;
-    background: url(../assets/profile.png);
-    display: inline-block;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
-}
-.profile:hover{
-    height: 53px;
-    width: 53px;
-    background-size: contain;
-    background-image: url(../assets/profile_light.png);
-    background-color: transparent;
-    border: transparent;
-    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));  
-}
-.home{
-    font-family: "Averia Libre", system-ui;
-    font-size: 27px;
-    color: #5c4033;
-    text-decoration: none;
-}
-.home:hover{
-    color: #76594C;
-    text-decoration: none;
-}
-.contact{
-    font-family: "Averia Libre", system-ui;
-    font-size: 27px;
-    color: #5c4033;
-    text-decoration: none;
-}
-.contact:hover{
-    color: #76594C;
-    text-decoration: none;
-}
-.products{
-    font-family: "Averia Libre", system-ui;
-    font-size: 27px;
-    color: #5c4033;
-    text-decoration: none;
-}
-.products:hover{
-    color: #76594C;
-    text-decoration: none;
+    color: #4a3728;
 }
 
 /* ========================================= */
-/* --- NEW BEIGE CARD & PILL FORM STYLES --- */
-/* ========================================= */
-
-.login-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 80vh; 
-  padding: 20px;
-}
-
-/* The beige box matching your Sign Up page */
-.login-card-beige {
-  background-color: #D2C9B8; /* Brand Beige */
-  padding: 50px 40px;
-  border-radius: 30px; /* Big rounded corners */
-  width: 100%;
-  max-width: 450px; 
-}
-
-.form-group {
-  margin-bottom: 25px;
-}
-
-/* 1. Pill-shaped Input Boxes */
-.custom-pill-input {
-  width: 100%;
-  padding: 15px;
-  border: none;
-  border-radius: 50px; /* Creates the pill shape */
-  font-size: 16px;
-  text-align: center; /* Centers the text perfectly */
-  box-sizing: border-box;
-  color: #5a4a3a;
-  outline: none;
-}
-
-/* Changes the placeholder text color */
-.custom-pill-input::placeholder {
-  color: #7a6a5a;
-}
-
-/* Adds a soft brown glow when typing */
-.custom-pill-input:focus {
-  box-shadow: 0 0 0 3px rgba(90, 74, 58, 0.2); 
-}
-
-/* 2. Pill-shaped Submit Button */
-.custom-pill-btn {
-  background-color: #5a4a3a !important; 
-  border: none !important;
-  color: white;
-  padding: 15px;
-  border-radius: 50px; /* Pill shape */
-  width: 75%; /* Makes the button slightly narrower than the inputs */
-  display: block;
-  margin: 0 auto; /* Centers the button */
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
-  margin-top: 15px;
-}
-
-.custom-pill-btn:hover {
-  background-color: #43362a !important; 
-}
-
-/* 3. The Sign Up Link */
-.signup-link-container {
-  text-align: center;
-  margin-top: 25px;
-}
-
-.signup-link {
-  color: #5a4a3a;
-  font-weight: bold;
-  text-decoration: none;
-  font-size: 15px;
-}
-
-.signup-link:hover {
-  text-decoration: underline;
-}
-/* --- OR DIVIDER --- */
-.divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  color: #7a6a5a;
-  margin: 20px auto;
-  width: 75%; /* Matches the button width */
-  font-size: 14px;
-  font-weight: bold;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 2px solid #5a4a3a; /* Matches your brand brown */
-  opacity: 0.15; /* Keeps it subtle */
-}
-
-.divider span {
-  padding: 0 15px; /* Space around the text */
-}
-
-/* --- GOOGLE BUTTON --- */
-.google-btn {
-  background-color: #ffffff !important; /* White background */
-  color: #5a4a3a !important; /* Brown text */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px; /* Space between the logo and text */
-}
-
-.google-btn:hover {
-  background-color: #fcfbf9 !important; /* Very subtle off-white on hover */
-}
-/* ========================================= */
-/* --- PROFILE DASHBOARD LAYOUT --- */
+/* --- LAYOUT & WRAPPER --- */
 /* ========================================= */
 
 .profile-wrapper {
-  display: flex;
-  max-width: 1100px;
-  margin: 40px auto;
-  gap: 30px;
-  padding: 0 20px;
-  align-items: flex-start;
-  /* Adjust this if your Navbar (191px) overlaps */
-  padding-top: 20px; 
+    display: flex;
+    max-width: 1100px;
+    margin: 40px auto;
+    gap: 30px;
+    padding: 20px;
+    align-items: flex-start;
 }
 
-/* LEFT SIDEBAR: User Card */
+/* ========================================= */
+/* --- SIDEBAR: USER CARD --- */
+/* ========================================= */
+
 .profile-sidebar {
-  flex: 1;
-  background-color: #D2C9B8; /* Matching your brand beige */
-  padding: 40px 20px;
-  border-radius: 30px;
-  text-align: center;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+    flex: 1;
+    background-color: #D2C9B8; /* Brand Beige */
+    padding: 40px 20px;
+    border-radius: 30px;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 20px;
 }
 
 .avatar-circle {
-  width: 90px;
-  height: 90px;
-  background-color: #5a4a3a; /* Brand Brown */
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.5rem;
-  margin: 0 auto 20px;
+    width: 90px;
+    height: 90px;
+    background-color: #5a4a3a; /* Brand Brown */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    margin: 0 auto 20px;
+    border: 4px solid #f5efe1;
+}
+
+.profile-welcome {
+    font-weight: 700;
+    color: #5a4a3a;
+    margin-bottom: 25px;
 }
 
 .logout-btn-minimal {
-  background: transparent;
-  border: 1.5px solid #5a4a3a;
-  color: #5a4a3a;
-  padding: 8px 25px;
-  border-radius: 50px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s ease;
+    background: white;
+    border: none;
+    color: #dc3545; /* Red for Logout */
+    padding: 10px 30px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
 .logout-btn-minimal:hover {
-  background: #5a4a3a;
-  color: white;
+    background: #dc3545;
+    color: white;
 }
 
-/* RIGHT CONTENT: Cards */
+/* ========================================= */
+/* --- CONTENT AREA & CARDS --- */
+/* ========================================= */
+
 .profile-content {
-  flex: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
 }
 
 .profile-section-card {
-  background: white;
-  padding: 30px;
-  border-radius: 25px;
-  border: 1px solid #e0d7cf;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    background: white;
+    padding: 35px;
+    border-radius: 25px;
+    border: 1px solid #e0d7cf;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
 }
 
 .mini-divider {
-  border: 0;
-  border-top: 1px solid #eee;
-  margin: 15px 0;
+    border: 0;
+    border-top: 1px solid #eee;
+    margin: 15px 0;
+}
+
+/* ========================================= */
+/* --- ADDRESS MANAGEMENT & PILL FORM --- */
+/* ========================================= */
+
+.add-address-container {
+    background: #fdfbf7;
+    padding: 25px;
+    border-radius: 25px;
+    border: 2px dashed #D2C9B8;
+}
+
+.form-title {
+    text-align: center;
+    color: #5a4a3a;
+    margin-bottom: 20px;
+    font-weight: 700;
+}
+
+/* Reusing your custom pill inputs from the Login/Sign-up logic */
+.custom-pill-input {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #ece4d5;
+    border-radius: 50px;
+    font-size: 16px;
+    text-align: center;
+    box-sizing: border-box;
+    color: #5a4a3a;
+    outline: none;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.custom-pill-input:focus {
+    box-shadow: 0 0 0 3px rgba(90, 74, 58, 0.1);
+    border-color: #5a4a3a;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.profile-form-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.btn-save-address {
+    background-color: #5a4a3a;
+    color: white;
+    border: none;
+    padding: 12px 35px;
+    border-radius: 50px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-cancel-minimal {
+    background: #f5efe1;
+    border: none;
+    color: #5a4a3a;
+    padding: 12px 25px;
+    border-radius: 50px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* ========================================= */
+/* --- ADDRESS DISPLAY LIST --- */
+/* ========================================= */
+
+.address-item-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: #fdfaf5;
+    border-radius: 20px;
+    border: 1px solid #f0ece4;
+    margin-bottom: 15px;
+    transition: transform 0.2s ease;
+}
+
+.address-item-display:hover {
+    transform: translateY(-3px);
+    border-color: #D2C9B8;
+}
+
+.address-info strong {
+    color: #5a4a3a;
+    font-size: 1.1rem;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.address-info p {
+    margin: 2px 0;
+    color: #7a6a5a;
+    font-size: 0.95rem;
+}
+
+.addr-phone {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #a09080;
+}
+
+.address-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: right;
+}
+
+.action-link {
+    background: transparent;
+    border: none;
+    font-weight: bold;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.action-link.edit { color: #5a4a3a; }
+.action-link.delete { color: #dc3545; }
+.action-link:hover { text-decoration: underline; }
+
+.edit-toggle-btn {
+    background: #5a4a3a;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 /* ========================================= */
 /* --- PURCHASE HISTORY ROWS --- */
 /* ========================================= */
 
-.order-history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
 .history-item-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  background: #fdfaf5; /* Subtle cream highlight */
-  border-radius: 15px;
-  border: 1px solid #f0ece4;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: #fdfaf5;
+    border-radius: 20px;
+    border: 1px solid #f0ece4;
+    transition: transform 0.2s ease;
+    margin-bottom: 12px;
 }
 
 .history-item-row:hover {
-  transform: translateX(5px);
-  border-color: #D2C9B8;
+    transform: translateX(5px);
+    border-color: #D2C9B8;
 }
 
 .order-number {
-  font-size: 0.75rem;
-  color: #a09080;
-  font-weight: bold;
-  display: block;
+    font-size: 0.75rem;
+    color: #a09080;
+    font-weight: bold;
+    display: block;
 }
 
 .order-product-name {
-  margin: 4px 0;
-  font-weight: 600;
-  color: #5a4a3a;
-  font-size: 1.05rem;
+    margin: 4px 0;
+    font-weight: 600;
+    color: #5a4a3a;
+    font-size: 1.05rem;
 }
 
 .order-timestamp {
-  font-size: 0.8rem;
-  color: #8c7b6d;
-}
-
-.order-info-right {
-  text-align: right;
+    font-size: 0.8rem;
+    color: #8c7b6d;
 }
 
 .order-price-tag {
-  font-weight: bold;
-  color: #5a4a3a;
-  margin-bottom: 8px;
-  font-size: 1.1rem;
+    font-weight: bold;
+    color: #5a4a3a;
+    margin-bottom: 8px;
+    font-size: 1.1rem;
 }
 
-/* Status Badges */
 .status-badge {
-  font-size: 0.7rem;
-  padding: 4px 12px;
-  border-radius: 50px;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+    font-size: 0.7rem;
+    padding: 6px 15px;
+    border-radius: 50px;
+    font-weight: bold;
+    text-transform: uppercase;
 }
 
-.status-badge.delivered {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.status-badge.shipped {
-  background-color: #e3f2fd;
-  color: #1565c0;
-}
+.status-badge.delivered { background-color: #e8f5e9; color: #2e7d32; }
+.status-badge.shipped { background-color: #e3f2fd; color: #1565c0; }
 
 /* ========================================= */
-/* --- ADDRESS SECTION --- */
-/* ========================================= */
-
-.address-display {
-  color: #7a6a5a;
-  line-height: 1.6;
-}
-
-.address-textarea {
-  width: 100%;
-  height: 80px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1.5px solid #D2C9B8;
-  font-family: inherit;
-  outline: none;
-}
-
-.edit-toggle-btn {
-  background: #f5efe1;
-  border: none;
-  color: #5a4a3a;
-  padding: 6px 16px;
-  border-radius: 12px;
-  font-weight: bold;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
 /* --- MOBILE RESPONSIVE --- */
+/* ========================================= */
+
 @media (max-width: 850px) {
-  .profile-wrapper {
-    flex-direction: column;
-    margin: 20px auto;
-  }
-  .profile-sidebar, .profile-content {
-    width: 100%;
-  }
+    .profile-wrapper {
+        flex-direction: column;
+    }
+    .profile-sidebar, .profile-content {
+        width: 100%;
+    }
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
 }
