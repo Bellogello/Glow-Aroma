@@ -135,13 +135,37 @@ app.get('/addresses/:userId', (req, res) => {
     });
 });
 
-app.post('/addresses/:userId', (req, res) => {
-    const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
-    const sql = `INSERT INTO user_addresses (user_id, full_name, phone, governorate, area, street, building, floor_apt, notes) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.query(sql, [req.params.userId, fullName, phone, governorate, area, street, building, floorApt, notes], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ message: 'Saved', id: result.insertId });
+app.post('/checkout', (req, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(401).json({ error: 'User ID required' });
+
+    // 1. Find the user's cart ID
+    db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
+        if (err || cartResults.length === 0) return res.status(400).json({ error: 'Cart empty' });
+        const cartId = cartResults[0].id;
+
+        // 2. Insert into Orders table (simplified version of your logic)
+        const orderSql = 'INSERT INTO orders (user_id, total, status_id) VALUES (?, 0, 1)';
+        db.query(orderSql, [userId], (err, orderResult) => {
+            if (err) return res.status(500).json({ error: 'Failed to create order' });
+            
+            const newOrderId = orderResult.insertId;
+
+            // --- THE FIX: CLEAR THE CART ---
+            // After the order is created, we delete all items linked to this cart ID
+            db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], (deleteErr) => {
+                if (deleteErr) {
+                    console.error("Cart clear error:", deleteErr);
+                    // We don't return 500 here because the order WAS placed successfully
+                }
+                
+                // Return success and the new Order ID to the frontend
+                res.status(201).json({ 
+                    message: 'Order placed and cart cleared', 
+                    orderId: newOrderId 
+                });
+            });
+        });
     });
 });
 
