@@ -22,6 +22,10 @@ if (!fs.existsSync('./uploads')) {
 }
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+app.use(cors({
+  origin: 'http://localhost:5173', 
+  credentials: true
+}));
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/'); 
@@ -46,8 +50,7 @@ const db = mysql.createConnection({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 3306,
-  database: process.env.DB_NAME,
-  connectTimeout: 10000 
+  database: process.env.DB_NAME
 });
 
 db.connect((err) => {
