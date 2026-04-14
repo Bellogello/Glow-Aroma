@@ -175,9 +175,13 @@ app.get('/mold-shapes', (req, res) => {
 // ==========================================
 
 app.get('/products', (req, res) => {
-  db.query('SELECT * FROM prebuilt_candles ORDER BY id DESC', (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
+  const query = "SELECT * FROM prebuilt_candles WHERE is_active = TRUE";
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Query Error:", err);
+      return res.status(500).json({ error: "Database query failed" });
+    }
+    res.json(results); // This MUST be called to prevent a 502 timeout
   });
 });
 
