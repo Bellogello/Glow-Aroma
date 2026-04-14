@@ -49,21 +49,19 @@ const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   port: process.env.DB_PORT || 3306,
-  database: process.env.DB_NAME
+  ssl: {
+    rejectUnauthorized: false // CRITICAL: This stops the SSL crash
+  }
 });
 
 db.connect((err) => {
   if (err) {
-    console.error('❌ DATABASE CONNECTION ERROR:', {
-      message: err.message,
-      code: err.code,
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT
-    });
-    return;
+    console.error("❌ DATABASE CONNECTION ERROR:", err.message);
+  } else {
+    console.log("✅ DATABASE CONNECTED SUCCESSFULLY");
   }
-  console.log(`✅ SUCCESS: Connected to database: ${process.env.DB_NAME}`);
 });
 
 // ==========================================
@@ -1114,7 +1112,7 @@ app.post('/paymob/callback', async (req, res) => {
 // --- START SERVER ---
 // ==========================================
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
