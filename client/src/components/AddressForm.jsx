@@ -2,9 +2,39 @@ import React from 'react';
 import '../styles/AddressForm.css';
 
 const egyptLocations = {
-  "Cairo": ["Nasr City", "Maadi", "Heliopolis", "New Cairo (Tagamoa)", "Zamalek", "Downtown", "Madinaty", "Shorouk", "Rehab", "Shoubra", "Mokattam", "Other"],
-  "Giza": ["6th of October", "Sheikh Zayed", "Mohandeseen", "Dokki", "Agouza", "Haram", "Faisal", "Imbaba", "Other"],
-  "Alexandria": ["Smouha", "Sidi Gaber", "Miami", "Gleem", "Loran", "Camp Caesar", "Agami", "Borg El Arab", "Other"],
+  "Cairo": [
+    "New Cairo", "Nasr City", "Maadi", "Heliopolis", "Downtown", 
+    "Zamalek", "Garden City", "Shoubra", "Ain Shams", "Mokattam", 
+    "Basateen", "Helwan", "Madinaty", "Shorouk", "Rehab", 
+    "Obour City", "Badr City", "El Marg", "Matareya"
+  ],
+  "Giza": [
+    "6th of October City", "Sheikh Zayed", "Haram", "Faisal", 
+    "Dokki", "Mohandeseen", "Agouza", "Imbaba", "Hadayek Al Ahram", 
+    "Muneera", "Smart Village", "Badrasheen", "Hawamdia"
+  ],
+  "Alexandria": [
+    "Smouha", "Sidi Gaber", "Miami", "Gleem", "Loran", "Camp Caesar", 
+    "Agami", "Borg El Arab", "Montaza", "Abu Qir", "Mandara", 
+    "Kafr Abdou", "Roushdy"
+  ],
+  "Qalyubia": ["Banha", "Shubra El Kheima", "Obour", "Qalyub", "Khanka"],
+  "Dakahlia": ["Mansoura", "Talkha", "Mit Ghamr", "Dekernes"],
+  "Sharkia": ["Zagazig", "10th of Ramadan City", "Bilbeis", "Faqus"],
+  "Gharbia": ["Tanta", "Kafr El Zayat", "Mahalla El Kubra", "Zefta"],
+  "Monufia": ["Shibin El Kom", "Menouf", "Ashmoun", "Quwaysna"],
+  "Beheira": ["Damanhour", "Kafr El Dawar", "Rashid", "Kom Hamada"],
+  "Ismailia": ["Ismailia City", "Fayed", "Qantara"],
+  "Port Said": ["Port Said City", "Port Fouad"],
+  "Suez": ["Suez City", "Ain Sokhna"],
+  "Fayoum": ["Fayoum City", "Tamiya", "Senouris"],
+  "Beni Suef": ["Beni Suef City", "Nasser", "Wasta"],
+  "Minya": ["Minya City", "Malawi", "Maghagha"],
+  "Assiut": ["Assiut City", "Dayrout", "Manfalut"],
+  "Sohag": ["Sohag City", "Akhmim", "Tahta"],
+  "Qena": ["Qena City", "Luxor", "Nag Hammadi"], // Often grouped for shipping
+  "Red Sea": ["Hurghada", "Gouna", "Safaga", "Marsa Alam"],
+  "Matrouh": ["Marsa Matrouh", "North Coast (Sahel)"],
   "Other": ["Other Area"]
 };
 
@@ -61,9 +91,9 @@ const AddressForm = ({ formData, onChange }) => {
               onChange={onChange}
             >
               <option value="">Select Governorate...</option>
-              {Object.keys(egyptLocations).map(gov => (
-                <option key={gov} value={gov}>{gov}</option>
-              ))}
+              {Object.keys(egyptLocations).sort().map(gov => (
+              <option key={gov} value={gov}>{gov}</option>
+            ))}
             </select>
           </div>
           
