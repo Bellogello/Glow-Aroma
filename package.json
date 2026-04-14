@@ -4,6 +4,7 @@
   "description": "this is my first repo, trying to figure things out ..",
   "main": "index.js",
   "scripts": {
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,15 +22,16 @@
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "axios": "^1.15.0",
     "bcrypt": "^6.0.0",
     "bootstrap": "^5.3.8",
     "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.577.0",
     "multer": "^2.1.1",
-    "mysql2": "^3.18.1",
+    "mysql2": "^3.22.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "three": "^0.183.2",
