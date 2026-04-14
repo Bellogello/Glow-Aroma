@@ -437,20 +437,22 @@ app.post('/checkout', (req, res) => {
                 return res.status(400).json({ error: "No items received from frontend" });
             }
 
-            // 4. Map items safely
+            // 4. Map items safely (ADDED details mapping here)
             const values = items.map(i => [
                 orderId, 
                 i.is_custom ? 'custom' : 'prebuilt', 
                 i.name || 'Candle', 
                 parseFloat(i.price) || 0, 
-                parseInt(i.quantity, 10) || 1
+                parseInt(i.quantity, 10) || 1,
+                i.details || i.color_info || 'Standard Pre-built' // <--- FALLBACK ADDED HERE
             ]);
 
-            // 5. Insert Items (WITH HARD STOP ON ERROR)
-            db.query('INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity) VALUES ?', [values], (itemErr) => {
+            // 5. Insert Items (ADDED the `details` column to the query)
+            const sql = 'INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity, details) VALUES ?';
+            
+            db.query(sql, [values], (itemErr) => {
                 if (itemErr) {
                     console.error("🚨 DB REJECTED ITEMS INSERT:", itemErr.message);
-                    // This sends the EXACT SQL error to your browser's Network tab!
                     return res.status(500).json({ error: "DB Error on Items: " + itemErr.message });
                 }
                 

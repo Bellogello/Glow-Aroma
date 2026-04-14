@@ -60,7 +60,7 @@ const Checkout = () => {
     setShippingDetails({ ...shippingDetails, [e.target.name]: e.target.value });
   };
 
-  const handlePlaceOrder = async (e) => {
+const handlePlaceOrder = async (e) => {
     if (e) e.preventDefault();
     const userId = localStorage.getItem("userId");
     
@@ -71,6 +71,9 @@ const Checkout = () => {
     try {
       let finalDetails = {};
       let currentOrderId = pendingOrderId; 
+
+      // Calculate total here so it's ready for the database
+      const calculatedTotal = cartItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
 
       // 3. Resolve Address & Create Order (Using API_BASE_URL)
       if (!currentOrderId) {
@@ -95,11 +98,19 @@ const Checkout = () => {
           };
         }
 
+        // --- THE FIX IS HERE ---
         const orderRes = await fetch(`${API_BASE_URL}/checkout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, shippingDetails: finalDetails, paymentMethod })
+          body: JSON.stringify({ 
+            userId, 
+            shippingDetails: finalDetails, 
+            paymentMethod,
+            total: calculatedTotal, // <--- NOW WE SEND THE TOTAL
+            items: cartItems        // <--- NOW WE SEND THE ITEMS
+          })
         });
+        
         const orderData = await orderRes.json();
 
         if (!orderRes.ok) throw new Error(orderData.error);
@@ -111,10 +122,8 @@ const Checkout = () => {
         }
       }
 
-      // 4. Handle Paymob Initiation (Using API_BASE_URL)
+      // 4. Handle Paymob Initiation
       if (paymentMethod === 'online') {
-        const orderTotal = cartItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
-        
         const pmRes = await fetch(`${API_BASE_URL}/paymob/initiate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -122,7 +131,7 @@ const Checkout = () => {
             userId,
             shippingDetails: finalDetails, 
             orderId: currentOrderId,      
-            amountCents: Math.round(orderTotal * 100),
+            amountCents: Math.round(calculatedTotal * 100),
             items: cartItems.map(i => ({ name: i.name, amount_cents: Math.round(i.price * 100), quantity: i.quantity }))
           })
         });
