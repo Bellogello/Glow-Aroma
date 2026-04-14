@@ -66,7 +66,7 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, r
     controls.update();
 
     const finalModelUrl = modelUrl
-      ? (modelUrl.startsWith('http') ? modelUrl : `http://localhost:5000${modelUrl}`)
+      ? (modelUrl.startsWith('http') ? modelUrl : `${import.meta.env.VITE_API_URL}${modelUrl}`)
       : '/candle.glb';
 
     const loader = new GLTFLoader();

@@ -31,32 +31,32 @@ const Create = () => {
   const [moldLayers, setMoldLayers] = useState([]); 
 
   useEffect(() => {
-    fetch('http://localhost:5000/scents')
+    fetch(`${import.meta.env.VITE_API_URL}/scents`)
       .then(res => res.json())
       .then(data => setScents(data))
       .catch(err => console.error("Error fetching scents:", err));
 
-    fetch('http://localhost:5000/colors')
+    fetch(`${import.meta.env.VITE_API_URL}/colors`)
       .then(res => res.json())
       .then(data => setColors(data))
       .catch(err => console.error("Error fetching colors:", err));
 
-    fetch('http://localhost:5000/cup-shapes')
+    fetch(`${import.meta.env.VITE_API_URL}/cup-shapes`)
       .then(res => res.json())
       .then(data => setCupShapes(data))
       .catch(err => console.error("Error fetching cup shapes:", err));
 
-    fetch('http://localhost:5000/cup-sizes')
+    fetch(`${import.meta.env.VITE_API_URL}/cup-sizes`)
       .then(res => res.json())
       .then(data => setCupSizes(data))
       .catch(err => console.error("Error fetching cup sizes:", err));
 
-    fetch('http://localhost:5000/cup-colors')
+    fetch(`${import.meta.env.VITE_API_URL}/cup-colors`)
       .then(res => res.json())
       .then(data => setCupColors(data))
       .catch(err => console.error("Error fetching cup colors:", err));
 
-    fetch('http://localhost:5000/mold-shapes')
+    fetch(`${import.meta.env.VITE_API_URL}/mold-shapes`)
       .then(res => res.json())
       .then(data => setMoldShapes(data))
       .catch(err => console.error("Error fetching mold shapes:", err));
@@ -133,7 +133,7 @@ const Create = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/cart/add', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/cart/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

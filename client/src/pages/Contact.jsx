@@ -22,7 +22,7 @@ const Contact = () => {
     const userId = localStorage.getItem("userId");
     
     if (userId) {
-      fetch(`http://localhost:5000/users/${userId}`)
+      fetch(`${import.meta.env.VITE_API_URL}/users/${userId}`)
         .then(res => res.json())
         .then(data => {
           if (!data.error) {
@@ -48,7 +48,7 @@ const Contact = () => {
     setFeedback({ type: '', text: '' });
 
     try {
-      const response = await fetch('http://localhost:5000/messages', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

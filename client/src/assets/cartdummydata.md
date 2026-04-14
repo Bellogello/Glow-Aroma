@@ -46,7 +46,7 @@ const Cart = () => {
       return; 
     }
 
-    fetch(`http://localhost:5000/api/cart/${userId}`)
+    fetch(`${import.meta.env.VITE_API_URL}/api/cart/${userId}`)
       .then(res => res.json())
       .then(data => {
         if (data.error) {

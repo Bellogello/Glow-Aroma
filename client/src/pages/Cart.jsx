@@ -19,7 +19,7 @@ const Cart = () => {
       return; 
     }
 
-    fetch(`http://localhost:5000/cart/${userId}`)
+    fetch(`${import.meta.env.VITE_API_URL}/cart/${userId}`)
       .then(res => res.json())
       .then(data => {
         if (data.error) {
@@ -39,7 +39,7 @@ const Cart = () => {
 
   const handleQuantityChange = async (cartItemId, action) => {
     try {
-      const response = await fetch(`http://localhost:5000/cart/update/${cartItemId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/cart/update/${cartItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
@@ -64,7 +64,7 @@ const Cart = () => {
 
   const handleRemove = async (cartItemId) => {
     try {
-      const response = await fetch(`http://localhost:5000/cart/remove/${cartItemId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/cart/remove/${cartItemId}`, {
         method: 'DELETE',
       });
 
@@ -134,7 +134,7 @@ const Cart = () => {
                 ) : (
                     item.image && (
                       <img
-                        src={item.image.startsWith('http') ? item.image : `http://localhost:5000${item.image}`}
+                        src={item.image.startsWith('http') ? item.image : `${import.meta.env.VITE_API_URL}${item.image}`}
                         alt={item.name}
                       />
                     )

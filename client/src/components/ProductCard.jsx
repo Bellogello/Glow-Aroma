@@ -30,7 +30,7 @@ const ProductCard = ({ product }) => {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/cart/add', { 
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/cart/add`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -53,7 +53,7 @@ const ProductCard = ({ product }) => {
   if (!product) return null;
 
   const displayImage = product.image_url 
-    ? (product.image_url.startsWith('http') ? product.image_url : `http://localhost:5000${product.image_url}`)
+    ? (product.image_url.startsWith('http') ? product.image_url : `${import.meta.env.VITE_API_URL}${product.image_url}`)
     : FallbackCandle;
 
   return (

@@ -38,9 +38,9 @@ const Checkout = () => {
 
     // Load initial data
     Promise.all([
-      fetch(`http://localhost:5000/cart/${userId}`).then(res => res.json()),
-      fetch(`http://localhost:5000/users/${userId}`).then(res => res.json()),
-      fetch(`http://localhost:5000/addresses/${userId}`).then(res => res.json())
+      fetch(`${import.meta.env.VITE_API_URL}/cart/${userId}`).then(res => res.json()),
+      fetch(`${import.meta.env.VITE_API_URL}/users/${userId}`).then(res => res.json()),
+      fetch(`${import.meta.env.VITE_API_URL}/addresses/${userId}`).then(res => res.json())
     ]).then(([cart, user, addresses]) => {
       if (!cart.error) setCartItems(cart);
       if (!user.error) setShippingDetails(prev => ({ ...prev, fullName: user.name, phone: user.phone || '' }));
@@ -74,7 +74,7 @@ const Checkout = () => {
       // 1. Resolve Address & Create Order (Only if we haven't created it yet)
       if (!currentOrderId) {
         if (selectedAddressId === 'new') {
-          const addrRes = await fetch(`http://localhost:5000/addresses/${userId}`, {
+          const addrRes = await fetch(`${import.meta.env.VITE_API_URL}/addresses/${userId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(shippingDetails)
@@ -95,7 +95,7 @@ const Checkout = () => {
         }
 
         // Create Order in Backend (Database)
-        const orderRes = await fetch('http://localhost:5000/checkout', {
+        const orderRes = await fetch(`${import.meta.env.VITE_API_URL}/checkout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, shippingDetails: finalDetails, paymentMethod })
@@ -116,7 +116,7 @@ const Checkout = () => {
       if (paymentMethod === 'online') {
         const orderTotal = cartItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
         
-        const pmRes = await fetch('http://localhost:5000/paymob/initiate', {
+        const pmRes = await fetch(`${import.meta.env.VITE_API_URL}/paymob/initiate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

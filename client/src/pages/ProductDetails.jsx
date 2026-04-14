@@ -29,7 +29,7 @@ const ProductDetails = () => {
     const fetchProductAndCart = async () => {
       try {
         // 2. Get the product
-        const prodRes = await fetch(`http://localhost:5000/products/${id}`);
+        const prodRes = await fetch(`${import.meta.env.VITE_API_URL}/products/${id}`);
         if (!prodRes.ok) throw new Error("Product not found");
         const prodData = await prodRes.json();
         setProduct(prodData);
@@ -37,7 +37,7 @@ const ProductDetails = () => {
         // 3. Check the user's cart
         const userId = localStorage.getItem("userId");
         if (userId) {
-          const cartRes = await fetch(`http://localhost:5000/cart/${userId}`);
+          const cartRes = await fetch(`${import.meta.env.VITE_API_URL}/cart/${userId}`);
           const cartData = await cartRes.json();
           
           // 4. Add our armor: Check if it's an array to prevent crashes!
@@ -77,7 +77,7 @@ const ProductDetails = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/cart/add', { 
+      const response = await fetch('${import.meta.env.VITE_API_URL}/cart/add', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -102,7 +102,7 @@ const ProductDetails = () => {
   if (!product) return <div className="home-container"><Navbar /><div className="loading-state"><h2>Product not found.</h2></div><Footer /></div>;
 
   const displayImage = product.image_url 
-    ? (product.image_url.startsWith('http') ? product.image_url : `http://localhost:5000${product.image_url}`)
+    ? (product.image_url.startsWith('http') ? product.image_url : `${import.meta.env.VITE_API_URL}${product.image_url}`)
     : FallbackCandle;
 
   // THE MATH: Calculate exactly how many they are allowed to buy

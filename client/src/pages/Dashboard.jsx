@@ -67,11 +67,11 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const [prodRes, orderRes, staffRes, discountRes, msgRes] = await Promise.all([
-        fetch('http://localhost:5000/products'),
-        fetch('http://localhost:5000/admin/orders'),
-        fetch('http://localhost:5000/admin/staff'),
-        fetch('http://localhost:5000/admin/discount-codes'),
-        fetch('http://localhost:5000/admin/messages'),
+        fetch('${import.meta.env.VITE_API_URL}/products'),
+        fetch('${import.meta.env.VITE_API_URL}/admin/orders'),
+        fetch('${import.meta.env.VITE_API_URL}/admin/staff'),
+        fetch('${import.meta.env.VITE_API_URL}/admin/discount-codes'),
+        fetch('${import.meta.env.VITE_API_URL}/admin/messages'),
       ]);
       
       const [prodData, orderData, staffData, discountData, msgData] = await Promise.all([
@@ -101,7 +101,7 @@ const Dashboard = () => {
   const handleAddStaff = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      const res = await fetch('http://localhost:5000/admin/add-staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(staffForm) });
+      const res = await fetch('${import.meta.env.VITE_API_URL}/admin/add-staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(staffForm) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add staff member.');
       setDialogSuccess('Staff member added successfully!');
@@ -112,7 +112,7 @@ const Dashboard = () => {
   const handleRemoveStaff = async (memberId) => {
     if (!window.confirm('Are you sure you want to remove this admin?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/admin/staff/${memberId}`, { method: 'DELETE' });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/staff/${memberId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to remove staff member.');
       setStaff((prev) => prev.filter((m) => m.id !== memberId));
@@ -133,7 +133,7 @@ const Dashboard = () => {
     if (productForm.image) formData.append('image', productForm.image);
 
     try {
-      const res = await fetch('http://localhost:5000/admin/products', { method: 'POST', body: formData });
+      const res = await fetch('${import.meta.env.VITE_API_URL}/admin/products', { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add product.');
       setDialogSuccess('Product added successfully!');
@@ -158,7 +158,7 @@ const Dashboard = () => {
     if (editProductForm.image) formData.append('image', editProductForm.image);
 
     try {
-      const res = await fetch(`http://localhost:5000/admin/products/${editProductForm.id}`, { method: 'PUT', body: formData });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/products/${editProductForm.id}`, { method: 'PUT', body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update product.');
       setDialogSuccess('Product updated successfully!');
@@ -169,7 +169,7 @@ const Dashboard = () => {
   const handleDeleteProduct = async (id) => {
     if (!window.confirm('Are you sure you want to completely remove this product?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/admin/products/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/products/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to delete product.');
       setProducts((prev) => prev.filter((p) => p.id !== id));
@@ -188,7 +188,7 @@ const Dashboard = () => {
     setShowOrderDialog(true); 
 
     try {
-      const res = await fetch(`http://localhost:5000/admin/orders/${order.id}/items`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/orders/${order.id}/items`);
       const data = await res.json();
       if (!data.error) setSelectedOrderItems(data);
     } catch (err) {
@@ -203,7 +203,7 @@ const Dashboard = () => {
     setDialogSuccess('');
     
     try {
-      const res = await fetch(`http://localhost:5000/admin/orders/${selectedOrder.id}/status`, { 
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/orders/${selectedOrder.id}/status`, { 
         method: 'PUT', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ status_id: Number(newStatusId) }) 
@@ -230,7 +230,7 @@ const Dashboard = () => {
   const handleDeleteAccount = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError('');
     try {
-      const res = await fetch(`http://localhost:5000/admin/delete-account`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, password: deletePassword }) });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/delete-account`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, password: deletePassword }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.message || 'Failed to delete account.');
       alert('Account successfully deleted. You will now be logged out.');
@@ -252,7 +252,7 @@ const Dashboard = () => {
     if (!code.trim() || !discount_value) { setDialogError('Code and discount value are required.'); return; }
     setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      const res = await fetch('http://localhost:5000/admin/discount-codes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim().toUpperCase(), discount_type, discount_value: Number(discount_value), min_order_amount: min_order_amount ? Number(min_order_amount) : null, max_order_amount: max_order_amount ? Number(max_order_amount) : null, max_uses: max_uses ? Number(max_uses) : null, expires_at: expires_at || null }) });
+      const res = await fetch('${import.meta.env.VITE_API_URL}/admin/discount-codes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim().toUpperCase(), discount_type, discount_value: Number(discount_value), min_order_amount: min_order_amount ? Number(min_order_amount) : null, max_order_amount: max_order_amount ? Number(max_order_amount) : null, max_uses: max_uses ? Number(max_uses) : null, expires_at: expires_at || null }) });
       if (!res.ok) throw new Error('Failed to create discount code.');
       setDialogSuccess('Discount code created successfully!');
       fetchDashboardData();
@@ -261,21 +261,21 @@ const Dashboard = () => {
   };
   const handleToggleDiscount = async (id, currentActive) => {
     try {
-      await fetch(`http://localhost:5000/admin/discount-codes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !currentActive }) });
+      await fetch(`${import.meta.env.VITE_API_URL}/admin/discount-codes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !currentActive }) });
       fetchDashboardData();
     } catch (err) { console.error(err.message); }
   };
   const handleDeleteDiscount = async (id) => {
     if (!window.confirm('Delete this code permanently?')) return;
     try {
-      await fetch(`http://localhost:5000/admin/discount-codes/${id}`, { method: 'DELETE' });
+      await fetch(`${import.meta.env.VITE_API_URL}/admin/discount-codes/${id}`, { method: 'DELETE' });
       fetchDashboardData();
     } catch (err) { console.error(err.message); }
   };
   const handleDeleteMessage = async (id) => {
     if (!window.confirm('Delete this message permanently?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/admin/messages/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/messages/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setMessages((prev) => prev.filter((m) => m.id !== id));
         setShowViewMessageDialog(false);
@@ -338,7 +338,7 @@ const Dashboard = () => {
                           <td>{product.id}</td>
                           <td>
                             {product.image_url && (
-                              <img src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:5000${product.image_url}`} alt={product.name} style={{width: '30px', height: '30px', objectFit: 'cover', borderRadius: '4px', marginRight: '10px'}} />
+                              <img src={product.image_url.startsWith('http') ? product.image_url : `${import.meta.env.VITE_API_URL}${product.image_url}`} alt={product.name} style={{width: '30px', height: '30px', objectFit: 'cover', borderRadius: '4px', marginRight: '10px'}} />
                             )}
                             <strong>{product.name}</strong>
                           </td>
