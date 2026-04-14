@@ -420,45 +420,45 @@ app.get('/admin/messages', (req, res) => {
 
 app.post('/checkout', (req, res) => {
     const { userId, total, items } = req.body;
-    
-    // 1. Force total to be a clean number (strips out "L.E." or currency symbols if the frontend sent them)
     const numericTotal = parseFloat(total) || 0;
 
+    // 1. Get Cart
     db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
         if (err || cartResults.length === 0) return res.status(400).json({ error: 'Empty Cart' });
         const cartId = cartResults[0].id;
 
-        // 2. Insert using the cleaned numeric total
+        // 2. Create the Order
         db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, numericTotal], (err, result) => {
-            if (err) {
-                // This logs the EXACT reason MySQL failed to your Railway terminal
-                console.error("🚨 DB REJECTED ORDER INSERT:", err.message); 
-                return res.status(500).json({ error: 'Order Creation Failed' });
-            }
+            if (err) return res.status(500).json({ error: 'Order Creation Failed: ' + err.message });
             const orderId = result.insertId;
 
-            if (items && items.length > 0) {
-                // 3. Clean the item prices and quantities just to be safe
-                const values = items.map(i => [
-                    orderId, 
-                    i.is_custom ? 'custom' : 'prebuilt', 
-                    i.name, 
-                    parseFloat(i.price) || 0, 
-                    parseInt(i.quantity, 10) || 1
-                ]);
-                
-                db.query('INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity) VALUES ?', [values], (itemErr) => {
-                    if (itemErr) console.error("🚨 DB REJECTED ITEMS INSERT:", itemErr.message);
-                    
-                    db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], () => {
-                        res.status(201).json({ message: 'Order Placed', orderId });
-                    });
-                });
-            } else {
-                db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], () => {
-                    res.status(201).json({ message: 'Order Placed', orderId });
-                });
+            // 3. Verify Frontend sent items
+            if (!items || items.length === 0) {
+                return res.status(400).json({ error: "No items received from frontend" });
             }
+
+            // 4. Map items safely
+            const values = items.map(i => [
+                orderId, 
+                i.is_custom ? 'custom' : 'prebuilt', 
+                i.name || 'Candle', 
+                parseFloat(i.price) || 0, 
+                parseInt(i.quantity, 10) || 1
+            ]);
+
+            // 5. Insert Items (WITH HARD STOP ON ERROR)
+            db.query('INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity) VALUES ?', [values], (itemErr) => {
+                if (itemErr) {
+                    console.error("🚨 DB REJECTED ITEMS INSERT:", itemErr.message);
+                    // This sends the EXACT SQL error to your browser's Network tab!
+                    return res.status(500).json({ error: "DB Error on Items: " + itemErr.message });
+                }
+                
+                // 6. Only clear cart IF items saved successfully
+                db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], () => {
+                    res.status(201).json({ message: 'Order Placed successfully', orderId });
+                });
+            });
         });
     });
 });
