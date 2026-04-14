@@ -409,45 +409,78 @@ app.get('/admin/messages', (req, res) => {
 });
 
 // ==========================================
-// --- CHECKOUT & PAYMENT CALLBACKS ---
+// --- FULL CHECKOUT LOGIC ---
 // ==========================================
 
 app.post('/checkout', (req, res) => {
-    const { userId, total } = req.body;
-    db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
-        if (err || cartResults.length === 0) return res.status(400).json({ error: 'Empty Cart' });
-        const cartId = cartResults[0].id;
+  const { userId, shippingDetails, paymentMethod } = req.body;
+  if (!userId) return res.status(401).json({ error: 'User ID required' });
 
-        db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, total], (err, result) => {
-            if (err) return res.status(500).json({ error: 'Order Creation Failed' });
-            const orderId = result.insertId;
+  // 1. Get the User's Cart
+  db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
+    if (err || cartResults.length === 0) return res.status(400).json({ error: 'Cart not found' });
+    const cartId = cartResults[0].id;
 
-            // --- CLEAR CART AFTER ORDER ---
-            db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], (delErr) => {
-                res.status(201).json({ message: 'Order Placed', orderId });
+    // 2. Fetch all items in the cart to calculate total and check stock
+    const cartItemsSql = `
+      SELECT ci.quantity, ci.prebuilt_candle_id, ci.custom_candle_id,
+             pc.price AS prebuilt_price, pc.name AS prebuilt_name, pc.stock_quantity,
+             cc.total_price AS custom_price, cc.type AS custom_type
+      FROM cart_items ci
+      LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
+      LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
+      WHERE ci.cart_id = ?`;
+
+    db.query(cartItemsSql, [cartId], (err, items) => {
+      if (err || items.length === 0) return res.status(400).json({ error: 'Cart is empty' });
+
+      // 3. Calculate Total and check stock for prebuilt candles
+      let orderTotal = 0;
+      for (let item of items) {
+        if (item.prebuilt_candle_id && item.quantity > item.stock_quantity) {
+          return res.status(400).json({ error: `Insufficient stock for ${item.prebuilt_name}` });
+        }
+        orderTotal += (item.prebuilt_price || item.custom_price || 0) * item.quantity;
+      }
+
+      // 4. Create the Order
+      const insertOrderSql = 'INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)';
+      db.query(insertOrderSql, [userId, orderTotal], (err, orderResult) => {
+        if (err) return res.status(500).json({ error: 'Failed to create order record' });
+        const newOrderId = orderResult.insertId;
+
+        // 5. Move items from Cart to Order Items (Bulk Insert)
+        const orderItemsValues = items.map(item => [
+          newOrderId,
+          item.prebuilt_candle_id ? 'prebuilt' : item.custom_type,
+          item.prebuilt_name || (item.custom_type === 'cup' ? 'Custom Cup' : 'Custom Mold'),
+          item.prebuilt_price || item.custom_price,
+          item.quantity
+        ]);
+
+        const insertItemsSql = 'INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity) VALUES ?';
+        db.query(insertItemsSql, [orderItemsValues], (err) => {
+          if (err) console.error("Order items move failed:", err);
+
+          // 6. Update Stock for prebuilt candles
+          items.forEach(item => {
+            if (item.prebuilt_candle_id) {
+              db.query('UPDATE prebuilt_candles SET stock_quantity = stock_quantity - ? WHERE id = ?', [item.quantity, item.prebuilt_candle_id]);
+            }
+          });
+
+          // 7. --- THE FIX: CLEAR THE CART ---
+          db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], (delErr) => {
+            res.status(201).json({ 
+              message: 'Order placed successfully and cart cleared', 
+              orderId: newOrderId 
             });
+          });
         });
+      });
     });
+  });
 });
-
-app.post('/paymob/initiate', async (req, res) => {
-    try {
-        const token = await paymobGetAuthToken();
-        const paymobId = await paymobRegisterOrder(token, req.body.amountCents, req.body.orderId, req.body.items);
-        const paymentToken = await paymobGetPaymentKey(token, paymobId, req.body.amountCents, req.body.shippingDetails);
-        res.json({ paymentToken, iframeId: process.env.PAYMOB_IFRAME_ID });
-    } catch (err) { res.status(500).json({ error: 'Payment Gate Failed' }); }
-});
-
-app.post('/paymob/callback', async (req, res) => {
-    const { hmac } = req.query;
-    const data = req.body?.obj;
-    if (data && paymobVerifyHmac(data, hmac) && data.success === true) {
-        db.query('UPDATE orders SET status_id = 2 WHERE id = ?', [data.order.merchant_order_id]);
-    }
-    res.sendStatus(200);
-});
-
 // ==========================================
 // --- SERVER ACTIVATION ---
 // ==========================================
