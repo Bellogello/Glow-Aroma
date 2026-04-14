@@ -46,7 +46,7 @@ const db = mysql.createConnection({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 3306,
-  database: 'glow_aroma_db',
+  database: process.env.DB_NAME || 'glow_aroma_db',
 });
 
 db.connect((err) => {
