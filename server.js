@@ -42,19 +42,25 @@ const SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 
 const db = mysql.createConnection({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 3306,
-  database: process.env.DB_NAME || 'glow_aroma_db',
+  database: process.env.DB_NAME,
+  connectTimeout: 10000 
 });
 
 db.connect((err) => {
   if (err) {
-    console.error('Error connecting to MariaDB:', err.message);
+    console.error('❌ DATABASE CONNECTION ERROR:', {
+      message: err.message,
+      code: err.code,
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT
+    });
     return;
   }
-  console.log('Connected to the glow_aroma_db database!');
+  console.log(`✅ SUCCESS: Connected to database: ${process.env.DB_NAME}`);
 });
 
 // ==========================================
