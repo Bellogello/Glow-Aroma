@@ -180,18 +180,21 @@ const Dashboard = () => {
   };
 
   // --- ORDER FUNCTIONS ---
- const handleOpenOrderDialog = async (order) => {
+const handleOpenOrderDialog = async (order) => {
   setSelectedOrder(order);
-  setOrderItems([]); // Clear old items
+  setNewStatusId(order.status_id.toString()); // Pre-fill the dropdown with current status
+  setSelectedOrderItems([]); // FIX: Changed from setOrderItems to setSelectedOrderItems
+  setShowOrderDialog(true); // FIX: Changed from setOrderDialogOpen to setShowOrderDialog
+
   try {
     const res = await fetch(`${API_BASE_URL}/admin/orders/${order.id}/items`);
-    if (!res.ok) throw new Error("Items not found"); // Stop if not 200 OK
+    if (!res.ok) throw new Error("Items not found");
     const data = await res.json();
-    setOrderItems(data);
+    
+    setSelectedOrderItems(data); // FIX: Changed from setOrderItems to setSelectedOrderItems
   } catch (err) {
     console.error("Failed to load order items:", err);
   }
-  setOrderDialogOpen(true);
 };
 
   const handleUpdateOrderStatus = async (e) => {

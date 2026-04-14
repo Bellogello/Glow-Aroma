@@ -357,14 +357,18 @@ app.delete('/cart/remove/:cartItemId', (req, res) => {
 // --- ADMIN DASHBOARD & STAFF ---
 // ==========================================
 
-app.get('/admin/orders', (req, res) => {
-    const sql = `
-        SELECT o.id, o.total, o.status_id, o.created_at, u.name AS customer_name 
-        FROM orders o 
-        JOIN users u ON o.user_id = u.id 
-        ORDER BY o.created_at DESC`;
-    db.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+app.get('/admin/orders/:id/items', (req, res) => {
+    const orderId = req.params.id;
+    // We select everything, but make sure the column names match 
+    // what the Dashboard.jsx loop expects.
+    const sql = `SELECT id, item_name, quantity, unit_price, item_type FROM order_items WHERE order_id = ?`;
+    
+    db.query(sql, [orderId], (err, results) => {
+        if (err) {
+            console.error("DB Error fetching items:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        console.log(`Found ${results.length} items for Order #${orderId}`);
         res.json(results);
     });
 });
