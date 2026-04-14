@@ -12,17 +12,11 @@ function AppNavbar() {
   const location = useLocation(); 
 
   useEffect(() => {
-    // 1. Auth & Role Check Logic
-    // In a real scenario, we check the roleId stored during sign-in
     const roleId = localStorage.getItem('roleId');
-    
-    // TEMPORARY: Keeping your override so you can test the Dashboard easily on Windows
-    // To go back to strict mode, change this to: setIsAdmin(roleId === '2' || roleId === '3');
-    setIsAdmin(true); 
-    
+    // roleId '2' = Admin, roleId '3' = Super Admin
+    setIsAdmin(roleId === '2' || roleId === '3');
   }, [location]);
 
-  // 2. Navigation Helper: Closes the mobile menu when a link is clicked
   const closeMenu = () => setExpanded(false);
 
   return (
@@ -37,13 +31,11 @@ function AppNavbar() {
         <Navbar.Brand as={Link} to="/" onClick={closeMenu}>
           <img src={logo} alt="Glow Aroma Logo" className="logo" />
         </Navbar.Brand>
-
         <Navbar.Toggle aria-controls="responsive-navbar-nav" />
-
         <Navbar.Collapse id="responsive-navbar-nav">
           <Nav className="ms-auto align-items-center">
             
-            {/* 3. Conditional Admin Link */}
+            {/* Only visible to Admin (2) and Super Admin (3) */}
             {isAdmin && (
               <Nav.Link 
                 as={Link} 
@@ -59,7 +51,6 @@ function AppNavbar() {
             <Nav.Link as={Link} to="/contact" onClick={closeMenu}>Contact</Nav.Link>
             <Nav.Link as={Link} to="/products" onClick={closeMenu}>Products</Nav.Link>
             
-            {/* 4. Action Icons */}
             <div className="icon-group">
               <Nav.Link 
                 as={Link} 

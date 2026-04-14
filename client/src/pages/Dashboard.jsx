@@ -5,7 +5,6 @@ import Navbar from '../components/Navbar';
 import '../styles/Dashboard.css';
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
-// 1. Import the "Central Brain"
 import { API_BASE_URL } from '../config';
 
 const Dashboard = () => {
@@ -56,8 +55,16 @@ const Dashboard = () => {
 
   useEffect(() => {
     const uId = localStorage.getItem('userId');
+    const roleId = localStorage.getItem('roleId');
+
+    // Only allow admins (role 2) and super admins (role 3)
+    if (roleId !== '2' && roleId !== '3') {
+      navigate('/');
+      return;
+    }
+
     setIsAuthorized(true);
-    setUserRole('3'); 
+    setUserRole(roleId);
     setUserId(uId);
     fetchDashboardData();
   }, [navigate]);
@@ -65,7 +72,6 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // 2. Updated all bulk fetches to use API_BASE_URL
       const [prodRes, orderRes, staffRes, discountRes, msgRes] = await Promise.all([
         fetch(`${API_BASE_URL}/products`),
         fetch(`${API_BASE_URL}/admin/orders`),
@@ -99,7 +105,6 @@ const Dashboard = () => {
   const handleAddStaff = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      // 3. Updated Staff Add
       const res = await fetch(`${API_BASE_URL}/admin/add-staff`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(staffForm) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add staff member.');
@@ -111,7 +116,6 @@ const Dashboard = () => {
   const handleRemoveStaff = async (memberId) => {
     if (!window.confirm('Are you sure you want to remove this admin?')) return;
     try {
-      // 4. Updated Staff Remove
       const res = await fetch(`${API_BASE_URL}/admin/staff/${memberId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to remove staff member.');
@@ -131,7 +135,6 @@ const Dashboard = () => {
     if (productForm.image) formData.append('image', productForm.image);
 
     try {
-      // 5. Updated Product Add
       const res = await fetch(`${API_BASE_URL}/admin/products`, { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add product.');
@@ -157,7 +160,6 @@ const Dashboard = () => {
     if (editProductForm.image) formData.append('image', editProductForm.image);
 
     try {
-      // 6. Updated Product Update
       const res = await fetch(`${API_BASE_URL}/admin/products/${editProductForm.id}`, { method: 'PUT', body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update product.');
@@ -169,7 +171,6 @@ const Dashboard = () => {
   const handleDeleteProduct = async (id) => {
     if (!window.confirm('Are you sure you want to completely remove this product?')) return;
     try {
-      // 7. Updated Product Delete
       const res = await fetch(`${API_BASE_URL}/admin/products/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to delete product.');
@@ -187,7 +188,6 @@ const Dashboard = () => {
     setShowOrderDialog(true); 
 
     try {
-      // 8. Updated Order Items Fetch
       const res = await fetch(`${API_BASE_URL}/admin/orders/${order.id}/items`);
       const data = await res.json();
       if (!data.error) setSelectedOrderItems(data);
@@ -203,19 +203,15 @@ const Dashboard = () => {
     setDialogSuccess('');
     
     try {
-      // 9. Updated Order Status Update
       const res = await fetch(`${API_BASE_URL}/admin/orders/${selectedOrder.id}/status`, { 
         method: 'PUT', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ status_id: Number(newStatusId) }) 
       });
       const data = await res.json();
-      
       if (!res.ok) throw new Error(data.message || 'Failed to update order status.');
-      
       setDialogSuccess('Order status updated!');
       setOrders((prev) => prev.map((o) => (o.id === selectedOrder.id ? { ...o, status_id: Number(newStatusId) } : o)));
-      
       setTimeout(() => setShowOrderDialog(false), 1500);
     } catch (err) { 
       setDialogError(err.message); 
@@ -229,7 +225,6 @@ const Dashboard = () => {
   const handleDeleteAccount = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError('');
     try {
-      // 10. Updated Admin Delete Account
       const res = await fetch(`${API_BASE_URL}/admin/delete-account`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, password: deletePassword }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.message || 'Failed to delete account.');
@@ -252,7 +247,6 @@ const Dashboard = () => {
     if (!code.trim() || !discount_value) { setDialogError('Code and discount value are required.'); return; }
     setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
-      // 11. Updated Discount Create
       const res = await fetch(`${API_BASE_URL}/admin/discount-codes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim().toUpperCase(), discount_type, discount_value: Number(discount_value), min_order_amount: min_order_amount ? Number(min_order_amount) : null, max_order_amount: max_order_amount ? Number(max_order_amount) : null, max_uses: max_uses ? Number(max_uses) : null, expires_at: expires_at || null }) });
       if (!res.ok) throw new Error('Failed to create discount code.');
       setDialogSuccess('Discount code created successfully!');
@@ -262,7 +256,6 @@ const Dashboard = () => {
   };
   const handleToggleDiscount = async (id, currentActive) => {
     try {
-      // 12. Updated Discount Toggle
       await fetch(`${API_BASE_URL}/admin/discount-codes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !currentActive }) });
       fetchDashboardData();
     } catch (err) { console.error(err.message); }
@@ -270,7 +263,6 @@ const Dashboard = () => {
   const handleDeleteDiscount = async (id) => {
     if (!window.confirm('Delete this code permanently?')) return;
     try {
-      // 13. Updated Discount Delete
       await fetch(`${API_BASE_URL}/admin/discount-codes/${id}`, { method: 'DELETE' });
       fetchDashboardData();
     } catch (err) { console.error(err.message); }
@@ -278,7 +270,6 @@ const Dashboard = () => {
   const handleDeleteMessage = async (id) => {
     if (!window.confirm('Delete this message permanently?')) return;
     try {
-      // 14. Updated Message Delete
       const res = await fetch(`${API_BASE_URL}/admin/messages/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setMessages((prev) => prev.filter((m) => m.id !== id));
@@ -295,7 +286,7 @@ const Dashboard = () => {
         <Navbar />
         <div className="dashboard-container">
 
-          {/* 1. ORDERS */}
+          {/* 1. ORDERS — visible to all admins */}
           <div className="dashboard-card">
             <div className="card-header-flex"><h2>Recent Orders</h2></div>
             {loading ? <p className="text-muted">Loading orders...</p> : (
@@ -321,7 +312,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* 2. PRODUCTS */}
+          {/* 2. PRODUCTS — visible to all admins */}
           <div className="dashboard-card">
             <div className="card-header-flex">
               <h2>Products Inventory</h2>
@@ -354,7 +345,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* 3. PROMO CODES */}
+          {/* 3. PROMO CODES — Super Admin only (role 3) */}
           {userRole === '3' && (
             <div className="dashboard-card">
               <div className="card-header-flex">
@@ -391,7 +382,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* 4. CUSTOMER MESSAGES */}
+          {/* 4. CUSTOMER MESSAGES — visible to all admins */}
           <div className="dashboard-card">
             <div className="card-header-flex">
               <h2>Customer Messages</h2>
@@ -418,14 +409,14 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* 5. ACCOUNT SETTINGS */}
+          {/* 5. ACCOUNT SETTINGS — visible to all admins */}
           <div className="dashboard-card">
             <h2>Account Settings</h2>
             <p className="text-muted mt-3">Manage your personal admin profile and security.</p>
             <div style={{ padding: '2rem 0', color: '#a89f91' }}>Profile management features coming soon...</div>
           </div>
 
-          {/* 6. STAFF */}
+          {/* 6. STAFF MANAGEMENT — Super Admin only (role 3) */}
           {userRole === '3' && (
             <div className="dashboard-card">
               <div className="card-header-flex">
@@ -454,7 +445,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* 7. DELETE ACCOUNT */}
+          {/* 7. DELETE ACCOUNT — visible to all admins */}
           <div className="dashboard-card">
             <div className="card-header-flex"><h2 className="text-danger">Delete Account</h2></div>
             <p className="text-muted">Account deletion is permanent. Proceed with caution.</p>
@@ -599,7 +590,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* ADD STAFF DIALOG */}
+      {/* ADD STAFF DIALOG — only reachable by Super Admin since the section is hidden for role 2 */}
       {showAddStaffDialog && (
         <div className="dialog-overlay">
           <div className="dialog-box">
