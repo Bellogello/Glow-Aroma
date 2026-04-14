@@ -420,23 +420,36 @@ app.get('/admin/messages', (req, res) => {
 
 app.post('/checkout', (req, res) => {
     const { userId, total, items } = req.body;
+    
+    // 1. Force total to be a clean number (strips out "L.E." or currency symbols if the frontend sent them)
+    const numericTotal = parseFloat(total) || 0;
+
     db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
         if (err || cartResults.length === 0) return res.status(400).json({ error: 'Empty Cart' });
         const cartId = cartResults[0].id;
 
-        db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, total], (err, result) => {
+        // 2. Insert using the cleaned numeric total
+        db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, numericTotal], (err, result) => {
             if (err) {
-                console.error("Order Insert Error:", err); // This will tell you exactly what failed in Railway
+                // This logs the EXACT reason MySQL failed to your Railway terminal
+                console.error("🚨 DB REJECTED ORDER INSERT:", err.message); 
                 return res.status(500).json({ error: 'Order Creation Failed' });
             }
             const orderId = result.insertId;
 
             if (items && items.length > 0) {
-                const values = items.map(i => [orderId, i.is_custom ? 'custom' : 'prebuilt', i.name, i.price, i.quantity]);
+                // 3. Clean the item prices and quantities just to be safe
+                const values = items.map(i => [
+                    orderId, 
+                    i.is_custom ? 'custom' : 'prebuilt', 
+                    i.name, 
+                    parseFloat(i.price) || 0, 
+                    parseInt(i.quantity, 10) || 1
+                ]);
+                
                 db.query('INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity) VALUES ?', [values], (itemErr) => {
-                    if (itemErr) console.error("Order Items Error:", itemErr);
+                    if (itemErr) console.error("🚨 DB REJECTED ITEMS INSERT:", itemErr.message);
                     
-                    // --- CLEAR CART AFTER ORDER ---
                     db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], () => {
                         res.status(201).json({ message: 'Order Placed', orderId });
                     });
