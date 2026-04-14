@@ -23,9 +23,10 @@ if (!fs.existsSync('./uploads')) {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(cors({
-  origin: 'http://localhost:5173', 
+  origin: ['http://localhost:5173', 'https://glow-aroma-production.up.railway.app'], // Allow both local and prod
   credentials: true
 }));
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/'); 
