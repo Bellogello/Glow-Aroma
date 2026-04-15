@@ -319,6 +319,25 @@ app.delete('/cart/remove/:cartItemId', (req, res) => {
     });
 });
 
+app.put('/cart/update/:cartItemId', (req, res) => {
+    const { action } = req.body;
+
+    if (action === 'increase') {
+        db.query('UPDATE cart_items SET quantity = quantity + 1 WHERE id = ?', [req.params.cartItemId], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Quantity increased' });
+        });
+    } else if (action === 'decrease') {
+        // GREATEST(1, quantity - 1) prevents the quantity from ever dropping below 1
+        db.query('UPDATE cart_items SET quantity = GREATEST(1, quantity - 1) WHERE id = ?', [req.params.cartItemId], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Quantity decreased' });
+        });
+    } else {
+        res.status(400).json({ error: 'Invalid action received' });
+    }
+});
+
 // ==========================================
 // --- ADDRESS BOOK ---
 // ==========================================

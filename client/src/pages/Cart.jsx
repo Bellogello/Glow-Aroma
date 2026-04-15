@@ -46,7 +46,9 @@ const Cart = () => {
       const response = await fetch(`${API_BASE_URL}/cart/update/${cartItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ userId: localStorage.getItem("userId"), 
+  total: cartTotal, 
+  items: cartItems }),
       });
 
       if (response.ok) {
