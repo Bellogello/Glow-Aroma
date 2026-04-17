@@ -16,10 +16,7 @@ const app = express();
 // ==========================================
 // --- MIDDLEWARE CONFIGURATION ---
 // ==========================================
-app.use(cors({
-    origin: true,
-    credentials: true
-}));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -27,9 +24,7 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // --- STATIC FILE HANDLING ---
 // ==========================================
 const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
-}
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 app.use('/uploads', express.static(uploadDir));
 
 // ==========================================
@@ -45,11 +40,8 @@ const db = mysql.createConnection({
 });
 
 db.connect((err) => {
-    if (err) {
-        console.error("Critical Database Error:", err.message);
-    } else {
-        console.log("Database connected successfully to " + process.env.DB_NAME);
-    }
+    if (err) console.error("Critical Database Error:", err.message);
+    else console.log("Database connected successfully to " + process.env.DB_NAME);
 });
 
 // ==========================================
@@ -67,10 +59,10 @@ const storage = multer.diskStorage({
         cb(null, `${safeName}-${Date.now()}${path.extname(file.originalname)}`);
     }
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 // ==========================================
-// --- UTILITY HELPERS ---
+// --- PAYMOB HELPERS ---
 // ==========================================
 
 async function paymobGetAuthToken() {
@@ -85,7 +77,7 @@ async function paymobRegisterOrder(authToken, amountCents, merchantOrderId, item
         amount_cents: amountCents,
         currency: 'EGP',
         merchant_order_id: String(merchantOrderId),
-        items: items
+        items
     });
     return res.data.id;
 }
@@ -104,22 +96,22 @@ async function paymobGetPaymentKey(authToken, paymobOrderId, amountCents, billin
 }
 
 function paymobVerifyHmac(data, receivedHmac) {
-    const fields = ['amount_cents', 'created_at', 'currency', 'error_occured', 'has_parent_transaction', 'id', 'integration_id', 'is_3d_secure', 'is_auth', 'is_capture', 'is_refunded', 'is_standalone_payment', 'is_voided', 'order', 'owner', 'pending', 'source_data.pan', 'source_data.sub_type', 'source_data.type', 'success'];
+    const fields = ['amount_cents','created_at','currency','error_occured','has_parent_transaction','id','integration_id','is_3d_secure','is_auth','is_capture','is_refunded','is_standalone_payment','is_voided','order','owner','pending','source_data.pan','source_data.sub_type','source_data.type','success'];
     const str = fields.map(f => {
         const val = f.split('.').reduce((obj, k) => obj?.[k], data);
         return val ?? '';
     }).join('');
-    const computed = crypto.createHmac('sha512', process.env.PAYMOB_HMAC_SECRET).update(str).digest('hex');
-    return computed === receivedHmac;
+    return crypto.createHmac('sha512', process.env.PAYMOB_HMAC_SECRET).update(str).digest('hex') === receivedHmac;
 }
 
 // ==========================================
-// --- CORE API ROUTES ---
+// --- HEALTH CHECK ---
 // ==========================================
-
 app.get('/', (req, res) => res.status(200).send('Glow Aroma Production API Active'));
 
-// --- Candle Builder Assets ---
+// ==========================================
+// --- CANDLE BUILDER ASSETS ---
+// ==========================================
 app.get('/scents', (req, res) => {
     db.query('SELECT * FROM scents WHERE is_available = TRUE', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -162,10 +154,12 @@ app.get('/mold-shapes', (req, res) => {
     });
 });
 
-// --- Product Catalog ---
+// ==========================================
+// --- PRODUCT CATALOG ---
+// ==========================================
 app.get('/products', (req, res) => {
-    db.query("SELECT * FROM prebuilt_candles WHERE is_active = TRUE", (err, results) => {
-        if (err) return res.status(500).json({ error: "Catalog fetch failed" });
+    db.query('SELECT * FROM prebuilt_candles WHERE is_active = TRUE', (err, results) => {
+        if (err) return res.status(500).json({ error: 'Catalog fetch failed' });
         res.json(results);
     });
 });
@@ -178,9 +172,58 @@ app.get('/products/:id', (req, res) => {
     });
 });
 
+// --- Admin Product Management ---
+app.post('/admin/products', upload.single('image'), (req, res) => {
+    const { name, price, stock_quantity, description } = req.body;
+    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+    if (!name || price === undefined || stock_quantity === undefined) {
+        return res.status(400).json({ message: 'Name, price, and stock are required.' });
+    }
+    db.query('INSERT INTO prebuilt_candles (name, price, stock_quantity, description, image_url) VALUES (?, ?, ?, ?, ?)',
+        [name, parseFloat(price), parseInt(stock_quantity), description || null, image_url],
+        (err, result) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.status(201).json({ message: 'Product added.', newProduct: { id: result.insertId, name, price, stock_quantity, description, image_url } });
+        }
+    );
+});
+
+app.put('/admin/products/:id', upload.single('image'), (req, res) => {
+    const { name, price, stock_quantity, description, existing_image_url } = req.body;
+    const image_url = req.file ? `/uploads/${req.file.filename}` : (existing_image_url || null);
+    db.query('UPDATE prebuilt_candles SET name=?, price=?, stock_quantity=?, description=?, image_url=? WHERE id=?',
+        [name, parseFloat(price), parseInt(stock_quantity), description || null, image_url, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'Product updated.', image_url });
+        }
+    );
+});
+
+app.delete('/admin/products/:id', (req, res) => {
+    db.query('DELETE FROM prebuilt_candles WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ message: 'Delete failed. Product may be linked to an order.' });
+        res.json({ message: 'Product deleted.' });
+    });
+});
+
 // ==========================================
 // --- USER AUTHENTICATION ---
 // ==========================================
+app.post('/users', (req, res) => {
+    const { name, email, phone, password_hash } = req.body;
+    bcrypt.hash(password_hash, SALT_ROUNDS, (err, hashed) => {
+        if (err) return res.status(500).json({ error: 'Hashing failed.' });
+        db.query('INSERT INTO users (name, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, 1)',
+            [name, email, phone, hashed],
+            (err, result) => {
+                if (err) return res.status(500).json({ error: err.message });
+                const token = jwt.sign({ id: result.insertId, name }, JWT_SECRET, { expiresIn: '7d' });
+                res.json({ message: 'User created!', token, userName: name, userId: result.insertId });
+            }
+        );
+    });
+});
 
 app.post('/signin', (req, res) => {
     const { email, password } = req.body;
@@ -221,7 +264,6 @@ app.post('/auth/google', async (req, res) => {
             headers: { Authorization: `Bearer ${access_token}` }
         });
         const { email, name } = response.data;
-
         db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
             if (results.length > 0) {
                 const user = results[0];
@@ -240,9 +282,8 @@ app.post('/auth/google', async (req, res) => {
 });
 
 // ==========================================
-// --- SHOPPING CART LOGIC ---
+// --- SHOPPING CART ---
 // ==========================================
-
 app.post('/cart/add', (req, res) => {
     const { userId, type, scentId, quantity = 1, prebuiltCandleId, totalPrice, cupShapeId, cupSizeId, cupColorId, candleColorId, moldShapeId, layers, snapshot } = req.body;
     if (!userId) return res.status(401).json({ error: 'Auth Required' });
@@ -252,22 +293,31 @@ app.post('/cart/add', (req, res) => {
 
         const handleAddition = (cId) => {
             if (prebuiltCandleId) {
-                db.query('INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?', [cId, prebuiltCandleId, quantity, quantity], () => res.json({ message: 'Added' }));
+                db.query('INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?',
+                    [cId, prebuiltCandleId, quantity, quantity],
+                    () => res.json({ message: 'Added' })
+                );
             } else if (type === 'cup') {
-                db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size_id, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)", [scentId, cupShapeId, cupSizeId, cupColorId, totalPrice, snapshot], (err, result) => {
-                    const customId = result.insertId;
-                    db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)', [customId, candleColorId], () => {
-                        db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cId, customId, quantity], () => res.json({ message: 'Added Custom' }));
-                    });
-                });
+                db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size_id, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
+                    [scentId, cupShapeId, cupSizeId, cupColorId, totalPrice, snapshot],
+                    (err, result) => {
+                        const customId = result.insertId;
+                        db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)', [customId, candleColorId], () => {
+                            db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cId, customId, quantity], () => res.json({ message: 'Added Custom' }));
+                        });
+                    }
+                );
             } else if (type === 'mold') {
-                db.query("INSERT INTO custom_candles (type, scent_id, mold_shape_id, total_price, preview_image) VALUES ('mold', ?, ?, ?, ?)", [scentId, moldShapeId, totalPrice, snapshot], (err, result) => {
-                    const customId = result.insertId;
-                    const layerVals = layers.map((colorId, index) => [customId, colorId, index + 1]);
-                    db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES ?', [layerVals], () => {
-                        db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cId, customId, quantity], () => res.json({ message: 'Added Mold' }));
-                    });
-                });
+                db.query("INSERT INTO custom_candles (type, scent_id, mold_shape_id, total_price, preview_image) VALUES ('mold', ?, ?, ?, ?)",
+                    [scentId, moldShapeId, totalPrice, snapshot],
+                    (err, result) => {
+                        const customId = result.insertId;
+                        const layerVals = layers.map((colorId, index) => [customId, colorId, index + 1]);
+                        db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES ?', [layerVals], () => {
+                            db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cId, customId, quantity], () => res.json({ message: 'Added Mold' }));
+                        });
+                    }
+                );
             }
         };
 
@@ -321,14 +371,12 @@ app.delete('/cart/remove/:cartItemId', (req, res) => {
 
 app.put('/cart/update/:cartItemId', (req, res) => {
     const { action } = req.body;
-
     if (action === 'increase') {
         db.query('UPDATE cart_items SET quantity = quantity + 1 WHERE id = ?', [req.params.cartItemId], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ message: 'Quantity increased' });
         });
     } else if (action === 'decrease') {
-        // GREATEST(1, quantity - 1) prevents the quantity from ever dropping below 1
         db.query('UPDATE cart_items SET quantity = GREATEST(1, quantity - 1) WHERE id = ?', [req.params.cartItemId], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ message: 'Quantity decreased' });
@@ -341,7 +389,6 @@ app.put('/cart/update/:cartItemId', (req, res) => {
 // ==========================================
 // --- ADDRESS BOOK ---
 // ==========================================
-
 app.get('/addresses/:userId', (req, res) => {
     db.query('SELECT * FROM user_addresses WHERE user_id = ?', [req.params.userId], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -351,46 +398,78 @@ app.get('/addresses/:userId', (req, res) => {
 
 app.post('/addresses/:userId', (req, res) => {
     const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
-    const sql = `INSERT INTO user_addresses (user_id, full_name, phone, governorate, area, street, building, floor_apt, notes) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.query(sql, [req.params.userId, fullName, phone, governorate, area, street, building, floorApt, notes], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ message: 'Saved', id: result.insertId });
-    });
+    db.query('INSERT INTO user_addresses (user_id, full_name, phone, governorate, area, street, building, floor_apt, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [req.params.userId, fullName, phone, governorate, area, street, building, floorApt, notes],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(201).json({ message: 'Saved', id: result.insertId });
+        }
+    );
 });
 
 app.put('/addresses/:id', (req, res) => {
     const { fullName, phone, governorate, area, street, building, floorApt, notes } = req.body;
-    const sql = `UPDATE user_addresses SET full_name=?, phone=?, governorate=?, area=?, street=?, building=?, floor_apt=?, notes=? WHERE id=?`;
-    db.query(sql, [fullName, phone, governorate, area, street, building, floorApt, notes, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Updated' });
-    });
+    db.query('UPDATE user_addresses SET full_name=?, phone=?, governorate=?, area=?, street=?, building=?, floor_apt=?, notes=? WHERE id=?',
+        [fullName, phone, governorate, area, street, building, floorApt, notes, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Updated' });
+        }
+    );
 });
 
 app.delete('/addresses/:id', (req, res) => {
     db.query('DELETE FROM user_addresses WHERE id = ?', [req.params.id], (err, result) => {
-        if (err) return res.status(500).json({ error: "Linked to Order" });
+        if (err) return res.status(500).json({ error: 'Linked to Order' });
         if (result.affectedRows === 0) return res.status(404).json({ error: 'Address Not Found' });
         res.json({ message: 'Deleted' });
     });
 });
 
 // ==========================================
+// --- CONTACT MESSAGES ---
+// FIX: Route was completely missing — this is why Contact page was broken
+// ==========================================
+app.post('/messages', (req, res) => {
+    const { name, email, phone, message } = req.body;
+    if (!name || !email || !message) {
+        return res.status(400).json({ error: 'Name, email, and message are required.' });
+    }
+    db.query('INSERT INTO contact_messages (name, email, phone, message) VALUES (?, ?, ?, ?)',
+        [name, email, phone || null, message],
+        (err) => {
+            if (err) return res.status(500).json({ error: 'Failed to send message.' });
+            res.status(201).json({ message: 'Message sent successfully!' });
+        }
+    );
+});
+
+// ==========================================
 // --- ADMIN DASHBOARD ---
 // ==========================================
-
 app.get('/admin/orders', (req, res) => {
-    const sql = 'SELECT o.id, o.total, o.status_id, o.created_at, u.name AS customer_name FROM orders o JOIN users u ON o.user_id = u.id ORDER BY o.created_at DESC';
-    db.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
-    });
+    db.query('SELECT o.id, o.total, o.status_id, o.created_at, u.name AS customer_name FROM orders o JOIN users u ON o.user_id = u.id ORDER BY o.created_at DESC',
+        (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(results);
+        }
+    );
 });
+
 app.get('/admin/orders/:id/items', (req, res) => {
     db.query('SELECT * FROM order_items WHERE order_id = ?', [req.params.id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
+    });
+});
+
+app.put('/admin/orders/:id/status', (req, res) => {
+    const { status_id } = req.body;
+    if (![1, 2, 3].includes(Number(status_id))) return res.status(400).json({ message: 'Invalid status_id.' });
+    db.query('UPDATE orders SET status_id = ? WHERE id = ?', [Number(status_id), req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (result.affectedRows === 0) return res.status(404).json({ message: 'Order not found.' });
+        res.json({ message: 'Order status updated.' });
     });
 });
 
@@ -404,9 +483,23 @@ app.get('/admin/staff', (req, res) => {
 app.post('/admin/add-staff', (req, res) => {
     const { name, email, phone, password, role_id } = req.body;
     bcrypt.hash(password, SALT_ROUNDS, (err, hashed) => {
-        db.query('INSERT INTO users (name, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, ?)', [name, email, phone, hashed, role_id], (err, result) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.status(201).json({ message: 'Staff Added' });
+        db.query('INSERT INTO users (name, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, ?)',
+            [name, email, phone, hashed, role_id],
+            (err, result) => {
+                if (err) return res.status(500).json({ message: err.message });
+                res.status(201).json({ message: 'Staff Added', newStaff: { id: result.insertId, name, email, role_id: Number(role_id) } });
+            }
+        );
+    });
+});
+
+app.delete('/admin/staff/:id', (req, res) => {
+    db.query('SELECT role_id FROM users WHERE id = ?', [req.params.id], (err, rows) => {
+        if (rows.length === 0) return res.status(404).json({ message: 'Not found.' });
+        if (rows[0].role_id === 3) return res.status(403).json({ message: 'Cannot remove Super Admin.' });
+        db.query('DELETE FROM users WHERE id = ? AND role_id = 2', [req.params.id], (err) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'Staff removed.' });
         });
     });
 });
@@ -421,8 +514,28 @@ app.get('/admin/discount-codes', async (req, res) => {
 app.post('/admin/discount-codes', async (req, res) => {
     const { code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at } = req.body;
     try {
-        await db.promise().query(`INSERT INTO discount_codes (code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`, [code, discount_type, discount_value, min_order_amount || 0, max_order_amount, max_uses, expires_at]);
+        await db.promise().query(
+            'INSERT INTO discount_codes (code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [code, discount_type, discount_value, min_order_amount || 0, max_order_amount, max_uses, expires_at]
+        );
         res.status(201).json({ message: 'Promo Created' });
+    } catch (e) {
+        if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ message: 'Code already exists.' });
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.patch('/admin/discount-codes/:id', async (req, res) => {
+    try {
+        await db.promise().query('UPDATE discount_codes SET is_active = ? WHERE id = ?', [req.body.is_active, req.params.id]);
+        res.json({ message: 'Status updated' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/admin/discount-codes/:id', async (req, res) => {
+    try {
+        await db.promise().query('DELETE FROM discount_codes WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Deleted' });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -433,72 +546,123 @@ app.get('/admin/messages', (req, res) => {
     });
 });
 
-// ==========================================
-// --- CHECKOUT & PAYMENT CALLBACKS ---
-// ==========================================
+app.delete('/admin/messages/:id', (req, res) => {
+    db.query('DELETE FROM contact_messages WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Message deleted.' });
+    });
+});
 
+app.delete('/admin/delete-account', (req, res) => {
+    const { userId, password } = req.body;
+    if (!userId || !password) return res.status(400).json({ error: 'userId and password required.' });
+
+    db.query('SELECT password_hash FROM users WHERE id = ?', [userId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) return res.status(404).json({ error: 'User not found.' });
+
+        const storedHash = results[0].password_hash;
+        const doDelete = () => {
+            db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, carts) => {
+                const finish = () => db.query('DELETE FROM users WHERE id = ?', [userId], (err) => {
+                    if (err) return res.status(500).json({ error: 'Delete failed.' });
+                    res.json({ message: 'Account deleted.' });
+                });
+                if (carts.length > 0) {
+                    db.query('DELETE FROM cart_items WHERE cart_id = ?', [carts[0].id], () => {
+                        db.query('DELETE FROM carts WHERE id = ?', [carts[0].id], finish);
+                    });
+                } else finish();
+            });
+        };
+
+        if (!storedHash.startsWith('$2')) {
+            if (password === storedHash) doDelete();
+            else res.status(401).json({ error: 'Incorrect password.' });
+        } else {
+            bcrypt.compare(password, storedHash, (err, match) => {
+                if (match) doDelete();
+                else res.status(401).json({ error: 'Incorrect password.' });
+            });
+        }
+    });
+});
+
+// ==========================================
+// --- CHECKOUT ---
+// ==========================================
 app.post('/checkout', (req, res) => {
     const { userId, total, items } = req.body;
     const numericTotal = parseFloat(total) || 0;
 
-    // 1. Get Cart
     db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
         if (err || cartResults.length === 0) return res.status(400).json({ error: 'Empty Cart' });
         const cartId = cartResults[0].id;
 
-        // 2. Create the Order
         db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, numericTotal], (err, result) => {
             if (err) return res.status(500).json({ error: 'Order Creation Failed: ' + err.message });
             const orderId = result.insertId;
 
-            // 3. Verify Frontend sent items
             if (!items || items.length === 0) {
-                return res.status(400).json({ error: "No items received from frontend" });
+                return res.status(400).json({ error: 'No items received from frontend' });
             }
 
-            // 4. Map items safely (ADDED details mapping here)
-              const values = items.map(i => {
-                // Determine exact ENUM match based on the item name
+            const values = items.map(i => {
                 let exactItemType = 'prebuilt';
                 if (i.is_custom) {
                     exactItemType = (i.name && i.name.toLowerCase().includes('mold')) ? 'mold' : 'cup';
                 }
-
-                return [
-                    orderId, 
-                    exactItemType, // <--- Now it sends 'cup', 'mold', or 'prebuilt'
-                    i.name || 'Candle', 
-                    parseFloat(i.price) || 0, 
-                    parseInt(i.quantity, 10) || 1,
-                    i.details || i.color_info || 'Standard Pre-built'
-                ];
+                return [orderId, exactItemType, i.name || 'Candle', parseFloat(i.price) || 0, parseInt(i.quantity, 10) || 1, i.details || i.color_info || 'Standard Pre-built'];
             });
 
-            // 5. Insert Items (ADDED the `details` column to the query)
-            const sql = 'INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity, details) VALUES ?';
-            
-            db.query(sql, [values], (itemErr) => {
+            db.query('INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity, details) VALUES ?', [values], (itemErr) => {
                 if (itemErr) {
-                    console.error("🚨 DB REJECTED ITEMS INSERT:", itemErr.message);
-                    return res.status(500).json({ error: "DB Error on Items: " + itemErr.message });
+                    console.error("DB REJECTED ITEMS INSERT:", itemErr.message);
+                    return res.status(500).json({ error: 'DB Error on Items: ' + itemErr.message });
                 }
-                
-                // 6. Only clear cart IF items saved successfully
                 db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], () => {
-                    res.status(201).json({ message: 'Order Placed successfully', orderId });
+                    res.status(201).json({ message: 'Order placed successfully', orderId });
                 });
             });
         });
     });
 });
 
+// ==========================================
+// --- PAYMOB ---
+// FIX: was passing raw shippingDetails to Paymob instead of shaped billing_data
+// ==========================================
 app.post('/paymob/initiate', async (req, res) => {
     try {
-        const token = await paymobGetAuthToken();
-        const paymobId = await paymobRegisterOrder(token, req.body.amountCents, req.body.orderId, req.body.items);
-        const paymentToken = await paymobGetPaymentKey(token, paymobId, req.body.amountCents, req.body.shippingDetails);
+        const { amountCents, orderId, items, shippingDetails } = req.body;
+
+        const authToken = await paymobGetAuthToken();
+        const paymobOrderId = await paymobRegisterOrder(authToken, amountCents, orderId, items || []);
+
+        // Paymob requires specific field names — shippingDetails fields don't match directly
+        const nameParts = (shippingDetails.fullName || 'Guest User').split(' ');
+        const billingData = {
+            first_name:      nameParts[0] || 'NA',
+            last_name:       nameParts.slice(1).join(' ') || 'NA',
+            phone_number:    shippingDetails.phone || 'NA',
+            apartment:       shippingDetails.floorApt || 'NA',
+            floor:           'NA',
+            street:          shippingDetails.street || 'NA',
+            building:        shippingDetails.building || 'NA',
+            city:            shippingDetails.area || 'NA',
+            state:           shippingDetails.governorate || 'NA',
+            country:         'EG',
+            postal_code:     'NA',
+            shipping_method: 'NA',
+            email:           'customer@glowaroma.com'
+        };
+
+        const paymentToken = await paymobGetPaymentKey(authToken, paymobOrderId, amountCents, billingData);
         res.json({ paymentToken, iframeId: process.env.PAYMOB_IFRAME_ID });
-    } catch (err) { res.status(500).json({ error: 'Payment Gate Failed' }); }
+    } catch (err) {
+        console.error('Paymob initiation error:', err.response?.data || err.message);
+        res.status(500).json({ error: 'Payment initiation failed' });
+    }
 });
 
 app.post('/paymob/callback', async (req, res) => {
@@ -513,7 +677,6 @@ app.post('/paymob/callback', async (req, res) => {
 // ==========================================
 // --- SERVER ACTIVATION ---
 // ==========================================
-
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);
