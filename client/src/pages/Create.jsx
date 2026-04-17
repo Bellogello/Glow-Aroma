@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../components/Navbar';
 import "../styles/create.css";
+import CandlePreview3D from '../components/CandlePreview3D';
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
 // 1. Import the "Central Brain"
@@ -9,19 +10,29 @@ import { API_BASE_URL } from '../config';
 const Create = () => {
   useTitle("Create Your Own");
 
+  const previewRef = useRef(null);
+
   const [scents, setScents] = useState([]);
   const [colors, setColors] = useState([]);
+  const [cupShapes, setCupShapes] = useState([]);
   const [cupSizes, setCupSizes] = useState([]);
   const [cupColors, setCupColors] = useState([]);
+  const [moldShapes, setMoldShapes] = useState([]);
 
+  const [candleType, setCandleType] = useState('cup'); 
   const [quantity, setQuantity] = useState(1);
   const [selectedScentId, setSelectedScentId] = useState("default");
+
+  const [selectedCupShape, setSelectedCupShape] = useState("default");
   const [selectedCupSize, setSelectedCupSize] = useState("default");
   const [selectedCupColor, setSelectedCupColor] = useState("default");
   const [selectedCandleColor, setSelectedCandleColor] = useState("default");
 
+  const [selectedMoldShape, setSelectedMoldShape] = useState("default");
+  const [moldLayers, setMoldLayers] = useState([]); 
+
   useEffect(() => {
-    // 2. Updated all initial data fetches to use API_BASE_URL
+    // 2. Updated all configuration fetches to use API_BASE_URL
     fetch(`${API_BASE_URL}/scents`)
       .then(res => res.json())
       .then(data => setScents(data))
@@ -32,6 +43,11 @@ const Create = () => {
       .then(data => setColors(data))
       .catch(err => console.error("Error fetching colors:", err));
 
+    fetch(`${API_BASE_URL}/cup-shapes`)
+      .then(res => res.json())
+      .then(data => setCupShapes(data))
+      .catch(err => console.error("Error fetching cup shapes:", err));
+
     fetch(`${API_BASE_URL}/cup-sizes`)
       .then(res => res.json())
       .then(data => setCupSizes(data))
@@ -41,61 +57,108 @@ const Create = () => {
       .then(res => res.json())
       .then(data => setCupColors(data))
       .catch(err => console.error("Error fetching cup colors:", err));
+
+    fetch(`${API_BASE_URL}/mold-shapes`)
+      .then(res => res.json())
+      .then(data => setMoldShapes(data))
+      .catch(err => console.error("Error fetching mold shapes:", err));
   }, []);
 
+  useEffect(() => {
+    if (selectedMoldShape !== "default") {
+      const shape = moldShapes.find(m => m.id.toString() === selectedMoldShape.toString());
+      if (shape) {
+        setMoldLayers(Array(shape.layers).fill("default"));
+      }
+    } else {
+      setMoldLayers([]);
+    }
+  }, [selectedMoldShape, moldShapes]);
+
+  const handleLayerColorChange = (index, colorId) => {
+    const newLayers = [...moldLayers];
+    newLayers[index] = colorId;
+    setMoldLayers(newLayers);
+  };
+
   const handleConfirm = async () => {
-    if (selectedCupSize === "default") return alert("Please pick a cup size!");
-    if (selectedCupColor === "default") return alert("Please pick a cup color!");
-    if (selectedCandleColor === "default") return alert("Please pick a candle wax color!");
     if (selectedScentId === "default") return alert("Please pick a scent!");
 
     let totalPrice = 0;
-
+    
     const scent = scents.find(s => s.id.toString() === selectedScentId.toString());
     if (scent) totalPrice += Number(scent.price);
 
-    const size = cupSizes.find(s => s.id.toString() === selectedCupSize.toString());
-    if (size) totalPrice += Number(size.price_modifier);
+    if (candleType === 'cup') {
+      if (selectedCupShape === "default" || selectedCupSize === "default" || selectedCupColor === "default" || selectedCandleColor === "default") {
+        return alert("Please fill out all Cup options!");
+      }
+      
+      const shape = cupShapes.find(s => s.id.toString() === selectedCupShape.toString());
+      const size = cupSizes.find(s => s.id.toString() === selectedCupSize.toString());
+      const waxColor = colors.find(c => c.id.toString() === selectedCandleColor.toString());
 
-    const waxColor = colors.find(c => c.id.toString() === selectedCandleColor.toString());
-    if (waxColor) totalPrice += Number(waxColor.price);
+      if (shape) totalPrice += Number(shape.base_price);
+      if (size) totalPrice += Number(size.price_modifier);
+      if (waxColor) totalPrice += Number(waxColor.price);
+
+    } else {
+      if (selectedMoldShape === "default") return alert("Please pick a Mold Shape!");
+      if (moldLayers.includes("default")) return alert("Please pick a color for every layer of your mold!");
+
+      const shape = moldShapes.find(s => s.id.toString() === selectedMoldShape.toString());
+      if (shape) totalPrice += Number(shape.base_price);
+
+      moldLayers.forEach(layerColorId => {
+        const color = colors.find(c => c.id.toString() === layerColorId.toString());
+        if (color) totalPrice += Number(color.price);
+      });
+    }
 
     const userId = localStorage.getItem("userId");
     if (!userId) return alert("You need to be logged in to add stuff to your cart!");
 
+    const snapshot = previewRef.current?.getSnapshot() || null;
+
     const payload = {
-      type: 'cup',
+      type: candleType,
       userId,
       quantity,
       scentId: selectedScentId,
       totalPrice: Number(totalPrice.toFixed(2)),
-      cupShapeId: 1, 
-      cupSizeId: selectedCupSize,
-      cupColorId: selectedCupColor,
-      candleColorId: selectedCandleColor,
+      snapshot,
+      ...(candleType === 'cup' 
+        ? { cupShapeId: selectedCupShape, cupSizeId: selectedCupSize, cupColorId: selectedCupColor, candleColorId: selectedCandleColor }
+        : { moldShapeId: selectedMoldShape, layers: moldLayers }
+      )
     };
 
     try {
-      // 3. Updated Cart Addition fetch to use API_BASE_URL
+      // 3. Updated Final Submission fetch to use API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/cart/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
       const data = await response.json();
+
       if (response.ok) {
         alert("Success! Your custom candle was added to the cart.");
         setQuantity(1);
         setSelectedScentId("default");
+        setSelectedCupShape("default");
         setSelectedCupSize("default");
         setSelectedCupColor("default");
         setSelectedCandleColor("default");
+        setSelectedMoldShape("default");
+        setMoldLayers([]);
       } else {
         alert("Error from server: " + data.error);
       }
     } catch (error) {
       console.error("Failed to add to cart:", error);
-      alert("Server is acting up. Make sure the backend is awake!");
+      alert("Server error. Please try again later.");
     }
   };
 
@@ -104,38 +167,125 @@ const Create = () => {
       <Navbar />
       <h1 style={{ textAlign: 'center' }}>Create Your Own Candle</h1>
       <hr className="hr--create" />
-
-      <div className="selections" style={{ maxWidth: '500px', margin: '0 auto', padding: '0 20px' }}>
-
-        <select value={selectedCupColor} onChange={(e) => setSelectedCupColor(e.target.value)}>
-          <option value="default">Cup Color</option>
-          {cupColors.map(color => <option key={color.id} value={color.id}>{color.name}</option>)}
-        </select>
-
-        <select value={selectedCupSize} onChange={(e) => setSelectedCupSize(e.target.value)}>
-          <option value="default">Cup Size</option>
-          {cupSizes.map(size => <option key={size.id} value={size.id}>{size.size_ml} ml</option>)}
-        </select>
-
-        <select value={selectedCandleColor} onChange={(e) => setSelectedCandleColor(e.target.value)}>
-          <option value="default">Candle Wax Color</option>
-          {colors.map(color => <option key={color.id} value={color.id}>{color.name}</option>)}
-        </select>
-
-        <select value={selectedScentId} onChange={(e) => setSelectedScentId(e.target.value)}>
-          <option value="default">Scent</option>
-          {scents.map(scent => <option key={scent.id} value={scent.id}>{scent.name}</option>)}
-        </select>
-
-        <div className="confirmation-area">
-          <div className="quantity-wrapper">
-            <button className="btn-qty" onClick={() => setQuantity(Math.max(1, quantity - 1))}>−</button>
-            <span className="qty-amount">{quantity}</span>
-            <button className="btn-qty" onClick={() => setQuantity(quantity + 1)}>+</button>
-          </div>
-          <button className="confirm" onClick={handleConfirm}>Confirm Candle</button>
+      
+      <div className='creation'>
+        <div className='candle-div'>
+          <CandlePreview3D
+            ref={previewRef}
+            cupColor={
+              cupColors.find(c => c.id.toString() === selectedCupColor.toString())?.hex_code ?? '#ffffff'
+            }
+            waxColor={
+              colors.find(c => c.id.toString() === selectedCandleColor.toString())?.hex_code ?? '#ffffff'
+            }
+            cupSize={
+              selectedCupSize === 'default' ? 'medium' :
+              (() => {
+                const s = cupSizes.find(s => s.id.toString() === selectedCupSize.toString());
+                if (!s) return 'medium';
+                const ml = Number(s.size_ml);
+                if (ml <= 200) return 'small';
+                if (ml <= 400) return 'medium';
+                return 'large';
+              })()
+            }
+          />
         </div>
+        
+        <div className='choices'> 
+          <div className="type-toggle">
+            <label className={`radio-label ${candleType === 'cup' ? 'active-radio' : ''}`}>
+              <input 
+                type="radio" 
+                value="cup" 
+                className="radio-input"
+                checked={candleType === 'cup'} 
+                onChange={() => setCandleType('cup')}
+              />
+              Cup Candle
+            </label>
+            <label className={`radio-label ${candleType === 'mold' ? 'active-radio' : ''}`}>
+              <input 
+                type="radio" 
+                value="mold" 
+                className="radio-input"
+                checked={candleType === 'mold'} 
+                onChange={() => setCandleType('mold')}
+              />
+              Mold Candle
+            </label>
+          </div>
 
+          <div className='selections'>
+            
+            {candleType === 'cup' && (
+              <>
+                <select value={selectedCupShape} onChange={(e) => setSelectedCupShape(e.target.value)}>
+                  <option value="default">Cup Shape</option>
+                  {cupShapes.map(shape => <option key={shape.id} value={shape.id}>{shape.name}</option>)}
+                </select>
+
+                <select value={selectedCupSize} onChange={(e) => setSelectedCupSize(e.target.value)}>
+                  <option value="default">Cup Size</option>
+                  {cupSizes.map(size => <option key={size.id} value={size.id}>{size.size_ml} ml</option>)}
+                </select>
+
+                <select value={selectedCupColor} onChange={(e) => setSelectedCupColor(e.target.value)}>
+                  <option value="default">Cup Color</option>
+                  {cupColors.map(color => <option key={color.id} value={color.id}>{color.name}</option>)}
+                </select>
+
+                <select value={selectedCandleColor} onChange={(e) => setSelectedCandleColor(e.target.value)}>
+                  <option value="default">Candle Wax Color</option>
+                  {colors.map(color => <option key={color.id} value={color.id}>{color.name}</option>)}
+                </select>
+              </>
+            )}
+
+            {candleType === 'mold' && (
+              <>
+                <select value={selectedMoldShape} onChange={(e) => setSelectedMoldShape(e.target.value)}>
+                  <option value="default">Mold Shape</option>
+                  {moldShapes.map(shape => (
+                    <option key={shape.id} value={shape.id}>
+                      {shape.name} ({shape.layers} {shape.layers === 1 ? 'Layer' : 'Layers'})
+                    </option>
+                  ))}
+                </select>
+
+                {moldLayers.map((selectedColor, index) => (
+                  <select 
+                    key={index} 
+                    className="layer-select"
+                    value={selectedColor} 
+                    onChange={(e) => handleLayerColorChange(index, e.target.value)}
+                  >
+                    <option value="default">Layer {index + 1} Color</option>
+                    {colors.map(color => <option key={color.id} value={color.id}>{color.name}</option>)}
+                  </select>
+                ))}
+              </>
+            )}
+
+            <select value={selectedScentId} onChange={(e) => setSelectedScentId(e.target.value)}>
+              <option value="default">Scent</option>
+              {scents.map(scent => <option key={scent.id} value={scent.id}>{scent.name}</option>)}
+            </select>
+
+            <div className="confirmation-area">
+              <div className="quantity-wrapper">
+                <button className="btn-qty" onClick={() => setQuantity(Math.max(1, quantity - 1))}>−</button>
+                <span className="qty-amount">{quantity}</span>
+                <button className="btn-qty" onClick={() => setQuantity(quantity + 1)}>+</button>            
+              </div>
+              
+              <button className="confirm" onClick={handleConfirm}>
+                Confirm Candle
+              </button>
+            </div>
+
+          </div>
+        </div>
       </div>
       <Footer />
     </div>
