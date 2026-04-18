@@ -1,4 +1,3 @@
-
 body {
     background-color: #f5efe1;
     font-family: "Averia Libre", system-ui;
@@ -11,11 +10,13 @@ body {
 
 .profile-wrapper {
     display: flex;
-    max-width: 1100px;
-    margin: 40px auto;
-    gap: 30px;
-    padding: 20px;
+    max-width: 68.75rem; /* ~1100px */
+    margin: 2.5rem auto; 
+    gap: 1.875rem; 
+    padding: 1.25rem; 
     align-items: flex-start;
+    box-sizing: border-box;
+    width: 100%;
 }
 
 /* ========================================= */
@@ -24,45 +25,45 @@ body {
 
 .profile-sidebar {
     flex: 1;
-    background-color: #D2C9B8; /* Brand Beige */
-    padding: 40px 20px;
-    border-radius: 30px;
+    background-color: #D2C9B8;
+    padding: 2.5rem 1.25rem;
+    border-radius: 1.875rem;
     text-align: center;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+    box-shadow: 0 0.5rem 1.25rem rgba(0,0,0,0.05);
     position: sticky;
-    top: 20px;
+    top: 1.25rem;
 }
 
 .avatar-circle {
-    width: 90px;
-    height: 90px;
-    background-color: #5a4a3a; /* Brand Brown */
+    width: 5.625rem; 
+    height: 5.625rem;
+    background-color: #5a4a3a;
     color: white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 2.5rem;
-    margin: 0 auto 20px;
-    border: 4px solid #f5efe1;
+    margin: 0 auto 1.25rem;
+    border: 0.25rem solid #f5efe1;
 }
 
 .profile-welcome {
     font-weight: 700;
     color: #5a4a3a;
-    margin-bottom: 25px;
+    margin-bottom: 1.5625rem;
 }
 
 .logout-btn-minimal {
     background: white;
     border: none;
-    color: #dc3545; /* Red for Logout */
-    padding: 10px 30px;
-    border-radius: 50px;
+    color: #dc3545;
+    padding: 0.625rem 1.875rem;
+    border-radius: 3.125rem; /* large enough to create a pill shape */
     cursor: pointer;
     font-weight: bold;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 0.25rem 0.625rem rgba(0,0,0,0.05);
 }
 
 .logout-btn-minimal:hover {
@@ -78,28 +79,29 @@ body {
     flex: 2;
     display: flex;
     flex-direction: column;
-    gap: 25px;
+    gap: 1.5625rem;
+    width: 100%; /* Ensures it doesn't overflow */
 }
 
 .profile-section-card {
     background: white;
-    padding: 35px;
-    border-radius: 25px;
+    padding: 2.1875rem;
+    border-radius: 1.5625rem;
     border: 1px solid #e0d7cf;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    box-shadow: 0 0.25rem 0.9375rem rgba(0,0,0,0.02);
 }
 
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 1.25rem;
 }
 
 .mini-divider {
     border: 0;
     border-top: 1px solid #eee;
-    margin: 15px 0;
+    margin: 0.9375rem 0;
 }
 
 /* ========================================= */
@@ -108,25 +110,24 @@ body {
 
 .add-address-container {
     background: #fdfbf7;
-    padding: 25px;
-    border-radius: 25px;
-    border: 2px dashed #D2C9B8;
+    padding: 1.5625rem;
+    border-radius: 1.5625rem;
+    border: 0.125rem dashed #D2C9B8;
 }
 
 .form-title {
     text-align: center;
     color: #5a4a3a;
-    margin-bottom: 20px;
+    margin-bottom: 1.25rem;
     font-weight: 700;
 }
 
-/* Reusing your custom pill inputs from the Login/Sign-up logic */
 .custom-pill-input {
     width: 100%;
-    padding: 15px;
+    padding: 0.9375rem;
     border: 1px solid #ece4d5;
-    border-radius: 50px;
-    font-size: 16px;
+    border-radius: 3.125rem;
+    font-size: 1rem;
     text-align: center;
     box-sizing: border-box;
     color: #5a4a3a;
@@ -136,29 +137,29 @@ body {
 }
 
 .custom-pill-input:focus {
-    box-shadow: 0 0 0 3px rgba(90, 74, 58, 0.1);
+    box-shadow: 0 0 0 0.1875rem rgba(90, 74, 58, 0.1);
     border-color: #5a4a3a;
 }
 
 .form-row {
     display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
+    gap: 0.9375rem;
+    margin-bottom: 0.9375rem;
 }
 
 .profile-form-actions {
     display: flex;
     justify-content: center;
-    gap: 15px;
-    margin-top: 25px;
+    gap: 0.9375rem;
+    margin-top: 1.5625rem;
 }
 
 .btn-save-address {
     background-color: #5a4a3a;
     color: white;
     border: none;
-    padding: 12px 35px;
-    border-radius: 50px;
+    padding: 0.75rem 2.1875rem;
+    border-radius: 3.125rem;
     font-weight: bold;
     cursor: pointer;
 }
@@ -167,8 +168,8 @@ body {
     background: #f5efe1;
     border: none;
     color: #5a4a3a;
-    padding: 12px 25px;
-    border-radius: 50px;
+    padding: 0.75rem 1.5625rem;
+    border-radius: 3.125rem;
     font-weight: bold;
     cursor: pointer;
 }
@@ -181,16 +182,16 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px;
+    padding: 1.25rem;
     background: #fdfaf5;
-    border-radius: 20px;
+    border-radius: 1.25rem;
     border: 1px solid #f0ece4;
-    margin-bottom: 15px;
+    margin-bottom: 0.9375rem;
     transition: transform 0.2s ease;
 }
 
 .address-item-display:hover {
-    transform: translateY(-3px);
+    transform: translateY(-0.1875rem);
     border-color: #D2C9B8;
 }
 
@@ -198,18 +199,18 @@ body {
     color: #5a4a3a;
     font-size: 1.1rem;
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 0.3125rem;
 }
 
 .address-info p {
-    margin: 2px 0;
+    margin: 0.125rem 0;
     color: #7a6a5a;
     font-size: 0.95rem;
 }
 
 .addr-phone {
     display: block;
-    margin-top: 8px;
+    margin-top: 0.5rem;
     font-size: 0.85rem;
     font-weight: bold;
     color: #a09080;
@@ -218,7 +219,7 @@ body {
 .address-actions {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0.5rem;
     text-align: right;
 }
 
@@ -239,8 +240,8 @@ body {
     background: #5a4a3a;
     color: white;
     border: none;
-    padding: 8px 20px;
-    border-radius: 50px;
+    padding: 0.5rem 1.25rem;
+    border-radius: 3.125rem;
     font-weight: bold;
     cursor: pointer;
 }
@@ -253,16 +254,16 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px;
+    padding: 1.25rem;
     background: #fdfaf5;
-    border-radius: 20px;
+    border-radius: 1.25rem;
     border: 1px solid #f0ece4;
     transition: transform 0.2s ease;
-    margin-bottom: 12px;
+    margin-bottom: 0.75rem;
 }
 
 .history-item-row:hover {
-    transform: translateX(5px);
+    transform: translateX(0.3125rem);
     border-color: #D2C9B8;
 }
 
@@ -274,7 +275,7 @@ body {
 }
 
 .order-product-name {
-    margin: 4px 0;
+    margin: 0.25rem 0;
     font-weight: 600;
     color: #5a4a3a;
     font-size: 1.05rem;
@@ -288,14 +289,14 @@ body {
 .order-price-tag {
     font-weight: bold;
     color: #5a4a3a;
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
     font-size: 1.1rem;
 }
 
 .status-badge {
     font-size: 0.7rem;
-    padding: 6px 15px;
-    border-radius: 50px;
+    padding: 0.375rem 0.9375rem;
+    border-radius: 3.125rem;
     font-weight: bold;
     text-transform: uppercase;
 }
@@ -307,15 +308,65 @@ body {
 /* --- MOBILE RESPONSIVE --- */
 /* ========================================= */
 
-@media (max-width: 850px) {
+/* Tablet Breakpoint (~850px) */
+@media (max-width: 53.125em) { 
     .profile-wrapper {
         flex-direction: column;
     }
-    .profile-sidebar, .profile-content {
-        width: 100%;
+    .profile-sidebar {
+        position: static; /* Removes sticky behavior on smaller screens */
+        width: auto;
     }
+}
+
+/* Phone Breakpoint (~600px) */
+@media (max-width: 37.5em) {
     .form-row {
         flex-direction: column;
-        gap: 0;
+        gap: 0.9375rem; /* Gives inputs breathing room when stacked */
     }
+    
+    .address-item-display, 
+    .history-item-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .address-actions {
+        flex-direction: row; /* Puts Edit/Delete side-by-side on mobile */
+        text-align: left;
+    }
+
+    .profile-section-card {
+        padding: 1.25rem; /* Reduces massive padding on small screens */
+    }
+}
+/* ========================================= */
+/* --- SCROLLABLE HISTORY CONTAINER --- */
+/* ========================================= */
+
+.order-history-list {
+    max-height: 25rem; /* ~400px. Adjust if you want it shorter/taller */
+    overflow-y: auto;
+    padding-right: 0.5rem; /* Gives the scrollbar some breathing room */
+}
+
+/* Custom Webkit Scrollbar to match your theme */
+.order-history-list::-webkit-scrollbar {
+    width: 0.375rem;
+}
+
+.order-history-list::-webkit-scrollbar-track {
+    background: #fdfaf5; 
+    border-radius: 0.625rem;
+}
+
+.order-history-list::-webkit-scrollbar-thumb {
+    background: #D2C9B8; 
+    border-radius: 0.625rem;
+}
+
+.order-history-list::-webkit-scrollbar-thumb:hover {
+    background: #a09080; 
 }

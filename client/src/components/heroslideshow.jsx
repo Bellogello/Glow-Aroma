@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom"; // 1. Import useNavigate
 
-// These paths say: "Go out of components, into assets, and find the file"
 import img1 from "../assets/slide1.png"; 
 import img2 from "../assets/slide2.png";
 import img3 from "../assets/slide3.png";
@@ -12,6 +12,7 @@ const images = [img1, img2, img3, img4, img5];
 
 export default function HeroSlideshow() {
   const [index, setIndex] = useState(0);
+  const navigate = useNavigate(); // 2. Initialize the hook
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -38,12 +39,25 @@ export default function HeroSlideshow() {
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 3, duration: 1, ease: "easeOut" }}
+          transition={{ delay: 1, duration: 1, ease: "easeOut" }}
         >
           Glow Aroma
         </motion.h1>
-        <p>Make Your Own Candle</p>
-        <button className="glow-btn">Explore Now</button>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5 }}
+        >
+          Make Your Own Candle
+        </motion.p>
+        
+        {/* 3. Use a standard button with navigate() */}
+        <button 
+          className="glow-btn" 
+          onClick={() => navigate("/products")}
+        >
+          Explore Now
+        </button>
       </div>
     </div>
   );

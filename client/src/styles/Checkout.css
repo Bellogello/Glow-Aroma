@@ -4,7 +4,7 @@
 
 .checkout-wrapper {
   width: 90%;
-  max-width: 1200px;
+  max-width: 75rem; /* ~1200px */
   margin: 3rem auto 5rem;
 }
 
@@ -29,7 +29,7 @@
   background-color: #ffffff;
   padding: 2.5rem;
   border-radius: 1.5rem;
-  box-shadow: 0 10px 30px rgba(74, 55, 40, 0.06);
+  box-shadow: 0 0.625rem 1.875rem rgba(74, 55, 40, 0.06);
 }
 
 .checkout-form-section h2 {
@@ -81,7 +81,7 @@
 .address-card.selected {
   border-color: #76594C;
   background-color: #ffffff;
-  box-shadow: 0 4px 15px rgba(118, 89, 76, 0.1);
+  box-shadow: 0 0.25rem 0.9375rem rgba(118, 89, 76, 0.1);
 }
 
 .address-card input[type="radio"] {
@@ -110,7 +110,7 @@
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
+  from { opacity: 0; transform: translateY(-0.625rem); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -154,7 +154,7 @@
   background-color: #D2C9B8;
   padding: 2rem;
   border-radius: 1.5rem;
-  box-shadow: 0 10px 30px rgba(74, 55, 40, 0.08);
+  box-shadow: 0 0.625rem 1.875rem rgba(74, 55, 40, 0.08);
   color: #4a3728;
   position: sticky;
   top: 1rem;
@@ -169,7 +169,7 @@
 
 .summary-items {
   margin-bottom: 1.5rem;
-  max-height: 200px;
+  max-height: 12.5rem; /* ~200px */
   overflow-y: auto;
 }
 
@@ -331,12 +331,12 @@
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(74, 55, 40, 0.2);
+  box-shadow: 0 0.25rem 0.9375rem rgba(74, 55, 40, 0.2);
 }
 
 .btn-place-order:hover:not(:disabled) {
   background-color: #76594C;
-  transform: translateY(-2px);
+  transform: translateY(-0.125rem);
 }
 
 .btn-place-order:disabled {
@@ -369,8 +369,8 @@
 .iframe-container {
   background: white;
   width: 100%;
-  max-width: 800px;
-  border-radius: 12px;
+  max-width: 50rem; /* ~800px */
+  border-radius: 0.75rem;
   padding: 1.5rem;
   max-height: 90vh;
   overflow-y: auto;
@@ -399,7 +399,9 @@
 /* ==========================================
    MOBILE RESPONSIVE
    ========================================== */
-@media (max-width: 768px) {
+
+/* Tablet Breakpoint (~768px) */
+@media (max-width: 48em) {
   .checkout-wrapper {
     width: 95%;
     margin: 1.5rem auto 3rem;
@@ -410,13 +412,11 @@
     margin-bottom: 1.5rem;
   }
 
-  /* Stack columns vertically on mobile */
   .checkout-grid {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
 
-  /* Summary goes on top on mobile so users see total before filling form */
   .checkout-summary-section {
     order: -1;
     position: static;
@@ -446,7 +446,7 @@
   }
 
   .summary-items {
-    max-height: 150px;
+    max-height: 9.375rem; /* ~150px */
   }
 
   .summary-item {
@@ -473,11 +473,12 @@
 
   .iframe-container {
     padding: 1rem;
-    border-radius: 8px;
+    border-radius: 0.5rem;
   }
 }
 
-@media (max-width: 400px) {
+/* Phone Breakpoint (~400px) */
+@media (max-width: 25em) {
   .checkout-page-title { font-size: 1.3rem; }
   .coupon-apply-btn { padding: 0.65rem 0.8rem; font-size: 0.85rem; }
 }
