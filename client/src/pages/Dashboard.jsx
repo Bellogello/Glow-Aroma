@@ -7,9 +7,15 @@ import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
 import { API_BASE_URL } from '../config';
 
+// 1. Import the notification hook
+import { useNotification } from '../components/NotificationContext';
+
 const Dashboard = () => {
   useTitle("Dashboard");
   const navigate = useNavigate();
+
+  // 2. Initialize the hook
+  const { success, error } = useNotification();
 
   // --- AUTH & ROLES ---
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -89,8 +95,9 @@ const Dashboard = () => {
       setStaff(Array.isArray(staffData) ? staffData : []);
       setDiscountCodes(Array.isArray(discountData) ? discountData : []);
       setMessages(Array.isArray(msgData) ? msgData : []);
-    } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err);
+      error("Failed to sync dashboard data.");
     } finally {
       setLoading(false);
     }
@@ -102,6 +109,7 @@ const Dashboard = () => {
 
   // --- STAFF FUNCTIONS ---
   const handleOpenAddStaff = () => { setStaffForm({ name: '', email: '', phone: '', password: '', role_id: '2' }); resetDialogState(); setShowAddStaffDialog(true); };
+  
   const handleAddStaff = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
     try {
@@ -113,6 +121,7 @@ const Dashboard = () => {
       setTimeout(() => setShowAddStaffDialog(false), 1500);
     } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
+  
   const handleRemoveStaff = async (memberId) => {
     if (!window.confirm('Are you sure you want to remove this admin?')) return;
     try {
@@ -120,11 +129,18 @@ const Dashboard = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to remove staff member.');
       setStaff((prev) => prev.filter((m) => m.id !== memberId));
-    } catch (err) { alert(`Error: ${err.message}`); }
+      
+      // 3. Added success toast for background action
+      success("Admin removed successfully.");
+    } catch (err) { 
+      // 4. Replaced alert
+      error(`Error: ${err.message}`); 
+    }
   };
 
   // --- PRODUCT FUNCTIONS ---
   const handleOpenAddProduct = () => { setProductForm({ name: '', price: '', stock_quantity: '', description: '', image: null }); resetDialogState(); setShowAddProductDialog(true); };
+  
   const handleAddProduct = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
     const formData = new FormData();
@@ -149,6 +165,7 @@ const Dashboard = () => {
     resetDialogState(); 
     setShowEditProductDialog(true); 
   };
+  
   const handleUpdateProduct = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
     const formData = new FormData();
@@ -168,6 +185,7 @@ const Dashboard = () => {
       setTimeout(() => setShowEditProductDialog(false), 1500);
     } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
+  
   const handleDeleteProduct = async (id) => {
     if (!window.confirm('Are you sure you want to completely remove this product?')) return;
     try {
@@ -176,26 +194,32 @@ const Dashboard = () => {
       if (!res.ok) throw new Error(data.message || 'Failed to delete product.');
       setProducts((prev) => prev.filter((p) => p.id !== id));
       setShowEditProductDialog(false);
-    } catch (err) { alert(`Error: ${err.message}`); }
+      
+      // 5. Added success toast
+      success("Product completely removed.");
+    } catch (err) { 
+      // 6. Replaced alert
+      error(`Error: ${err.message}`); 
+    }
   };
 
   // --- ORDER FUNCTIONS ---
-const handleOpenOrderDialog = async (order) => {
-  setSelectedOrder(order);
-  setNewStatusId(order.status_id.toString()); // Pre-fill the dropdown with current status
-  setSelectedOrderItems([]); // FIX: Changed from setOrderItems to setSelectedOrderItems
-  setShowOrderDialog(true); // FIX: Changed from setOrderDialogOpen to setShowOrderDialog
+  const handleOpenOrderDialog = async (order) => {
+    setSelectedOrder(order);
+    setNewStatusId(order.status_id.toString());
+    setSelectedOrderItems([]);
+    setShowOrderDialog(true);
 
-  try {
-    const res = await fetch(`${API_BASE_URL}/admin/orders/${order.id}/items`);
-    if (!res.ok) throw new Error("Items not found");
-    const data = await res.json();
-    
-    setSelectedOrderItems(data); // FIX: Changed from setOrderItems to setSelectedOrderItems
-  } catch (err) {
-    console.error("Failed to load order items:", err);
-  }
-};
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/orders/${order.id}/items`);
+      if (!res.ok) throw new Error("Items not found");
+      const data = await res.json();
+      setSelectedOrderItems(data);
+    } catch (err) {
+      console.error("Failed to load order items:", err);
+      error("Could not load order items.");
+    }
+  };
 
   const handleUpdateOrderStatus = async (e) => {
     e.preventDefault(); 
@@ -223,25 +247,30 @@ const handleOpenOrderDialog = async (order) => {
 
   // --- ACCOUNT & DISCOUNT FUNCTIONS ---
   const handleOpenDeleteAccount = () => { setDeletePassword(''); resetDialogState(); setShowDeleteAccountDialog(true); };
+  
   const handleDeleteAccount = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError('');
     try {
       const res = await fetch(`${API_BASE_URL}/admin/delete-account`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, password: deletePassword }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.message || 'Failed to delete account.');
-      alert('Account successfully deleted. You will now be logged out.');
+      
+      // 7. Replaced alert with a success toast before navigating
+      success('Account successfully deleted. You have been logged out.');
       localStorage.clear();
       navigate('/');
     } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
 
   const handleOpenAddDiscount = () => { setDiscountForm({ code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_order_amount: '', max_uses: '', expires_at: '' }); resetDialogState(); setShowAddDiscountDialog(true); };
+  
   const generateRandomCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = 'GLOW-';
     for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
     setDiscountForm({ ...discountForm, code: result });
   };
+  
   const handleAddDiscountCode = async (e) => {
     e.preventDefault();
     const { code, discount_type, discount_value, min_order_amount, max_order_amount, max_uses, expires_at } = discountForm;
@@ -255,19 +284,32 @@ const handleOpenOrderDialog = async (order) => {
       setTimeout(() => { setShowAddDiscountDialog(false); resetDialogState(); }, 1500);
     } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
+  
   const handleToggleDiscount = async (id, currentActive) => {
     try {
       await fetch(`${API_BASE_URL}/admin/discount-codes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !currentActive }) });
       fetchDashboardData();
-    } catch (err) { console.error(err.message); }
+      // 8. Added feedback toast
+      success(currentActive ? "Promo code disabled." : "Promo code activated.");
+    } catch (err) { 
+      console.error(err.message); 
+      error("Failed to toggle promo code.");
+    }
   };
+  
   const handleDeleteDiscount = async (id) => {
     if (!window.confirm('Delete this code permanently?')) return;
     try {
       await fetch(`${API_BASE_URL}/admin/discount-codes/${id}`, { method: 'DELETE' });
       fetchDashboardData();
-    } catch (err) { console.error(err.message); }
+      // 9. Added feedback toast
+      success("Promo code deleted.");
+    } catch (err) { 
+      console.error(err.message); 
+      error("Failed to delete promo code.");
+    }
   };
+  
   const handleDeleteMessage = async (id) => {
     if (!window.confirm('Delete this message permanently?')) return;
     try {
@@ -275,8 +317,15 @@ const handleOpenOrderDialog = async (order) => {
       if (res.ok) {
         setMessages((prev) => prev.filter((m) => m.id !== id));
         setShowViewMessageDialog(false);
+        // 10. Added feedback toast
+        success("Message deleted.");
+      } else {
+        error("Failed to delete message.");
       }
-    } catch (err) { console.error(err.message); }
+    } catch (err) { 
+      console.error(err.message); 
+      error("Server error while deleting message.");
+    }
   };
 
   if (!isAuthorized) return null;
@@ -591,7 +640,7 @@ const handleOpenOrderDialog = async (order) => {
         </div>
       )}
 
-      {/* ADD STAFF DIALOG — only reachable by Super Admin since the section is hidden for role 2 */}
+      {/* ADD STAFF DIALOG */}
       {showAddStaffDialog && (
         <div className="dialog-overlay">
           <div className="dialog-box">

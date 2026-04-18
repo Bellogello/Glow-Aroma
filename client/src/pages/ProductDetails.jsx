@@ -5,12 +5,17 @@ import Footer from '../components/Footer';
 import useTitle from '../components/useTitles';
 import FallbackCandle from '../assets/candle.png';
 import '../styles/ProductDetails.css';
-// 1. Import the "Central Brain"
 import { API_BASE_URL } from '../config';
+
+// 1. Import the notification hook
+import { useNotification } from '../components/NotificationContext';
 
 const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  // 2. Initialize the hook
+  const { success, error, warning } = useNotification();
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +32,6 @@ const ProductDetails = () => {
 
     const fetchProductAndCart = async () => {
       try {
-        // 2. Used API_BASE_URL for product fetch
         const prodRes = await fetch(`${API_BASE_URL}/products/${id}`);
         if (!prodRes.ok) throw new Error("Product not found");
         const prodData = await prodRes.json();
@@ -35,7 +39,6 @@ const ProductDetails = () => {
 
         const userId = localStorage.getItem("userId");
         if (userId) {
-          // 3. Used API_BASE_URL for cart check
           const cartRes = await fetch(`${API_BASE_URL}/cart/${userId}`);
           const cartData = await cartRes.json();
           
@@ -62,7 +65,8 @@ const ProductDetails = () => {
   const handleAddToCart = async () => {
     const userId = localStorage.getItem("userId");
     if (!userId) {
-      alert("Please log in to add items to your cart!");
+      // 3a. Replaced alert
+      warning("Please log in to add items to your cart!");
       return;
     }
 
@@ -75,7 +79,6 @@ const ProductDetails = () => {
     };
 
     try {
-      // 4. Used API_BASE_URL for add-to-cart action
       const response = await fetch(`${API_BASE_URL}/cart/add`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -85,13 +88,17 @@ const ProductDetails = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert(`${quantity}x ${product.name} added to your cart! 🛒`);
+        // 3b. Replaced alert and kept navigation
+        success(`${quantity}x ${product.name} added to your cart! 🛒`);
         navigate('/cart'); 
       } else {
-        alert("Wait: " + data.error); 
+        // 3c. Replaced alert
+        error("Wait: " + data.error); 
       }
-    } catch (error) {
-      console.error("Failed to add to cart:", error);
+    } catch (err) {
+      console.error("Failed to add to cart:", err);
+      // Added network error fallback
+      error("Server connection failed. Try again.");
     } finally {
       setIsAdding(false);
     }
@@ -100,7 +107,6 @@ const ProductDetails = () => {
   if (loading) return <div className="home-container"><Navbar /><div className="loading-state"><h2>Loading details...</h2></div><Footer /></div>;
   if (!product) return <div className="home-container"><Navbar /><div className="loading-state"><h2>Product not found.</h2></div><Footer /></div>;
 
-  // 5. Fixed Display Image logic to use API_BASE_URL
   const displayImage = product.image_url 
     ? (product.image_url.startsWith('http') ? product.image_url : `${API_BASE_URL}${product.image_url}`)
     : FallbackCandle;

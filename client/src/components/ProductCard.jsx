@@ -2,11 +2,16 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom'; 
 import '../styles/ProductCard.css';
 import FallbackCandle from '../assets/candle.png'; 
-// 1. Import the "Central Brain"
 import { API_BASE_URL } from '../config';
+
+// 1. Import the notification hook
+import { useNotification } from '../components/NotificationContext';
 
 const ProductCard = ({ product }) => {
   const [isAdding, setIsAdding] = useState(false);
+  
+  // 2. Initialize the hook
+  const { success, error, warning } = useNotification();
 
   // Check if it's completely out of stock
   const isOutOfStock = product?.stock_quantity <= 0;
@@ -18,7 +23,8 @@ const ProductCard = ({ product }) => {
 
     const userId = localStorage.getItem("userId");
     if (!userId) {
-      alert("You need to be logged in to add stuff to your cart!");
+      // 3a. Replaced alert
+      warning("You need to be logged in to add stuff to your cart!");
       return;
     }
 
@@ -31,7 +37,6 @@ const ProductCard = ({ product }) => {
     };
 
     try {
-      // 2. Used API_BASE_URL for the cart action
       const response = await fetch(`${API_BASE_URL}/cart/add`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,12 +46,16 @@ const ProductCard = ({ product }) => {
       const data = await response.json();
 
       if (response.ok) {
-        alert(`${product.name} added to cart! 🛒`);
+        // 3b. Replaced alert
+        success(`${product.name} added to cart! 🛒`);
       } else {
-        alert("Wait: " + data.error);
+        // 3c. Replaced alert
+        error("Wait: " + data.error);
       }
-    } catch (error) {
-      console.error("Failed to add to cart:", error);
+    } catch (err) {
+      console.error("Failed to add to cart:", err);
+      // Added an error toast for network failures
+      error("Connection failed. Try again.");
     } finally {
       setIsAdding(false);
     }
@@ -54,7 +63,6 @@ const ProductCard = ({ product }) => {
 
   if (!product) return null;
 
-  // 3. Fixed Display Image logic to use API_BASE_URL
   const displayImage = product.image_url 
     ? (product.image_url.startsWith('http') ? product.image_url : `${API_BASE_URL}${product.image_url}`)
     : FallbackCandle;

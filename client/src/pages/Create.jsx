@@ -4,11 +4,16 @@ import "../styles/create.css";
 import CandlePreview3D from '../components/CandlePreview3D';
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
-// 1. Import the "Central Brain"
 import { API_BASE_URL } from '../config';
+
+// 1. Import the notification hook
+import { useNotification } from '../components/NotificationContext';
 
 const Create = () => {
   useTitle("Create Your Own");
+  
+  // 2. Initialize the hook
+  const { success, error, warning } = useNotification();
 
   const previewRef = useRef(null);
 
@@ -32,7 +37,6 @@ const Create = () => {
   const [moldLayers, setMoldLayers] = useState([]); 
 
   useEffect(() => {
-    // 2. Updated all configuration fetches to use API_BASE_URL
     fetch(`${API_BASE_URL}/scents`)
       .then(res => res.json())
       .then(data => setScents(data))
@@ -82,7 +86,8 @@ const Create = () => {
   };
 
   const handleConfirm = async () => {
-    if (selectedScentId === "default") return alert("Please pick a scent!");
+    // 3a. Replaced alert with a warning toast
+    if (selectedScentId === "default") return warning("Please pick a scent!");
 
     let totalPrice = 0;
     
@@ -91,7 +96,8 @@ const Create = () => {
 
     if (candleType === 'cup') {
       if (selectedCupShape === "default" || selectedCupSize === "default" || selectedCupColor === "default" || selectedCandleColor === "default") {
-        return alert("Please fill out all Cup options!");
+        // 3b. Replaced alert
+        return warning("Please fill out all Cup options!");
       }
       
       const shape = cupShapes.find(s => s.id.toString() === selectedCupShape.toString());
@@ -103,8 +109,9 @@ const Create = () => {
       if (waxColor) totalPrice += Number(waxColor.price);
 
     } else {
-      if (selectedMoldShape === "default") return alert("Please pick a Mold Shape!");
-      if (moldLayers.includes("default")) return alert("Please pick a color for every layer of your mold!");
+      // 3c. Replaced alerts
+      if (selectedMoldShape === "default") return warning("Please pick a Mold Shape!");
+      if (moldLayers.includes("default")) return warning("Please pick a color for every layer of your mold!");
 
       const shape = moldShapes.find(s => s.id.toString() === selectedMoldShape.toString());
       if (shape) totalPrice += Number(shape.base_price);
@@ -116,7 +123,7 @@ const Create = () => {
     }
 
     const userId = localStorage.getItem("userId");
-    if (!userId) return alert("You need to be logged in to add stuff to your cart!");
+    if (!userId) return warning("You need to be logged in to add stuff to your cart!");
 
     const snapshot = previewRef.current?.getSnapshot() || null;
 
@@ -134,7 +141,6 @@ const Create = () => {
     };
 
     try {
-      // 3. Updated Final Submission fetch to use API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/cart/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -144,7 +150,8 @@ const Create = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Success! Your custom candle was added to the cart.");
+        // 3d. Replaced alert with a nice success toast
+        success("Success! Your custom candle was added to the cart.");
         setQuantity(1);
         setSelectedScentId("default");
         setSelectedCupShape("default");
@@ -154,11 +161,13 @@ const Create = () => {
         setSelectedMoldShape("default");
         setMoldLayers([]);
       } else {
-        alert("Error from server: " + data.error);
+        // 3e. Replaced alert
+        error("Error from server: " + data.error);
       }
-    } catch (error) {
-      console.error("Failed to add to cart:", error);
-      alert("Server error. Please try again later.");
+    } catch (err) {
+      console.error("Failed to add to cart:", err);
+      // 3f. Replaced alert
+      error("Server error. Please try again later.");
     }
   };
 

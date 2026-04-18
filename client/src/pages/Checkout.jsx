@@ -7,9 +7,15 @@ import AddressForm from '../components/AddressForm';
 import '../styles/Checkout.css';
 import { API_BASE_URL } from '../config';
 
+// 1. Import the notification hook
+import { useNotification } from '../components/NotificationContext';
+
 const Checkout = () => {
   useTitle("Checkout | Glow Aroma");
   const navigate = useNavigate();
+
+  // 2. Initialize the hook
+  const { success, error, warning } = useNotification();
 
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +84,8 @@ const Checkout = () => {
       } else {
         setAppliedCoupon(data);
         setCouponSuccess(`✓ "${data.code}" applied!`);
+        // 3a. Added a nice success toast for coupons!
+        success(`Promo code ${data.code} applied!`);
       }
     } catch (err) {
       setCouponError('Could not validate coupon. Try again.');
@@ -107,7 +115,13 @@ const Checkout = () => {
   const handlePlaceOrder = async (e) => {
     if (e) e.preventDefault();
     const userId = localStorage.getItem("userId");
-    if (cartItems.length === 0 && !pendingOrderId) return alert("Your cart is empty!");
+    
+    // 3b. Replaced alert with warning toast
+    if (cartItems.length === 0 && !pendingOrderId) {
+      warning("Your cart is empty!");
+      return;
+    }
+    
     setIsProcessing(true);
 
     try {
@@ -173,8 +187,9 @@ const Checkout = () => {
       } else {
         navigate(`/order-success?success=true&order=${currentOrderId}`);
       }
-    } catch (error) {
-      alert(error.message);
+    } catch (err) {
+      // 3c. Replaced alert with error toast
+      error(err.message);
     } finally {
       setIsProcessing(false);
     }

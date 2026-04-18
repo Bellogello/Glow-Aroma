@@ -6,12 +6,18 @@ import '../styles/profile.css';
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
 import { API_BASE_URL } from '../config';
+
+// 1. Import the notification hook
+import { useNotification } from '../components/NotificationContext';
   
 const Signin = () => {
   useTitle("Sign in");
   
+  // 2. Initialize the hook
+  const { success, error, warning } = useNotification();
+  
   // SAFE URL LOGIC: This prevents the "/undefined/signin" error on Windows
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://glow-aroma-production.up.railway.app';
+  const SAFE_API_BASE_URL = import.meta.env.VITE_API_URL || 'https://glow-aroma-production.up.railway.app';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,8 +33,7 @@ const Signin = () => {
     };
 
     try {
-      // Use the API_BASE_URL variable here
-      const response = await fetch(`${API_BASE_URL}/signin`, {
+      const response = await fetch(`${SAFE_API_BASE_URL}/signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -36,7 +41,6 @@ const Signin = () => {
         body: JSON.stringify(loginData),
       });
 
-      // Handle cases where the server might return non-JSON (like a 404 HTML page)
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         throw new TypeError("Oops, we didn't get JSON from the server!");
@@ -50,13 +54,17 @@ const Signin = () => {
         localStorage.setItem("userId", data.userId);
         localStorage.setItem("roleId", data.roleId); 
         
+        // 3a. Added a friendly success toast
+        success(`Welcome back, ${data.userName}!`);
         navigate('/profile'); 
       } else {
-        alert("Login failed: " + (data.error || "Unknown error"));
+        // 3b. Replaced alert
+        error("Login failed: " + (data.error || "Unknown error"));
       }
-    } catch (error) {
-      console.error("Error signing in:", error);
-      alert("Connection error: Make sure the backend is awake!");
+    } catch (err) {
+      console.error("Error signing in:", err);
+      // 3c. Replaced alert
+      error("Connection error: Make sure the backend is awake!");
     }
   };
 
@@ -64,8 +72,7 @@ const Signin = () => {
   const loginWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        // Use the API_BASE_URL variable here too
-        const response = await fetch(`${API_BASE_URL}/auth/google`, {
+        const response = await fetch(`${SAFE_API_BASE_URL}/auth/google`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -81,16 +88,21 @@ const Signin = () => {
           localStorage.setItem("userId", data.userId);
           localStorage.setItem("roleId", data.roleId);
           
+          // 4a. Added success toast
+          success(`Welcome back, ${data.userName}!`);
           navigate('/profile'); 
         } else {
-          alert("Google Login failed: " + data.error);
+          // 4b. Replaced alert
+          error("Google Login failed: " + data.error);
         }
-      } catch (error) {
-        console.error("Error communicating with backend:", error);
-        alert("Server error. Please try again later.");
+      } catch (err) {
+        console.error("Error communicating with backend:", err);
+        // 4c. Replaced alert
+        error("Server error. Please try again later.");
       }
     },
-    onError: () => alert('Google Login window was closed or failed.'),
+    // 4d. Replaced alert with a warning toast
+    onError: () => warning('Google Login window was closed or failed.'),
   });
 
   return (

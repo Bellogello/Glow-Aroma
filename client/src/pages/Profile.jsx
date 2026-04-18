@@ -7,9 +7,15 @@ import AddressForm from '../components/AddressForm';
 import '../styles/profile.css'; 
 import { API_BASE_URL } from '../config';
 
+// 1. Import the notification hook
+import { useNotification } from '../components/NotificationContext';
+
 const Profile = () => {
   useTitle("My Profile | Glow Aroma");
   const navigate = useNavigate();
+
+  // 2. Initialize the hook
+  const { success, error, warning } = useNotification();
 
   const token = localStorage.getItem("token");
   const userName = localStorage.getItem("userName");
@@ -90,11 +96,15 @@ const Profile = () => {
       const res = await fetch(`${API_BASE_URL}/addresses/${addressId}`, { method: 'DELETE' });
       if (res.ok) {
         setSavedAddresses(prev => prev.filter(addr => addr.id !== addressId));
+        // 3a. Added success feedback
+        success("Address deleted.");
       } else {
-        alert("Could not delete. It may be linked to an existing order.");
+        // 3b. Replaced alert
+        error("Could not delete. It may be linked to an existing order.");
       }
     } catch (err) {
-      alert("Server connection error.");
+      // 3c. Replaced alert
+      error("Server connection error.");
     }
   };
 
@@ -117,10 +127,13 @@ const Profile = () => {
     if (e) e.preventDefault();
     if (submitting) return;
     const { fullName, phone, governorate, area, street } = newAddress;
+    
     if (!fullName || !phone || !governorate || !area || !street) {
-      alert("Please fill in all required fields.");
+      // 4a. Replaced alert with a warning toast
+      warning("Please fill in all required fields.");
       return;
     }
+    
     setSubmitting(true);
     const url = editingId ? `${API_BASE_URL}/addresses/${editingId}` : `${API_BASE_URL}/addresses/${userId}`;
     const method = editingId ? 'PUT' : 'POST';
@@ -135,11 +148,16 @@ const Profile = () => {
         setIsAddingAddress(false);
         setEditingId(null);
         setNewAddress({ fullName: userName, phone: '', governorate: '', area: '', street: '', building: '', floorApt: '', notes: '' });
+        
+        // 4b. Added dynamic success feedback
+        success(editingId ? "Address updated!" : "New address saved!");
       } else {
-        alert("Failed to save. Please try again.");
+        // 4c. Replaced alert
+        error("Failed to save. Please try again.");
       }
     } catch (err) {
-      alert("Network error.");
+      // 4d. Replaced alert
+      error("Network error.");
     } finally {
       setSubmitting(false);
     }

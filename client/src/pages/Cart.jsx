@@ -7,8 +7,15 @@ import { Link } from 'react-router-dom';
 import useTitle from '../components/useTitles';
 import { API_BASE_URL } from '../config';
 
+// 1. Import the notification hook
+import { useNotification } from '../components/NotificationContext';
+
 const Cart = () => {
   useTitle("Cart");
+  
+  // 2. Initialize the hook
+  const { success, error, warning } = useNotification();
+  
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,10 +51,13 @@ const Cart = () => {
         }));
       } else {
         const errorData = await response.json();
-        alert(errorData.error || "Cannot update quantity.");
+        // 3a. Replaced alert
+        error(errorData.error || "Cannot update quantity.");
       }
-    } catch (error) {
-      console.error("Failed to update quantity:", error);
+    } catch (err) {
+      console.error("Failed to update quantity:", err);
+      // Added network fallback
+      error("Connection error. Could not update quantity.");
     }
   };
 
@@ -56,12 +66,17 @@ const Cart = () => {
       const response = await fetch(`${API_BASE_URL}/cart/remove/${cartItemId}`, { method: 'DELETE' });
       if (response.ok) {
         setCartItems(prevItems => prevItems.filter(item => item.cart_item_id !== cartItemId));
+        // 3b. Added a subtle success toast so the user knows it worked
+        success("Item removed from cart.");
       } else {
         const data = await response.json();
-        alert("Error removing item: " + data.error);
+        // 3c. Replaced alert
+        error("Error removing item: " + data.error);
       }
-    } catch (error) {
-      console.error("Failed to delete item:", error);
+    } catch (err) {
+      console.error("Failed to delete item:", err);
+      // Added network fallback
+      error("Connection error. Could not remove item.");
     }
   };
 

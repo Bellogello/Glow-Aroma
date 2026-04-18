@@ -7,11 +7,17 @@ import '../styles/Home.css';
 import { API_BASE_URL } from '../config';
 import FallbackCandle from '../assets/candle.png';
 
+// 1. Import the notification hook
+import { useNotification } from '../components/NotificationContext';
+
 const Home = () => {
   useEffect(() => { document.title = "Glow Aroma"; }, []);
 
   const scrollRef = useRef(null);
   const navigate = useNavigate();
+  
+  // 2. Initialize the hook
+  const { success, error, warning } = useNotification();
 
   const [bestSellers, setBestSellers] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -34,7 +40,8 @@ const Home = () => {
   const handleQuickBuy = async (product) => {
     const userId = localStorage.getItem("userId");
     if (!userId) {
-      alert("Please login to shop!");
+      // 3a. Replaced alert
+      warning("Please login to shop!");
       return;
     }
 
@@ -51,14 +58,18 @@ const Home = () => {
       });
 
       if (response.ok) {
+        // 3b. Added a success toast for better UX before jumping pages
+        success(`${product.name} added to cart!`);
         navigate('/cart');
       } else {
         const errorData = await response.json();
-        alert("Failed to add to cart: " + (errorData.error || "Unknown error"));
+        // 3c. Replaced alert
+        error("Failed to add to cart: " + (errorData.error || "Unknown error"));
       }
-    } catch (error) {
-      console.error("Quick buy failed:", error);
-      alert("Server connection failed. Try again later.");
+    } catch (err) {
+      console.error("Quick buy failed:", err);
+      // 3d. Replaced alert
+      error("Server connection failed. Try again later.");
     }
   };
 

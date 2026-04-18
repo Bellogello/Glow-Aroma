@@ -6,8 +6,14 @@ import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
 import validator from 'validator';
 
+// 1. Import the notification hook
+import { useNotification } from '../components/NotificationContext';
+
 const Signup = () => {
   useTitle("Sign up");
+
+  // 2. Initialize the hook
+  const { success, error, warning } = useNotification();
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://glow-aroma-production.up.railway.app';
 
@@ -23,12 +29,14 @@ const Signup = () => {
     e.preventDefault();
 
     if (!validator.isEmail(email)) {
-      alert("Please enter a valid email address.");
+      // 3a. Replaced alert with warning
+      warning("Please enter a valid email address.");
       return; 
     }
 
     if (password !== repeatPassword) {
-      alert("Your passwords do not match!");
+      // 3b. Replaced alert with warning
+      warning("Your passwords do not match!");
       return; 
     }
 
@@ -41,7 +49,8 @@ const Signup = () => {
     });
 
     if (!isStrong) {
-      alert("Password is too weak! It must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.");
+      // 3c. Replaced alert with warning
+      warning("Password is too weak! It must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.");
       return; 
     }
 
@@ -67,13 +76,18 @@ const Signup = () => {
         localStorage.setItem("userName", data.userName);
         localStorage.setItem("userId", data.userId);
         localStorage.setItem("roleId", "1");
+        
+        // 4a. Added a friendly success toast
+        success(`Account created! Welcome to Glow Aroma, ${data.userName}!`);
         navigate('/profile'); 
       } else {
-        alert("Error: " + (data.error || data.message));
+        // 4b. Replaced alert with error
+        error("Error: " + (data.error || data.message));
       }
-    } catch (error) {
-      console.error("Failed to push data:", error);
-      alert("Server error. Please check your internet connection.");
+    } catch (err) {
+      console.error("Failed to push data:", err);
+      // 4c. Replaced alert with error
+      error("Server error. Please check your internet connection.");
     }
   };
 
