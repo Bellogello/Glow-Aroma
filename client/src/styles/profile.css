@@ -18,7 +18,12 @@ body {
     box-sizing: border-box;
     width: 100%;
 }
-
+.profile-sidebar, 
+.profile-content, 
+.profile-section-card,
+.address-item-display {
+    box-sizing: border-box;
+}
 /* ========================================= */
 /* --- SIDEBAR: USER CARD --- */
 /* ========================================= */
@@ -309,21 +314,23 @@ body {
 /* ========================================= */
 
 /* Tablet Breakpoint (~850px) */
-@media (max-width: 53.125em) { 
+@media (max-width: 850px) { 
     .profile-wrapper {
         flex-direction: column;
+        align-items: stretch; /* Forces cards to center and stay within bounds */
+        padding: 1.25rem;
     }
     .profile-sidebar {
-        position: static; /* Removes sticky behavior on smaller screens */
-        width: auto;
+        position: static; 
+        width: 100%;
     }
 }
 
 /* Phone Breakpoint (~600px) */
-@media (max-width: 37.5em) {
+@media (max-width: 600px) {
     .form-row {
         flex-direction: column;
-        gap: 0.9375rem; /* Gives inputs breathing room when stacked */
+        gap: 0.9375rem; 
     }
     
     .address-item-display, 
@@ -334,12 +341,16 @@ body {
     }
 
     .address-actions {
-        flex-direction: row; /* Puts Edit/Delete side-by-side on mobile */
-        text-align: left;
+        flex-direction: row; 
+        width: 100%;
+        justify-content: flex-end; /* Pushes Edit/Delete neatly to the bottom right */
+        border-top: 1px solid #f0ece4; /* Adds a clean divider above the buttons */
+        padding-top: 0.75rem;
+        margin-top: 0.5rem;
     }
 
     .profile-section-card {
-        padding: 1.25rem; /* Reduces massive padding on small screens */
+        padding: 1.5rem; /* Reduces the massive desktop padding for tiny screens */
     }
 }
 /* ========================================= */

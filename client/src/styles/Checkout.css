@@ -4,10 +4,15 @@
 
 .checkout-wrapper {
   width: 90%;
-  max-width: 75rem; /* ~1200px */
+  max-width: 75rem; 
   margin: 3rem auto 5rem;
+  box-sizing: border-box; /* ADDED */
 }
 
+.checkout-wrapper * {
+  box-sizing: border-box; /* ADDED */
+  max-width: 100%; /* ADDED - Forces nothing to ever bleed past its parent */
+}
 .checkout-page-title {
   color: #4a3728;
   font-weight: 800;
@@ -400,10 +405,10 @@
    MOBILE RESPONSIVE
    ========================================== */
 
-/* Tablet Breakpoint (~768px) */
-@media (max-width: 48em) {
+/* Tablet & Phone Breakpoint */
+@media (max-width: 768px) {
   .checkout-wrapper {
-    width: 95%;
+    width: 92%; /* Slightly tighter to guarantee screen fit */
     margin: 1.5rem auto 3rem;
   }
 
@@ -412,19 +417,19 @@
     margin-bottom: 1.5rem;
   }
 
+  /* Switched to Flexbox for mobile to absolutely prevent horizontal bleed */
   .checkout-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column-reverse; /* Puts Summary on top, Form on bottom */
     gap: 1.5rem;
+    width: 100%;
   }
 
-  .checkout-summary-section {
-    order: -1;
-    position: static;
-    padding: 1.5rem;
-  }
-
+  .checkout-summary-section,
   .checkout-form-section {
-    padding: 1.5rem;
+    width: 100%;
+    position: static;
+    padding: 1.25rem; /* Standardized mobile padding */
   }
 
   .checkout-form-section h2,
@@ -432,8 +437,12 @@
     font-size: 1.1rem;
   }
 
-  .address-card {
+  /* Force cards to never exceed the white box width */
+  .address-card,
+  .pay-option {
+    width: 100%;
     padding: 1rem;
+    word-break: break-word; /* Prevents long names/addresses from stretching the box */
   }
 
   .address-card-info strong {
@@ -441,12 +450,11 @@
   }
 
   .pay-option {
-    padding: 0.85rem 1rem;
     font-size: 0.95rem;
   }
 
   .summary-items {
-    max-height: 9.375rem; /* ~150px */
+    max-height: 12rem; 
   }
 
   .summary-item {
@@ -469,16 +477,18 @@
   .btn-place-order {
     font-size: 1rem;
     padding: 1rem;
+    width: 100%;
   }
 
   .iframe-container {
     padding: 1rem;
     border-radius: 0.5rem;
+    width: 95%;
   }
 }
 
-/* Phone Breakpoint (~400px) */
-@media (max-width: 25em) {
+/* Small Phone Breakpoint */
+@media (max-width: 400px) {
   .checkout-page-title { font-size: 1.3rem; }
   .coupon-apply-btn { padding: 0.65rem 0.8rem; font-size: 0.85rem; }
 }
