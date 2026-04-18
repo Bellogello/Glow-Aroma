@@ -4,88 +4,125 @@
   justify-content: center;
   align-items: center;
   min-height: 80vh; 
-  padding: 20px;
+  padding: 2rem 1rem;
 }
 
-/* The beige box matching your Sign In page */
+/* The beige box matching your brand */
 .login-card-beige {
-  background-color: #D2C9B8; /* Brand Beige */
-  padding: 50px 40px;
-  border-radius: 30px; 
+  background-color: #D2C9B8; 
+  padding: 3rem 2.5rem;
+  border-radius: 1.5rem; /* Matches your Dashboard/Contact cards */
   width: 100%;
-  max-width: 450px; 
+  max-width: 28rem; /* ~450px */
+  box-shadow: 0 0.5rem 2rem rgba(74, 55, 40, 0.1);
 }
 
-/* --- THE NEW SIDE-BY-SIDE ROW --- */
+/* --- THE SIDE-BY-SIDE ROW --- */
 .form-row {
-  display: flex;
-  gap: 15px; /* Space between Name and Phone */
-  margin-bottom: 25px;
-}
-
-/* Makes both inputs in the row share space equally */
-.form-row .custom-pill-input {
-  flex: 1; 
-  width: 100%; 
+  display: grid; /* Switched to Grid for better control */
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .form-group {
-  margin-bottom: 25px;
+  margin-bottom: 1.25rem;
+  width: 100%;
 }
 
-/* 1. Pill-shaped Input Boxes */
+/* 1. Squary-Circle Input Boxes */
 .custom-pill-input {
   width: 100%;
-  padding: 15px;
-  border: none;
-  border-radius: 50px; 
-  font-size: 16px;
-  text-align: center; 
+  padding: 0.9rem 1.25rem;
+  border: 1.5px solid transparent; /* Hidden border for smooth transition */
+  border-radius: 0.75rem; /* THE SQUIRCLE: Matches Contact/Checkout */
+  font-size: 1rem;
   box-sizing: border-box;
-  color: #5a4a3a;
+  color: #4a3728;
+  background-color: #ffffff;
   outline: none;
+  transition: all 0.2s ease;
 }
 
 .custom-pill-input::placeholder {
-  color: #7a6a5a;
+  color: #a89f91;
 }
 
+/* Glow effect when user types */
 .custom-pill-input:focus {
-  box-shadow: 0 0 0 3px rgba(90, 74, 58, 0.2); 
+  border-color: #76594C;
+  box-shadow: 0 0 0 4px rgba(118, 89, 76, 0.15); 
 }
 
-/* 2. Pill-shaped Submit Button */
+/* 2. Squary-Circle Submit Button */
 .custom-pill-btn {
-  background-color: #5a4a3a !important; 
+  background-color: #4a3728 !important; 
   border: none !important;
-  color: white;
-  padding: 15px;
-  border-radius: 50px; 
-  width: 75%; 
+  color: #fdfbf7;
+  padding: 1rem;
+  border-radius: 0.75rem; /* Matching the inputs */
+  width: 100%; /* Full width for better mobile tap targets */
   display: block;
-  margin: 0 auto; 
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 1.1rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
-  margin-top: 15px;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
 }
 
 .custom-pill-btn:hover {
-  background-color: #43362a !important; 
+  background-color: #76594C !important; 
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* 3. The Sign In Link */
+/* 3. Google Button Override */
+.google-btn {
+  background-color: #ffffff !important;
+  color: #4a3728 !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid #e0dcd3 !important;
+}
+
+.google-btn:hover {
+  background-color: #fdfbf7 !important;
+  transform: translateY(-2px);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem 0;
+  color: #7a6a5a;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(74, 55, 40, 0.2);
+}
+
+.divider span {
+  padding: 0 10px;
+}
+
+/* 4. The Sign In/Up Link */
 .signup-link-container {
   text-align: center;
-  margin-top: 25px;
+  margin-top: 1.5rem;
 }
 
 .signup-link {
-  color: #5a4a3a;
-  font-weight: bold;
+  color: #4a3728;
+  font-weight: 700;
   text-decoration: none;
-  font-size: 15px;
+  font-size: 0.95rem;
 }
 
 .signup-link:hover {
@@ -93,24 +130,9 @@
 }
 
 /* --- MOBILE RESPONSIVENESS --- */
-/* Stacks the Name and Phone inputs on top of each other on tiny phone screens */
 @media (max-width: 500px) {
   .form-row {
-    flex-direction: column;
-    gap: 25px; 
+    grid-template-columns: 1fr; /* Stack inputs on mobile */
+    gap: 1.25rem; 
   }
-}
-/* --- GOOGLE BUTTON OVERRIDE --- */
-.google-btn {
-  background-color: #ffffff !important; /* White background */
-  color: #5a4a3a !important; /* Brown text to match your brand */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px; /* Adds space between the Google logo and the text */
-}
-
-/* A soft beige hover effect so it doesn't turn dark brown */
-.google-btn:hover {
-  background-color: #fdfbf7 !important; 
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom"; // 1. Import useNavigate
+import '../styles/heroslideshow.css'
 
 import img1 from "../assets/slide1.png"; 
 import img2 from "../assets/slide2.png";
@@ -27,10 +28,13 @@ export default function HeroSlideshow() {
         <motion.img
           key={index}
           src={images[index]}
-          initial={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, filter: "blur(10px)" }}
-          transition={{ duration: 1.5, ease: "easeInOut" }}
+          initial={{ opacity: 0, scale: 1.1 }} // Start slightly zoomed in
+          animate={{ opacity: 1, scale: 1.05 }} // Keep a very tiny zoom scale
+          exit={{ opacity: 0 }}
+          transition={{ 
+            duration: 2.5, // Slightly longer transition for smoothness
+            scale: { duration: 6.5, ease: "linear" } // Slow zoom throughout the slide's life
+          }}
           className="main-slide-img"
         />
       </AnimatePresence>
@@ -48,7 +52,7 @@ export default function HeroSlideshow() {
           animate={{ opacity: 1 }}
           transition={{ delay: 1.5 }}
         >
-          Make Your Own Candle
+          Explore Products
         </motion.p>
         
         {/* 3. Use a standard button with navigate() */}

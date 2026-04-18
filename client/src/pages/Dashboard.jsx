@@ -432,7 +432,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* 4. CUSTOMER MESSAGES — visible to all admins */}
+{/* 4. CUSTOMER MESSAGES — visible to all admins */}
           <div className="dashboard-card">
             <div className="card-header-flex">
               <h2>Customer Messages</h2>
@@ -440,16 +440,35 @@ const Dashboard = () => {
             {loading ? <p className="text-muted">Loading messages...</p> : (
               <div className="table-scroll-wrapper">
                 <Table responsive className="custom-table borderless align-left-table mb-0">
-                  <thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Phone</th><th>Action</th></tr></thead>
-                  <tbody>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Order ID</th> {/* ADDED THIS COLUMN */}
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+<tbody>
                     {messages.length === 0
-                      ? <tr><td colSpan="5" className="text-center text-muted py-4">No messages found.</td></tr>
+                      ? <tr><td colSpan="6" className="text-center text-muted py-4">No messages found.</td></tr>
                       : messages.map((msg) => (
                         <tr key={msg.id} className="table-row-hover">
                           <td>{new Date(msg.created_at).toLocaleDateString()}</td>
                           <td><strong>{msg.name}</strong></td>
                           <td><a href={`mailto:${msg.email}`} className="text-decoration-none">{msg.email}</a></td>
                           <td>{msg.phone ? <a href={`tel:${msg.phone}`} className="text-decoration-none text-muted">{msg.phone}</a> : <span className="text-muted">—</span>}</td>
+                          
+                          {/* ADDED THIS DATA CELL */}
+                          <td>
+                            {(msg.order_id || msg.orderId) ? (
+                              <span style={{ fontWeight: 'bold', color: '#76594C' }}>#{msg.order_id || msg.orderId}</span>
+                            ) : (
+                              <span className="text-muted">—</span>
+                            )}
+                          </td>
+                          
                           <td><button className="btn-action" onClick={() => { setSelectedMessage(msg); setShowViewMessageDialog(true); }}>Read</button></td>
                         </tr>
                       ))}
@@ -755,31 +774,39 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* VIEW MESSAGE DIALOG */}
-      {showViewMessageDialog && selectedMessage && (
-        <div className="dialog-overlay">
-          <div className="dialog-box">
-            <div className="dialog-header">
-              <h3>Message from {selectedMessage.name}</h3>
-              <button className="close-btn" onClick={() => setShowViewMessageDialog(false)}>&times;</button>
-            </div>
-            <div className="p-2 mb-3">
-              <p className="mb-1"><strong>Email:</strong> <a href={`mailto:${selectedMessage.email}`}>{selectedMessage.email}</a></p>
-              <p className="mb-1"><strong>Phone:</strong> {selectedMessage.phone ? <a href={`tel:${selectedMessage.phone}`}>{selectedMessage.phone}</a> : <span className="text-muted">Not provided</span>}</p>
-              <p className="mb-3 text-muted" style={{ fontSize: '0.85rem' }}>
-                <strong>Received:</strong> {new Date(selectedMessage.created_at).toLocaleString()}
-              </p>
-              <div className="p-3 bg-light rounded" style={{ whiteSpace: 'pre-wrap', border: '1px solid #e0dcd3' }}>
-                {selectedMessage.message}
-              </div>
-            </div>
-            <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
-              <button className="btn-action-danger" onClick={() => handleDeleteMessage(selectedMessage.id)}>Delete</button>
-              <button className="btn btn-cancel" onClick={() => setShowViewMessageDialog(false)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
+        {/* VIEW MESSAGE DIALOG */}
+              {showViewMessageDialog && selectedMessage && (
+                <div className="dialog-overlay">
+                  <div className="dialog-box">
+                    <div className="dialog-header">
+                      <h3>Message from {selectedMessage.name}</h3>
+                      <button className="close-btn" onClick={() => setShowViewMessageDialog(false)}>&times;</button>
+                    </div>
+                    <div className="p-2 mb-3">
+                      <p className="mb-1"><strong>Email:</strong> <a href={`mailto:${selectedMessage.email}`}>{selectedMessage.email}</a></p>
+                      <p className="mb-1"><strong>Phone:</strong> {selectedMessage.phone ? <a href={`tel:${selectedMessage.phone}`}>{selectedMessage.phone}</a> : <span className="text-muted">Not provided</span>}</p>
+                      
+                      {/* ADDED ORDER ID DISPLAY IN THE POPUP */}
+                      {(selectedMessage.order_id || selectedMessage.orderId) && (
+                        <p className="mb-1">
+                          <strong>Ref Order:</strong> <span style={{ color: '#76594C', fontWeight: 'bold' }}>#{selectedMessage.order_id || selectedMessage.orderId}</span>
+                        </p>
+                      )}
+                      
+                      <p className="mb-3 text-muted" style={{ fontSize: '0.85rem' }}>
+                        <strong>Received:</strong> {new Date(selectedMessage.created_at).toLocaleString()}
+                      </p>
+                      <div className="p-3 bg-light rounded" style={{ whiteSpace: 'pre-wrap', border: '1px solid #e0dcd3' }}>
+                        {selectedMessage.message}
+                      </div>
+                    </div>
+                    <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
+                      <button className="btn-action-danger" onClick={() => handleDeleteMessage(selectedMessage.id)}>Delete</button>
+                      <button className="btn btn-cancel" onClick={() => setShowViewMessageDialog(false)}>Close</button>
+                    </div>
+                  </div>
+                </div>
+              )}
       
     </>
   );
