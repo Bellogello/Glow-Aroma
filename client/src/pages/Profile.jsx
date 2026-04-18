@@ -11,37 +11,32 @@ const Profile = () => {
   useTitle("My Profile | Glow Aroma");
   const navigate = useNavigate();
 
-  // --- AUTH & USER INFO ---
   const token = localStorage.getItem("token");
   const userName = localStorage.getItem("userName");
   const userId = localStorage.getItem("userId");
 
-  // --- STATE MANAGEMENT ---
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false); // Fix for multiple saves
+  const [submitting, setSubmitting] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
-  const [editingId, setEditingId] = useState(null); 
-  
+  const [editingId, setEditingId] = useState(null);
   const [newAddress, setNewAddress] = useState({
-    fullName: userName || '', 
-    phone: '', 
-    governorate: '', 
-    area: '', 
-    street: '', 
-    building: '', 
+    fullName: userName || '',
+    phone: '',
+    governorate: '',
+    area: '',
+    street: '',
+    building: '',
     floorApt: '',
     notes: ''
   });
 
-  const [orders] = useState([
-    { id: "#8821", date: "March 15, 2026", item: "Midnight Jasmine Jar", price: "350 L.E.", status: "Delivered" },
-    { id: "#8754", date: "Feb 10, 2026", item: "Vanilla Dream & Rose Petal", price: "660 L.E.", status: "Shipped" }
-  ]);
-
   useEffect(() => {
     if (!userId) return;
     loadProfileData();
+    loadOrderHistory();
   }, [userId]);
 
   const loadProfileData = async () => {
@@ -52,7 +47,6 @@ const Profile = () => {
       ]);
       const addresses = await addrRes.json();
       const user = await userRes.json();
-
       if (Array.isArray(addresses)) setSavedAddresses(addresses);
       if (!user.error && user.phone) {
         setNewAddress(prev => ({ ...prev, phone: user.phone }));
@@ -62,6 +56,32 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadOrderHistory = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/orders/user/${userId}`);
+      const data = await res.json();
+      if (Array.isArray(data)) setOrders(data);
+    } catch (err) {
+      console.error("Failed to load order history:", err);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const getStatusBadgeClass = (statusId) => {
+    if (statusId === 1) return 'processing';
+    if (statusId === 2) return 'shipped';
+    if (statusId === 3) return 'delivered';
+    return 'processing';
+  };
+
+  const getStatusLabel = (statusId) => {
+    if (statusId === 1) return 'Processing';
+    if (statusId === 2) return 'Shipped';
+    if (statusId === 3) return 'Delivered';
+    return 'Processing';
   };
 
   const handleDeleteAddress = async (addressId) => {
@@ -95,28 +115,23 @@ const Profile = () => {
 
   const handleSaveNewAddress = async (e) => {
     if (e) e.preventDefault();
-    if (submitting) return; // Block multiple clicks
-
+    if (submitting) return;
     const { fullName, phone, governorate, area, street } = newAddress;
     if (!fullName || !phone || !governorate || !area || !street) {
       alert("Please fill in all required fields.");
       return;
     }
-
-    setSubmitting(true); // Disable button immediately
-
+    setSubmitting(true);
     const url = editingId ? `${API_BASE_URL}/addresses/${editingId}` : `${API_BASE_URL}/addresses/${userId}`;
     const method = editingId ? 'PUT' : 'POST';
-
     try {
       const res = await fetch(url, {
-        method: method,
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newAddress)
       });
-
       if (res.ok) {
-        await loadProfileData(); 
+        await loadProfileData();
         setIsAddingAddress(false);
         setEditingId(null);
         setNewAddress({ fullName: userName, phone: '', governorate: '', area: '', street: '', building: '', floorApt: '', notes: '' });
@@ -126,7 +141,7 @@ const Profile = () => {
     } catch (err) {
       alert("Network error.");
     } finally {
-      setSubmitting(false); // Re-enable button
+      setSubmitting(false);
     }
   };
 
@@ -136,6 +151,7 @@ const Profile = () => {
     <div className="home-container">
       <Navbar />
       <div className="profile-wrapper">
+
         <div className="profile-sidebar">
           <div className="avatar-circle">{userName ? userName.charAt(0).toUpperCase() : "U"}</div>
           <h2 className="profile-welcome">Welcome, {userName}!</h2>
@@ -143,6 +159,8 @@ const Profile = () => {
         </div>
 
         <div className="profile-content">
+
+          {/* ADDRESSES */}
           <div className="profile-section-card">
             <div className="section-header">
               <h3>Shipping Addresses</h3>
@@ -154,27 +172,21 @@ const Profile = () => {
             {isAddingAddress ? (
               <div className="add-address-container">
                 <h4 className="form-title">{editingId ? "Edit Address" : "New Address"}</h4>
-                <AddressForm formData={newAddress} onChange={(e) => setNewAddress({...newAddress, [e.target.name]: e.target.value})} />
+                <AddressForm formData={newAddress} onChange={(e) => setNewAddress({ ...newAddress, [e.target.name]: e.target.value })} />
                 <div className="profile-form-actions">
-                  <button 
-                    className="btn-save-address" 
-                    onClick={handleSaveNewAddress}
-                    disabled={submitting}
-                  >
+                  <button className="btn-save-address" onClick={handleSaveNewAddress} disabled={submitting}>
                     {submitting ? "Saving..." : (editingId ? "Update" : "Save")}
                   </button>
-                  <button 
-                    className="btn-cancel-minimal" 
-                    onClick={() => { setIsAddingAddress(false); setEditingId(null); }}
-                    disabled={submitting}
-                  >
+                  <button className="btn-cancel-minimal" onClick={() => { setIsAddingAddress(false); setEditingId(null); }} disabled={submitting}>
                     Cancel
                   </button>
                 </div>
               </div>
             ) : (
               <div className="saved-addresses-list">
-                {loading ? <p className="text-muted">Loading...</p> : savedAddresses.length > 0 ? (
+                {loading ? (
+                  <p className="text-muted">Loading...</p>
+                ) : savedAddresses.length > 0 ? (
                   savedAddresses.map(addr => (
                     <div key={addr.id} className="address-item-display">
                       <div className="address-info">
@@ -188,30 +200,44 @@ const Profile = () => {
                       </div>
                     </div>
                   ))
-                ) : <p className="text-muted">No addresses saved yet.</p>}
+                ) : (
+                  <p className="text-muted">No addresses saved yet.</p>
+                )}
               </div>
             )}
           </div>
 
+          {/* ORDER HISTORY */}
           <div className="profile-section-card">
             <div className="section-header"><h3>Recent Purchases</h3></div>
             <hr className="mini-divider" />
             <div className="order-history-list">
-              {orders.map((order) => (
-                <div key={order.id} className="history-item-row">
-                  <div className="order-info-left">
-                    <span className="order-number">{order.id}</span>
-                    <p className="order-product-name">{order.item}</p>
-                    <span className="order-timestamp">{order.date}</span>
+              {ordersLoading ? (
+                <p className="text-muted">Loading orders...</p>
+              ) : orders.length === 0 ? (
+                <p className="text-muted">No orders yet. Go treat yourself! 🕯️</p>
+              ) : (
+                orders.map((order) => (
+                  <div key={order.id} className="history-item-row">
+                    <div className="order-info-left">
+                      <span className="order-number">#{order.id}</span>
+                      <p className="order-product-name">{order.item_summary}</p>
+                      <span className="order-timestamp">
+                        {new Date(order.created_at).toLocaleDateString('en-EG', { year: 'numeric', month: 'long', day: 'numeric' })}
+                      </span>
+                    </div>
+                    <div className="order-info-right">
+                      <p className="order-price-tag">{Number(order.total).toFixed(2)} L.E.</p>
+                      <span className={`status-badge ${getStatusBadgeClass(order.status_id)}`}>
+                        {getStatusLabel(order.status_id)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="order-info-right">
-                    <p className="order-price-tag">{order.price}</p>
-                    <span className={`status-badge ${order.status.toLowerCase()}`}>{order.status}</span>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
+
         </div>
       </div>
       <Footer />

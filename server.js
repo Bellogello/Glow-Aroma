@@ -681,6 +681,66 @@ app.post('/paymob/callback', async (req, res) => {
 });
 
 // ==========================================
+// --- USER ORDER HISTORY ---
+// ==========================================
+app.get('/orders/user/:userId', (req, res) => {
+    const sql = `
+        SELECT o.id, o.total, o.status_id, o.created_at,
+        GROUP_CONCAT(oi.item_name ORDER BY oi.id ASC SEPARATOR ', ') AS item_summary
+        FROM orders o
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.user_id = ?
+        GROUP BY o.id
+        ORDER BY o.created_at DESC
+        LIMIT 10
+    `;
+    db.query(sql, [req.params.userId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// ==========================================
+// --- COUPON VALIDATION ---
+// ==========================================
+app.post('/coupons/validate', async (req, res) => {
+    const { code, orderTotal } = req.body;
+    if (!code) return res.status(400).json({ error: 'No code provided.' });
+
+    try {
+        const [rows] = await db.promise().query(
+            'SELECT * FROM discount_codes WHERE code = ? AND is_active = TRUE',
+            [code.toUpperCase()]
+        );
+
+        if (rows.length === 0) return res.status(404).json({ error: 'Invalid or inactive coupon code.' });
+
+        const coupon = rows[0];
+
+        if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+            return res.status(400).json({ error: 'This coupon has expired.' });
+        }
+        if (coupon.max_uses && coupon.times_used >= coupon.max_uses) {
+            return res.status(400).json({ error: 'This coupon has reached its usage limit.' });
+        }
+        if (coupon.min_order_amount && orderTotal < coupon.min_order_amount) {
+            return res.status(400).json({ error: `Minimum order of ${coupon.min_order_amount} L.E. required.` });
+        }
+        if (coupon.max_order_amount && orderTotal > coupon.max_order_amount) {
+            return res.status(400).json({ error: `This coupon is only valid for orders up to ${coupon.max_order_amount} L.E.` });
+        }
+
+        res.json({
+            code: coupon.code,
+            discount_type: coupon.discount_type,
+            discount_value: Number(coupon.discount_value)
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
 // --- SERVER ACTIVATION ---
 // ==========================================
 const PORT = process.env.PORT || 8080;

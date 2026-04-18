@@ -4,24 +4,32 @@ import Navbar from '../components/Navbar';
 import HeroSlideshow from "../components/heroslideshow";
 import Footer from '../components/Footer';
 import '../styles/Home.css';
-// 1. Import the "Central Brain"
 import { API_BASE_URL } from '../config';
+import FallbackCandle from '../assets/candle.png';
 
 const Home = () => {
-  useEffect(() => {
-    document.title = "Glow Aroma";
-  }, []);
+  useEffect(() => { document.title = "Glow Aroma"; }, []);
 
   const scrollRef = useRef(null);
   const navigate = useNavigate();
 
-  const bestSellers = [
-    { id: 101, name: "Midnight Jasmine", price: "350", image: "/assets/candle1.jpg" },
-    { id: 102, name: "Vanilla Bean", price: "320", image: "/assets/candle2.jpg" },
-    { id: 103, name: "Spiced Sandalwood", price: "380", image: "/assets/candle3.jpg" },
-    { id: 104, name: "Rose Petal", price: "340", image: "/assets/candle4.jpg" },
-    { id: 105, name: "Ocean Breeze", price: "360", image: "/assets/candle5.jpg" }
-  ];
+  const [bestSellers, setBestSellers] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // Fetch real products from DB
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/products`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          // Show up to 6 products, sorted by id descending (newest first)
+          // Once you add times_ordered column, change sort to: data.sort((a,b) => b.times_ordered - a.times_ordered)
+          setBestSellers(data.slice(0, 6));
+        }
+      })
+      .catch(err => console.error("Failed to fetch products:", err))
+      .finally(() => setLoadingProducts(false));
+  }, []);
 
   const handleQuickBuy = async (product) => {
     const userId = localStorage.getItem("userId");
@@ -31,22 +39,19 @@ const Home = () => {
     }
 
     try {
-      // 2. Used API_BASE_URL and fixed the template literal backticks
+      // FIX: was sending productId instead of prebuiltCandleId
       const response = await fetch(`${API_BASE_URL}/cart/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
-          productId: product.id,
-          name: product.name,
-          price: product.price,
-          quantity: 1,
-          is_custom: false 
+          prebuiltCandleId: product.id,
+          quantity: 1
         }),
       });
 
       if (response.ok) {
-        navigate('/cart'); 
+        navigate('/cart');
       } else {
         const errorData = await response.json();
         alert("Failed to add to cart: " + (errorData.error || "Unknown error"));
@@ -64,26 +69,41 @@ const Home = () => {
 
       <section className="best-sellers-section">
         <h1 className="products-title">Best Sellers</h1>
-        
-        <div className="carousel-wrapper">
-          <div className="carousel-container" ref={scrollRef}>
-            {bestSellers.map((product) => (
-              <div 
-                key={product.id} 
-                className="mini-product-card" 
-                onClick={() => handleQuickBuy(product)}
-              >
-                <div className="mini-image-wrapper">
-                  <img src={product.image} alt={product.name} className="mini-img" />
-                </div>
-                <div className="mini-details">
-                  <h3 className="mini-name">{product.name}</h3>
-                  <p className="mini-price">{product.price} L.E.</p>
-                </div>
-              </div>
-            ))}
+
+        {loadingProducts ? (
+          <p style={{ textAlign: 'center', color: '#a89f91' }}>Loading...</p>
+        ) : bestSellers.length === 0 ? (
+          <p style={{ textAlign: 'center', color: '#a89f91' }}>No products yet.</p>
+        ) : (
+          <div className="carousel-wrapper">
+            <div className="carousel-container" ref={scrollRef}>
+              {bestSellers.map((product) => {
+                const displayImage = product.image_url
+                  ? (product.image_url.startsWith('http') ? product.image_url : `${API_BASE_URL}${product.image_url}`)
+                  : FallbackCandle;
+
+                return (
+                  <div
+                    key={product.id}
+                    className="mini-product-card"
+                    onClick={() => handleQuickBuy(product)}
+                  >
+                    <div className="mini-image-wrapper">
+                      <img src={displayImage} alt={product.name} className="mini-img" />
+                      {product.stock_quantity <= 0 && (
+                        <div className="sold-out-badge">Sold Out</div>
+                      )}
+                    </div>
+                    <div className="mini-details">
+                      <h3 className="mini-name">{product.name}</h3>
+                      <p className="mini-price">{Number(product.price).toFixed(2)} L.E.</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       <Footer />
