@@ -36,6 +36,18 @@
   margin-bottom: 1.25rem;
 }
 
+/* --- NEW: SEARCH CONTROLS ROW --- */
+.dashboard-controls-row {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap; /* Allows stacking on mobile */
+}
+
+.min-w-150 {
+  min-width: 150px;
+}
+
 /* ========================================= */
 /* --- TABLES & BUTTONS ---                  */
 /* ========================================= */

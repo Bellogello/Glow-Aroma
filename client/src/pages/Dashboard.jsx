@@ -30,6 +30,11 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState([]);
 
+  // --- NEW: SEARCH & FILTER STATES ---
+  const [orderSearch, setOrderSearch] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('All');
+  const [productSearch, setProductSearch] = useState('');
+
   // --- DIALOG VISIBILITY STATES ---
   const [showAddStaffDialog, setShowAddStaffDialog] = useState(false);
   const [showAddProductDialog, setShowAddProductDialog] = useState(false);
@@ -63,7 +68,6 @@ const Dashboard = () => {
     const uId = localStorage.getItem('userId');
     const roleId = localStorage.getItem('roleId');
 
-    // Only allow admins (role 2) and super admins (role 3)
     if (roleId !== '2' && roleId !== '3') {
       navigate('/');
       return;
@@ -107,6 +111,18 @@ const Dashboard = () => {
   const getStatusLabel = (s) => s === 1 ? 'Processing' : s === 2 ? 'Shipped' : 'Delivered';
   const getStatusBg = (s) => s === 1 ? 'warning' : s === 2 ? 'info' : 'success';
 
+  // --- NEW: FILTERING LOGIC ---
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch = order.customer_name?.toLowerCase().includes(orderSearch.toLowerCase()) || 
+                          order.id.toString().includes(orderSearch);
+    const matchesStatus = orderStatusFilter === 'All' || order.status_id.toString() === orderStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredProducts = products.filter(product => 
+    product.name?.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
   // --- STAFF FUNCTIONS ---
   const handleOpenAddStaff = () => { setStaffForm({ name: '', email: '', phone: '', password: '', role_id: '2' }); resetDialogState(); setShowAddStaffDialog(true); };
   
@@ -129,11 +145,8 @@ const Dashboard = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to remove staff member.');
       setStaff((prev) => prev.filter((m) => m.id !== memberId));
-      
-      // 3. Added success toast for background action
       success("Admin removed successfully.");
     } catch (err) { 
-      // 4. Replaced alert
       error(`Error: ${err.message}`); 
     }
   };
@@ -194,11 +207,8 @@ const Dashboard = () => {
       if (!res.ok) throw new Error(data.message || 'Failed to delete product.');
       setProducts((prev) => prev.filter((p) => p.id !== id));
       setShowEditProductDialog(false);
-      
-      // 5. Added success toast
       success("Product completely removed.");
     } catch (err) { 
-      // 6. Replaced alert
       error(`Error: ${err.message}`); 
     }
   };
@@ -254,8 +264,6 @@ const Dashboard = () => {
       const res = await fetch(`${API_BASE_URL}/admin/delete-account`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, password: deletePassword }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.message || 'Failed to delete account.');
-      
-      // 7. Replaced alert with a success toast before navigating
       success('Account successfully deleted. You have been logged out.');
       localStorage.clear();
       navigate('/');
@@ -289,7 +297,6 @@ const Dashboard = () => {
     try {
       await fetch(`${API_BASE_URL}/admin/discount-codes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !currentActive }) });
       fetchDashboardData();
-      // 8. Added feedback toast
       success(currentActive ? "Promo code disabled." : "Promo code activated.");
     } catch (err) { 
       console.error(err.message); 
@@ -302,7 +309,6 @@ const Dashboard = () => {
     try {
       await fetch(`${API_BASE_URL}/admin/discount-codes/${id}`, { method: 'DELETE' });
       fetchDashboardData();
-      // 9. Added feedback toast
       success("Promo code deleted.");
     } catch (err) { 
       console.error(err.message); 
@@ -317,7 +323,6 @@ const Dashboard = () => {
       if (res.ok) {
         setMessages((prev) => prev.filter((m) => m.id !== id));
         setShowViewMessageDialog(false);
-        // 10. Added feedback toast
         success("Message deleted.");
       } else {
         error("Failed to delete message.");
@@ -339,14 +344,36 @@ const Dashboard = () => {
           {/* 1. ORDERS — visible to all admins */}
           <div className="dashboard-card">
             <div className="card-header-flex"><h2>Recent Orders</h2></div>
+
+            {/* NEW: ORDERS SEARCH & FILTER CONTROLS */}
+            <div className="dashboard-controls-row mb-4">
+              <Form.Control 
+                type="text" 
+                placeholder="Search by Order ID or Customer Name..." 
+                className="custom-input flex-grow-1" 
+                value={orderSearch} 
+                onChange={(e) => setOrderSearch(e.target.value)} 
+              />
+              <Form.Select 
+                className="custom-input w-auto min-w-150" 
+                value={orderStatusFilter} 
+                onChange={(e) => setOrderStatusFilter(e.target.value)}
+              >
+                <option value="All">All Statuses</option>
+                <option value="1">Processing</option>
+                <option value="2">Shipped</option>
+                <option value="3">Delivered</option>
+              </Form.Select>
+            </div>
+
             {loading ? <p className="text-muted">Loading orders...</p> : (
               <div className="table-scroll-wrapper">
                 <Table responsive className="custom-table borderless align-left-table mb-0">
                   <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
                   <tbody>
-                    {orders.length === 0
-                      ? <tr><td colSpan="6" className="text-center text-muted py-4">No orders found.</td></tr>
-                      : orders.map((order) => (
+                    {filteredOrders.length === 0
+                      ? <tr><td colSpan="6" className="text-center text-muted py-4">No matching orders found.</td></tr>
+                      : filteredOrders.map((order) => (
                         <tr key={order.id} className="table-row-hover">
                           <td><strong>#{order.id}</strong></td>
                           <td>{order.customer_name}</td>
@@ -368,14 +395,26 @@ const Dashboard = () => {
               <h2>Products Inventory</h2>
               <button className="custom-pill-btn-small" onClick={handleOpenAddProduct}>+ Add Product</button>
             </div>
+
+            {/* NEW: PRODUCTS SEARCH CONTROL */}
+            <div className="dashboard-controls-row mb-4">
+              <Form.Control 
+                type="text" 
+                placeholder="Search products by name..." 
+                className="custom-input" 
+                value={productSearch} 
+                onChange={(e) => setProductSearch(e.target.value)} 
+              />
+            </div>
+
             {loading ? <p className="text-muted">Loading inventory...</p> : (
               <div className="table-scroll-wrapper">
                 <Table responsive className="custom-table borderless align-left-table mb-0">
                   <thead><tr><th>ID</th><th>Product Name</th><th>Stock Level</th><th>Price</th><th>Action</th></tr></thead>
                   <tbody>
-                    {products.length === 0
-                      ? <tr><td colSpan="5" className="text-center text-muted py-4">No products found.</td></tr>
-                      : products.map((product) => (
+                    {filteredProducts.length === 0
+                      ? <tr><td colSpan="5" className="text-center text-muted py-4">No matching products found.</td></tr>
+                      : filteredProducts.map((product) => (
                         <tr key={product.id} className="table-row-hover">
                           <td>{product.id}</td>
                           <td>
