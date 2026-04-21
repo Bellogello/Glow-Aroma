@@ -6,7 +6,10 @@ import useTitle from '../components/useTitles';
 import { API_BASE_URL } from '../config';
 import '../styles/Inventory.css';
 
-// ── Config for each category ──────────────────────────────────────────────────
+// 1. Import your notification hook
+import { useNotification } from '../components/NotificationContext';
+
+// ── Config for each category (Mapped EXACTLY to your Database schema) ──
 const CATEGORIES = [
   {
     key: 'scents',
@@ -14,12 +17,13 @@ const CATEGORIES = [
     icon: '🕯️',
     endpoint: 'scents',
     fields: [
-      { name: 'name',           label: 'Scent Name',      type: 'text',   required: true },
-      { name: 'price_modifier', label: 'Price Modifier (L.E.)', type: 'number', required: false },
-      { name: 'is_available',   label: 'Available',        type: 'toggle', required: false },
+      { name: 'name',         label: 'Scent Name',   type: 'text',   required: true },
+      { name: 'scent_family', label: 'Scent Family', type: 'text',   required: false },
+      { name: 'price',        label: 'Price (L.E.)', type: 'number', required: false },
+      { name: 'is_available', label: 'Available',    type: 'toggle', required: false },
     ],
     display: (item) => item.name,
-    sub: (item) => `+${Number(item.price_modifier || 0).toFixed(2)} L.E.`,
+    sub: (item) => `+${Number(item.price || 0).toFixed(2)} L.E.`,
   },
   {
     key: 'colors',
@@ -27,13 +31,13 @@ const CATEGORIES = [
     icon: '🎨',
     endpoint: 'colors',
     fields: [
-      { name: 'name',           label: 'Color Name',       type: 'text',   required: true },
-      { name: 'hex_code',       label: 'Hex Code',         type: 'color',  required: false },
-      { name: 'price_modifier', label: 'Price Modifier (L.E.)', type: 'number', required: false },
-      { name: 'is_available',   label: 'Available',        type: 'toggle', required: false },
+      { name: 'name',         label: 'Color Name',   type: 'text',   required: true },
+      { name: 'hex_code',     label: 'Hex Code',     type: 'color',  required: false },
+      { name: 'price',        label: 'Price (L.E.)', type: 'number', required: false },
+      { name: 'is_available', label: 'Available',    type: 'toggle', required: false },
     ],
     display: (item) => item.name,
-    sub: (item) => `+${Number(item.price_modifier || 0).toFixed(2)} L.E.`,
+    sub: (item) => `+${Number(item.price || 0).toFixed(2)} L.E.`,
     swatch: (item) => item.hex_code,
   },
   {
@@ -42,12 +46,12 @@ const CATEGORIES = [
     icon: '🫙',
     endpoint: 'cup-colors',
     fields: [
-      { name: 'name',           label: 'Color Name',       type: 'text',   required: true },
-      { name: 'hex_code',       label: 'Hex Code',         type: 'color',  required: false },
-      { name: 'price_modifier', label: 'Price Modifier (L.E.)', type: 'number', required: false },
+      { name: 'name',         label: 'Color Name',   type: 'text',   required: true },
+      { name: 'hex_code',     label: 'Hex Code',     type: 'color',  required: false },
+      // Note: Cup colors do not have a price or is_available column in your database!
     ],
     display: (item) => item.name,
-    sub: (item) => `+${Number(item.price_modifier || 0).toFixed(2)} L.E.`,
+    sub: (item) => '', // No extra cost text needed
     swatch: (item) => item.hex_code,
   },
   {
@@ -56,7 +60,7 @@ const CATEGORIES = [
     icon: '📏',
     endpoint: 'cup-sizes',
     fields: [
-      { name: 'size_ml',        label: 'Size (ml)',        type: 'number', required: true },
+      { name: 'size_ml',        label: 'Size (ml)',            type: 'number', required: true },
       { name: 'price_modifier', label: 'Price Modifier (L.E.)', type: 'number', required: false },
     ],
     display: (item) => `${item.size_ml} ml`,
@@ -68,12 +72,12 @@ const CATEGORIES = [
     icon: '🔷',
     endpoint: 'cup-shapes',
     fields: [
-      { name: 'name',           label: 'Shape Name',       type: 'text',   required: true },
-      { name: 'price_modifier', label: 'Price Modifier (L.E.)', type: 'number', required: false },
-      { name: 'is_available',   label: 'Available',        type: 'toggle', required: false },
+      { name: 'name',         label: 'Shape Name',        type: 'text',   required: true },
+      { name: 'base_price',   label: 'Base Price (L.E.)', type: 'number', required: false },
+      { name: 'is_available', label: 'Available',         type: 'toggle', required: false },
     ],
     display: (item) => item.name,
-    sub: (item) => `+${Number(item.price_modifier || 0).toFixed(2)} L.E.`,
+    sub: (item) => `+${Number(item.base_price || 0).toFixed(2)} L.E.`,
   },
   {
     key: 'mold-shapes',
@@ -81,12 +85,13 @@ const CATEGORIES = [
     icon: '🔶',
     endpoint: 'mold-shapes',
     fields: [
-      { name: 'name',           label: 'Shape Name',       type: 'text',   required: true },
-      { name: 'price_modifier', label: 'Price Modifier (L.E.)', type: 'number', required: false },
-      { name: 'is_available',   label: 'Available',        type: 'toggle', required: false },
+      { name: 'name',         label: 'Shape Name',        type: 'text',   required: true },
+      { name: 'layers',       label: 'Number of Layers',  type: 'number', required: true },
+      { name: 'base_price',   label: 'Base Price (L.E.)', type: 'number', required: false },
+      { name: 'is_available', label: 'Available',         type: 'toggle', required: false },
     ],
-    display: (item) => item.name,
-    sub: (item) => `+${Number(item.price_modifier || 0).toFixed(2)} L.E.`,
+    display: (item) => `${item.name} (${item.layers} layer${item.layers > 1 ? 's' : ''})`,
+    sub: (item) => `+${Number(item.base_price || 0).toFixed(2)} L.E.`,
   },
 ];
 
@@ -107,6 +112,9 @@ const Inventory = () => {
   useTitle("Inventory | Glow Aroma");
   const navigate = useNavigate();
 
+  // Initialize notifications
+  const { success, error, warning } = useNotification();
+
   const [activeKey, setActiveKey]   = useState('scents');
   const [items, setItems]           = useState([]);
   const [loading, setLoading]       = useState(false);
@@ -114,11 +122,10 @@ const Inventory = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [form, setForm]             = useState({});
-  const [feedback, setFeedback]     = useState({ type: '', text: '' });
 
   const category = CATEGORIES.find(c => c.key === activeKey);
 
-  // Auth guard — super admin only
+  // Auth guard — super admin and admin only
   useEffect(() => {
     const roleId = localStorage.getItem('roleId');
     if (roleId !== '2' && roleId !== '3') navigate('/');
@@ -131,13 +138,12 @@ const Inventory = () => {
 
   const fetchItems = async () => {
     setLoading(true);
-    setFeedback({ type: '', text: '' });
     try {
       const res = await fetch(`${API_BASE_URL}/admin/inventory/${category.endpoint}`);
       const data = await res.json();
       setItems(Array.isArray(data) ? data : []);
     } catch (err) {
-      setFeedback({ type: 'error', text: 'Failed to load items.' });
+      error('Failed to load items.');
     } finally {
       setLoading(false);
     }
@@ -146,7 +152,6 @@ const Inventory = () => {
   const openAddDialog = () => {
     setEditingItem(null);
     setForm(defaultForm(category.fields));
-    setFeedback({ type: '', text: '' });
     setShowDialog(true);
   };
 
@@ -157,7 +162,6 @@ const Inventory = () => {
       f[field.name] = item[field.name] !== undefined ? item[field.name] : (field.type === 'toggle' ? true : '');
     });
     setForm(f);
-    setFeedback({ type: '', text: '' });
     setShowDialog(true);
   };
 
@@ -166,44 +170,59 @@ const Inventory = () => {
   };
 
   const handleSubmit = async () => {
-    const requiredField = category.fields.find(f => f.required && !form[f.name]);
+    // Validation
+    const requiredField = category.fields.find(f => f.required && (form[f.name] === '' || form[f.name] === undefined));
     if (requiredField) {
-      setFeedback({ type: 'error', text: `${requiredField.label} is required.` });
+      warning(`${requiredField.label} is required.`);
       return;
     }
+    
     setSubmitting(true);
-    setFeedback({ type: '', text: '' });
+    
+    // SANITIZE: Safely convert empty string numbers to 0 to prevent 500 crashes!
+    const sanitizedForm = { ...form };
+    category.fields.forEach(field => {
+      if (field.type === 'number') {
+        sanitizedForm[field.name] = sanitizedForm[field.name] === '' ? 0 : Number(sanitizedForm[field.name]);
+      }
+    });
+
     try {
       const url = editingItem
         ? `${API_BASE_URL}/admin/inventory/${category.endpoint}/${editingItem.id}`
         : `${API_BASE_URL}/admin/inventory/${category.endpoint}`;
       const method = editingItem ? 'PUT' : 'POST';
+      
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify(sanitizedForm)
       });
+      
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to save.');
-      setFeedback({ type: 'success', text: editingItem ? 'Updated successfully!' : 'Added successfully!' });
+      
+      success(editingItem ? 'Updated successfully!' : 'Added successfully!');
       await fetchItems();
       setTimeout(() => setShowDialog(false), 800);
     } catch (err) {
-      setFeedback({ type: 'error', text: err.message });
+      error(err.message);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (item) => {
-    if (!window.confirm(`Delete "${category.display(item)}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete this item? This cannot be undone.`)) return;
     try {
       const res = await fetch(`${API_BASE_URL}/admin/inventory/${category.endpoint}/${item.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete.');
+      
       setItems(prev => prev.filter(i => i.id !== item.id));
+      success("Item deleted.");
     } catch (err) {
-      alert(err.message);
+      error(err.message);
     }
   };
 
@@ -214,9 +233,11 @@ const Inventory = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...item, is_available: !item.is_available })
       });
+      
       setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: !i.is_available } : i));
+      success(item.is_available ? "Item hidden from customers." : "Item is now available.");
     } catch (err) {
-      alert('Failed to update availability.');
+      error('Failed to update availability.');
     }
   };
 
@@ -272,7 +293,7 @@ const Inventory = () => {
                     )}
                     <div className="inv-item-info">
                       <span className="inv-item-name">{category.display(item)}</span>
-                      <span className="inv-item-sub">{category.sub(item)}</span>
+                      {category.sub(item) && <span className="inv-item-sub">{category.sub(item)}</span>}
                     </div>
                   </div>
                   <div className="inv-item-actions">
@@ -305,9 +326,6 @@ const Inventory = () => {
             </div>
 
             <div className="inv-dialog-body">
-              {feedback.text && (
-                <div className={`inv-feedback ${feedback.type}`}>{feedback.text}</div>
-              )}
 
               {category.fields.map(field => (
                 <div key={field.name} className="inv-field">

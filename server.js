@@ -622,16 +622,17 @@ app.get('/admin/inventory/scents', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/scents', async (req, res) => {
-    const { name, price_modifier, is_available } = req.body;
+    // FIXED: Using 'price' instead of 'price_modifier'
+    const { name, price, is_available } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     try {
-        const [result] = await db.promise().query('INSERT INTO scents (name, price_modifier, is_available) VALUES (?, ?, ?)', [name, parseFloat(price_modifier) || 0, is_available !== false]);
+        const [result] = await db.promise().query('INSERT INTO scents (name, price, is_available) VALUES (?, ?, ?)', [name, parseFloat(price) || 0, is_available !== false]);
         res.status(201).json({ message: 'Scent added.', id: result.insertId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/admin/inventory/scents/:id', async (req, res) => {
-    const { name, price_modifier, is_available } = req.body;
-    try { await db.promise().query('UPDATE scents SET name=?, price_modifier=?, is_available=? WHERE id=?', [name, parseFloat(price_modifier) || 0, is_available, req.params.id]); res.json({ message: 'Scent updated.' }); }
+    const { name, price, is_available } = req.body;
+    try { await db.promise().query('UPDATE scents SET name=?, price=?, is_available=? WHERE id=?', [name, parseFloat(price) || 0, is_available, req.params.id]); res.json({ message: 'Scent updated.' }); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/scents/:id', async (req, res) => {
@@ -647,16 +648,17 @@ app.get('/admin/inventory/colors', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/colors', async (req, res) => {
-    const { name, hex_code, price_modifier, is_available } = req.body;
+    // FIXED: Using 'price'
+    const { name, hex_code, price, is_available } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     try {
-        const [result] = await db.promise().query('INSERT INTO colors (name, hex_code, price_modifier, is_available) VALUES (?, ?, ?, ?)', [name, hex_code || null, parseFloat(price_modifier) || 0, is_available !== false]);
+        const [result] = await db.promise().query('INSERT INTO colors (name, hex_code, price, is_available) VALUES (?, ?, ?, ?)', [name, hex_code || null, parseFloat(price) || 0, is_available !== false]);
         res.status(201).json({ message: 'Color added.', id: result.insertId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/admin/inventory/colors/:id', async (req, res) => {
-    const { name, hex_code, price_modifier, is_available } = req.body;
-    try { await db.promise().query('UPDATE colors SET name=?, hex_code=?, price_modifier=?, is_available=? WHERE id=?', [name, hex_code || null, parseFloat(price_modifier) || 0, is_available, req.params.id]); res.json({ message: 'Color updated.' }); }
+    const { name, hex_code, price, is_available } = req.body;
+    try { await db.promise().query('UPDATE colors SET name=?, hex_code=?, price=?, is_available=? WHERE id=?', [name, hex_code || null, parseFloat(price) || 0, is_available, req.params.id]); res.json({ message: 'Color updated.' }); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/colors/:id', async (req, res) => {
@@ -672,16 +674,17 @@ app.get('/admin/inventory/cup-colors', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/cup-colors', async (req, res) => {
-    const { name, hex_code, price_modifier } = req.body;
+    // FIXED: Removed price completely. Your SQL database for cup_colors doesn't have a price column!
+    const { name, hex_code } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     try {
-        const [result] = await db.promise().query('INSERT INTO cup_colors (name, hex_code, price_modifier) VALUES (?, ?, ?)', [name, hex_code || null, parseFloat(price_modifier) || 0]);
+        const [result] = await db.promise().query('INSERT INTO cup_colors (name, hex_code) VALUES (?, ?)', [name, hex_code || null]);
         res.status(201).json({ message: 'Cup color added.', id: result.insertId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/admin/inventory/cup-colors/:id', async (req, res) => {
-    const { name, hex_code, price_modifier } = req.body;
-    try { await db.promise().query('UPDATE cup_colors SET name=?, hex_code=?, price_modifier=? WHERE id=?', [name, hex_code || null, parseFloat(price_modifier) || 0, req.params.id]); res.json({ message: 'Cup color updated.' }); }
+    const { name, hex_code } = req.body;
+    try { await db.promise().query('UPDATE cup_colors SET name=?, hex_code=? WHERE id=?', [name, hex_code || null, req.params.id]); res.json({ message: 'Cup color updated.' }); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/cup-colors/:id', async (req, res) => {
@@ -697,6 +700,7 @@ app.get('/admin/inventory/cup-sizes', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/cup-sizes', async (req, res) => {
+    // This one was actually correct! It uses price_modifier in the DB.
     const { size_ml, price_modifier } = req.body;
     if (!size_ml) return res.status(400).json({ error: 'Size (ml) is required.' });
     try {
@@ -722,16 +726,17 @@ app.get('/admin/inventory/cup-shapes', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/cup-shapes', async (req, res) => {
-    const { name, price_modifier, is_available } = req.body;
+    // FIXED: Using 'base_price'
+    const { name, base_price, is_available } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     try {
-        const [result] = await db.promise().query('INSERT INTO cup_shapes (name, price_modifier, is_available) VALUES (?, ?, ?)', [name, parseFloat(price_modifier) || 0, is_available !== false]);
+        const [result] = await db.promise().query('INSERT INTO cup_shapes (name, base_price, is_available) VALUES (?, ?, ?)', [name, parseFloat(base_price) || 0, is_available !== false]);
         res.status(201).json({ message: 'Cup shape added.', id: result.insertId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/admin/inventory/cup-shapes/:id', async (req, res) => {
-    const { name, price_modifier, is_available } = req.body;
-    try { await db.promise().query('UPDATE cup_shapes SET name=?, price_modifier=?, is_available=? WHERE id=?', [name, parseFloat(price_modifier) || 0, is_available, req.params.id]); res.json({ message: 'Cup shape updated.' }); }
+    const { name, base_price, is_available } = req.body;
+    try { await db.promise().query('UPDATE cup_shapes SET name=?, base_price=?, is_available=? WHERE id=?', [name, parseFloat(base_price) || 0, is_available, req.params.id]); res.json({ message: 'Cup shape updated.' }); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/cup-shapes/:id', async (req, res) => {
@@ -747,16 +752,17 @@ app.get('/admin/inventory/mold-shapes', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/mold-shapes', async (req, res) => {
-    const { name, price_modifier, is_available } = req.body;
+    // FIXED: Using 'base_price' AND added 'layers'
+    const { name, base_price, layers, is_available } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     try {
-        const [result] = await db.promise().query('INSERT INTO mold_shapes (name, price_modifier, is_available) VALUES (?, ?, ?)', [name, parseFloat(price_modifier) || 0, is_available !== false]);
+        const [result] = await db.promise().query('INSERT INTO mold_shapes (name, layers, base_price, is_available) VALUES (?, ?, ?, ?)', [name, parseInt(layers) || 1, parseFloat(base_price) || 0, is_available !== false]);
         res.status(201).json({ message: 'Mold shape added.', id: result.insertId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/admin/inventory/mold-shapes/:id', async (req, res) => {
-    const { name, price_modifier, is_available } = req.body;
-    try { await db.promise().query('UPDATE mold_shapes SET name=?, price_modifier=?, is_available=? WHERE id=?', [name, parseFloat(price_modifier) || 0, is_available, req.params.id]); res.json({ message: 'Mold shape updated.' }); }
+    const { name, base_price, layers, is_available } = req.body;
+    try { await db.promise().query('UPDATE mold_shapes SET name=?, layers=?, base_price=?, is_available=? WHERE id=?', [name, parseInt(layers) || 1, parseFloat(base_price) || 0, is_available, req.params.id]); res.json({ message: 'Mold shape updated.' }); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/mold-shapes/:id', async (req, res) => {
