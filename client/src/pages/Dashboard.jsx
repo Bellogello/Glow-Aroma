@@ -472,50 +472,56 @@ const Dashboard = () => {
           )}
 
 {/* 4. CUSTOMER MESSAGES — visible to all admins */}
-          <div className="dashboard-card">
-            <div className="card-header-flex">
-              <h2>Customer Messages</h2>
-            </div>
-            {loading ? <p className="text-muted">Loading messages...</p> : (
-              <div className="table-scroll-wrapper">
-                <Table responsive className="custom-table borderless align-left-table mb-0">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Phone</th>
-                      <th>Order ID</th> {/* ADDED THIS COLUMN */}
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-<tbody>
-                    {messages.length === 0
-                      ? <tr><td colSpan="6" className="text-center text-muted py-4">No messages found.</td></tr>
-                      : messages.map((msg) => (
-                        <tr key={msg.id} className="table-row-hover">
-                          <td>{new Date(msg.created_at).toLocaleDateString()}</td>
-                          <td><strong>{msg.name}</strong></td>
-                          <td><a href={`mailto:${msg.email}`} className="text-decoration-none">{msg.email}</a></td>
-                          <td>{msg.phone ? <a href={`tel:${msg.phone}`} className="text-decoration-none text-muted">{msg.phone}</a> : <span className="text-muted">—</span>}</td>
-                          
-                          {/* ADDED THIS DATA CELL */}
-                          <td>
-                            {(msg.order_id || msg.orderId) ? (
-                              <span style={{ fontWeight: 'bold', color: '#76594C' }}>#{msg.order_id || msg.orderId}</span>
-                            ) : (
-                              <span className="text-muted">—</span>
-                            )}
-                          </td>
-                          
-                          <td><button className="btn-action" onClick={() => { setSelectedMessage(msg); setShowViewMessageDialog(true); }}>Read</button></td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </Table>
-              </div>
-            )}
-          </div>
+<div className="dashboard-card">
+  <div className="card-header-flex">
+    <h2>Customer Messages</h2>
+  </div>
+  {loading ? <p className="text-muted">Loading messages...</p> : (
+    <div className="table-scroll-wrapper">
+      <Table responsive className="custom-table borderless align-left-table mb-0">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Order ID</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {messages.length === 0 ? (
+            <tr>
+              <td colSpan="6" className="text-center text-muted py-4">No messages found.</td>
+            </tr>
+          ) : (
+            messages.map((msg) => (
+              <tr key={msg.id} className="table-row-hover">
+                <td>{new Date(msg.created_at).toLocaleDateString()}</td>
+                <td><strong>{msg.name}</strong></td>
+                <td><a href={`mailto:${msg.email}`} className="text-decoration-none">{msg.email}</a></td>
+                <td>{msg.phone ? <a href={`tel:${msg.phone}`} className="text-decoration-none text-muted">{msg.phone}</a> : <span className="text-muted">—</span>}</td>
+                <td>
+                  {(msg.order_id || msg.orderId) ? (
+                    <span style={{ fontWeight: 'bold', color: '#76594C' }}>#{msg.order_id || msg.orderId}</span>
+                  ) : (
+                    <span className="text-muted">—</span>
+                  )}
+                </td>
+                <td>
+                  <button className="btn-action" onClick={() => { setSelectedMessage(msg); setShowViewMessageDialog(true); }}>
+                    Read
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </Table>
+    </div>
+  )}
+</div>
+
 
           {/* 5. ACCOUNT SETTINGS — visible to all admins */}
           <div className="dashboard-card">

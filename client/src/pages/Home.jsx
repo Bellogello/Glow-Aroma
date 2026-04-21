@@ -37,40 +37,8 @@ const Home = () => {
       .finally(() => setLoadingProducts(false));
   }, []);
 
-  const handleQuickBuy = async (product) => {
-    const userId = localStorage.getItem("userId");
-    if (!userId) {
-      // 3a. Replaced alert
-      warning("Please login to shop!");
-      return;
-    }
-
-    try {
-      // FIX: was sending productId instead of prebuiltCandleId
-      const response = await fetch(`${API_BASE_URL}/cart/add`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          prebuiltCandleId: product.id,
-          quantity: 1
-        }),
-      });
-
-      if (response.ok) {
-        // 3b. Added a success toast for better UX before jumping pages
-        success(`${product.name} added to cart!`);
-        navigate('/cart');
-      } else {
-        const errorData = await response.json();
-        // 3c. Replaced alert
-        error("Failed to add to cart: " + (errorData.error || "Unknown error"));
-      }
-    } catch (err) {
-      console.error("Quick buy failed:", err);
-      // 3d. Replaced alert
-      error("Server connection failed. Try again later.");
-    }
+  const handleQuickBuy = (product) => {
+      navigate(`/product/${product.id}`);
   };
 
   return (
