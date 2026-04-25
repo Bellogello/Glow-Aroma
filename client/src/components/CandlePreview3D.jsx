@@ -9,7 +9,7 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
   const meshesRef = useRef({ cup: [], wax: [], wick: [], moldLayers: [] });
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
-  const cameraRef = useRef(null); // Ref to store the main camera for snapshot resetting
+  const cameraRef = useRef(null); 
 
 useImperativeHandle(ref, () => ({
   getSnapshot: () => {
@@ -20,17 +20,28 @@ useImperativeHandle(ref, () => ({
 
     if (!renderer || !scene || !canvas || !mainCamera) return null;
 
-    // 1. Create the studio camera
-    const photoCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    
-    // 2. MOVE CAMERA BACK: (x, y, z)
-    // We increase these values to pull the camera away from the candle
-    // Position (6, 5, 6) gives a great high-angle diagonal without the "zoom"
-    photoCamera.position.set(6, 5, 6); 
-    photoCamera.lookAt(0, 1.0, 0); // Aim at the middle/base
+    const isMobile = window.innerWidth < 768;
 
+    // 1. High-Res Camera (Square Aspect Ratio)
+    const photoCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+    const dist = isMobile ? 6.2 : 4.6;
+    const height = 5.5; 
+    photoCamera.position.set(dist, height, dist); 
+    photoCamera.lookAt(0, 1.0, 0); 
+
+    // 2. THE SECRET FOR HIGH-RES:
+    // We manually trigger a high-resolution render before capturing.
+    // This forces Three.js to use every single pixel available on the GPU.
+    renderer.setPixelRatio(window.devicePixelRatio > 2 ? window.devicePixelRatio : 2);
     renderer.render(scene, photoCamera);
-    const data = canvas.toDataURL('image/jpeg', 0.6);
+    
+    // 3. CAPTURE AT 100% QUALITY (1.0)
+    // Using PNG provides lossless quality, but if the file is too big for your DB,
+    // use 'image/jpeg' with 1.0 quality instead.
+    const data = canvas.toDataURL('image/png'); 
+
+    // 4. RESET: Put the renderer back to normal for the UI
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.render(scene, mainCamera);
     
     return data;
@@ -48,20 +59,24 @@ useImperativeHandle(ref, () => ({
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
     camera.position.set(0, 6, 4);
-    cameraRef.current = camera; // Store camera in ref immediately
+    cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
       powerPreference: 'high-performance',
-      preserveDrawingBuffer: true,
+      preserveDrawingBuffer: true, // Needed for snapshots
+      alpha: true
     });
+    
     renderer.setSize(size, size);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Keep high resolution: Set pixel ratio to device (2x or 3x)
+    renderer.setPixelRatio(window.devicePixelRatio);
     
     renderer.shadowMap.enabled = !isMobile;
     rendererRef.current = renderer;
 
+    // Premium Lighting Setup
     scene.add(new THREE.AmbientLight(0xfff5e0, 1.5));
     const key = new THREE.DirectionalLight(0xffffff, 2);
     key.position.set(5, 10, 5);
@@ -90,7 +105,6 @@ useImperativeHandle(ref, () => ({
       finalModelUrl,
       (gltf) => {
         scene.children = scene.children.filter(c => c.type !== 'Group');
-        
         loadedGroup = gltf.scene;
         scene.add(loadedGroup);
 
@@ -101,14 +115,11 @@ useImperativeHandle(ref, () => ({
           allowedParts = Array.isArray(colorableParts) 
             ? colorableParts 
             : (typeof colorableParts === 'string' ? JSON.parse(colorableParts) : []);
-        } catch (e) {
-          allowedParts = [];
-        }
+        } catch (e) { allowedParts = []; }
 
         loadedGroup.traverse((obj) => {
           if (obj.isMesh) {
             obj.castShadow = !isMobile;
-            
             const exactName = obj.name; 
             const lowerName = exactName.toLowerCase();
             const layerIndex = allowedParts.indexOf(exactName);
@@ -117,19 +128,14 @@ useImperativeHandle(ref, () => ({
               obj.material = obj.material.clone();
               obj.material.flatShading = !!flatShading;
               obj.material.needsUpdate = true;
-              
               meshesRef.current.moldLayers[layerIndex] = obj;
-              if (layerColors[layerIndex]) {
-                obj.material.color.set(layerColors[layerIndex]);
-              }
+              if (layerColors[layerIndex]) obj.material.color.set(layerColors[layerIndex]);
             } 
             else if (lowerName.includes('cylinder_0') || lowerName.endsWith('_0')) {
               const parsedColor = new THREE.Color(cupColor); 
-              const opacity = cupColor.includes('rgba') 
-                  ? parseFloat(cupColor.split(',')[3]) 
-                  : 1.0;
+              const opacity = cupColor.includes('rgba') ? parseFloat(cupColor.split(',')[3]) : 1.0;
 
-              const crystalMaterial = new THREE.MeshPhysicalMaterial({
+              obj.material = new THREE.MeshPhysicalMaterial({
                 color: parsedColor,
                 metalness: 0.1,
                 roughness: 0.05,
@@ -141,15 +147,11 @@ useImperativeHandle(ref, () => ({
                 flatShading: !!flatShading, 
                 depthWrite: false
               });
-
-              obj.material = crystalMaterial;
               meshesRef.current.cup.push(obj);
             }
             else if (lowerName.includes('cylinder001_1') || lowerName.endsWith('_1') || lowerName.includes('sphere') || lowerName.includes('wax')) {
               obj.material = obj.material.clone();
               obj.material.flatShading = !!flatShading;
-              obj.material.needsUpdate = true;
-              
               meshesRef.current.wax.push(obj);
               if (waxColor) obj.material.color.set(waxColor);
             }
@@ -159,9 +161,7 @@ useImperativeHandle(ref, () => ({
             }
           }
         });
-      },
-      undefined,
-      (err) => console.error('Failed to load 3D model:', err)
+      }
     );
 
     let frameId;
@@ -179,11 +179,8 @@ useImperativeHandle(ref, () => ({
           if (child.isMesh) {
             child.geometry.dispose();
             if (child.material) {
-              if (Array.isArray(child.material)) {
-                child.material.forEach(m => m.dispose());
-              } else {
-                child.material.dispose();
-              }
+              if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+              else child.material.dispose();
             }
           }
         });
@@ -196,10 +193,7 @@ useImperativeHandle(ref, () => ({
     meshesRef.current.cup.forEach(mesh => {
       if (cupColor) {
         mesh.material.color.set(new THREE.Color(cupColor));
-        const opacity = cupColor.includes('rgba') 
-          ? parseFloat(cupColor.split(',')[3]) 
-          : 1.0;
-          
+        const opacity = cupColor.includes('rgba') ? parseFloat(cupColor.split(',')[3]) : 1.0;
         mesh.material.opacity = opacity;
         mesh.material.transmission = opacity < 1 ? 1.0 : 0.0;
         mesh.material.transparent = true;
@@ -216,9 +210,7 @@ useImperativeHandle(ref, () => ({
 
   useEffect(() => {
     meshesRef.current.moldLayers.forEach((mesh, index) => {
-      if (mesh && layerColors[index]) {
-        mesh.material.color.set(layerColors[index]);
-      }
+      if (mesh && layerColors[index]) mesh.material.color.set(layerColors[index]);
     });
   }, [layerColors]);
 
@@ -230,15 +222,12 @@ useImperativeHandle(ref, () => ({
     });
   }, [cupSize]);
 
-  const isMobile = window.innerWidth < 768;
-  const canvasSize = isMobile ? '280px' : '400px';
-
   return (
     <canvas
       ref={canvasRef}
       style={{
-        width: canvasSize,
-        height: canvasSize,
+        width: '100%',
+        height: '100%',
         borderRadius: '16px',
         cursor: 'grab',
       }}

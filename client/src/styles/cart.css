@@ -327,3 +327,17 @@ button:hover {
 .empty-cart-container p { color: #8c7e70; font-size: 1.1rem; }
 .shop-now-btn { margin-top: 2rem; padding: 1rem 3rem; background-color: #4a3728; color: #fdfbf7; border: none; border-radius: 3rem; transition: all 0.3s ease; text-decoration: none; font-weight: bold; box-shadow: 0 4px 15px rgba(74, 55, 40, 0.2); }
 .shop-now-btn:hover { background-color: #76594C; transform: translateY(-2px); color: #fdfbf7; box-shadow: 0 6px 20px rgba(74, 55, 40, 0.3); }
+
+.cart-item-image-container {
+    background-color: #fdf6f0; /* Match Three.js background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.cart-item-image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* This is the secret for mobile */
+}
