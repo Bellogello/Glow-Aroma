@@ -50,9 +50,9 @@ const Create = () => {
 
     fetchData('scents', setScents);
     fetchData('colors', setColors);
-    fetchData('cup-shapes', setCupShapes);
-    fetchData('cup-sizes', setCupSizes);
-    fetchData('cup-colors', setCupColors);
+    fetchData('admin/inventory/cup-shapes', setCupShapes);
+    fetchData('admin/inventory/cup-sizes', setCupSizes);
+    fetchData('admin/inventory/cup-colors', setCupColors);
     fetchData('mold-shapes', setMoldShapes);
     
     // --- NEW: Fetch the library models to get the mesh names ---

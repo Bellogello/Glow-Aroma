@@ -877,17 +877,36 @@ app.get('/admin/inventory/cup-shapes', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/cup-shapes', async (req, res) => {
-    const { name, price_modifier, is_available } = req.body;
+    // 1. Added model_url here
+    const { name, price_modifier, model_url, is_available } = req.body; 
+    
     if (!name) return res.status(400).json({ error: 'Name is required.' });
+    
     try {
-        const [result] = await db.promise().query('INSERT INTO cup_shapes (name, price_modifier, is_available) VALUES (?, ?, ?)', [name, parseFloat(price_modifier) || 0, is_available !== false]);
+        // 2. Added model_url to the SQL query and the array of values
+        const [result] = await db.promise().query(
+            'INSERT INTO cup_shapes (name, price_modifier, model_url, is_available) VALUES (?, ?, ?, ?)', 
+            [name, parseFloat(price_modifier) || 0, model_url || null, is_available !== false]
+        );
         res.status(201).json({ message: 'Cup shape added.', id: result.insertId });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        res.status(500).json({ error: e.message }); 
+    }
 });
 app.put('/admin/inventory/cup-shapes/:id', async (req, res) => {
-    const { name, price_modifier, is_available } = req.body;
-    try { await db.promise().query('UPDATE cup_shapes SET name=?, price_modifier=?, is_available=? WHERE id=?', [name, parseFloat(price_modifier) || 0, is_available, req.params.id]); res.json({ message: 'Cup shape updated.' }); }
-    catch (e) { res.status(500).json({ error: e.message }); }
+    const { name, price_modifier, model_url, is_available } = req.body;
+    
+    if (!name) return res.status(400).json({ error: 'Name is required.' });
+    
+    try {
+        await db.promise().query(
+            'UPDATE cup_shapes SET name = ?, price_modifier = ?, model_url = ?, is_available = ? WHERE id = ?', 
+            [name, parseFloat(price_modifier) || 0, model_url || null, is_available !== false, req.params.id]
+        );
+        res.json({ message: 'Cup shape updated.' });
+    } catch (e) { 
+        res.status(500).json({ error: e.message }); 
+    }
 });
 app.delete('/admin/inventory/cup-shapes/:id', async (req, res) => {
     try { await db.promise().query('DELETE FROM cup_shapes WHERE id = ?', [req.params.id]); res.json({ message: 'Cup shape deleted.' }); }
