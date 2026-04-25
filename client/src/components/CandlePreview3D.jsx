@@ -40,15 +40,14 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: !isMobile, // Keeps antialiasing off for mobile (great for performance)
+      antialias: true, // Restored for smooth edges
       powerPreference: 'high-performance',
       preserveDrawingBuffer: true,
     });
     renderer.setSize(size, size);
     
-    // --- PERF FIX 1: Cap Pixel Ratio on Mobile ---
-    // Phones have massive pixel densities. Rendering 3D at 3x ratio cooks the GPU.
-    renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2.5));
+    // Allows high-res Retina displays to look sharp, capped at 2x for safety
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     
     renderer.shadowMap.enabled = !isMobile;
     rendererRef.current = renderer;
@@ -70,7 +69,7 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
     controls.target.set(0, 1, 0);
     controls.update();
 
-    let loadedGroup = null; // Keep track of the loaded model for memory cleanup
+    let loadedGroup = null; 
 
     const finalModelUrl = modelUrl
       ? (modelUrl.startsWith('http') ? modelUrl : `${API_BASE_URL}${modelUrl}`)
@@ -133,15 +132,9 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
     );
 
     let frameId;
-    let lastTime = 0;
-    const animate = (time) => {
+    const animate = () => {
+      // requestAnimationFrame naturally runs at the screen's refresh rate (60Hz, 120Hz, etc.)
       frameId = requestAnimationFrame(animate);
-      
-      // --- PERF FIX 2: 30FPS Throttle on Mobile ---
-      // Halves the CPU/GPU workload so the phone doesn't heat up or lag.
-      if (isMobile && time - lastTime < 33) return;
-      lastTime = time;
-      
       controls.update();
       renderer.render(scene, camera);
     };
@@ -150,8 +143,7 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
     return () => {
       cancelAnimationFrame(frameId);
       
-      // --- PERF FIX 3: Deep VRAM Memory Cleanup ---
-      // Prevents iOS Safari and Android Chrome from crashing after switching models.
+      // Deep VRAM Memory Cleanup (Crucial for mobile stability)
       if (loadedGroup) {
         loadedGroup.traverse((child) => {
           if (child.isMesh) {
