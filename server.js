@@ -895,19 +895,24 @@ app.get('/admin/inventory/mold-shapes', async (req, res) => {
     try { const [rows] = await db.promise().query('SELECT * FROM mold_shapes ORDER BY id DESC'); res.json(rows); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.post('/admin/inventory/mold-shapes', async (req, res) => {
-    const { name, price_modifier, is_available } = req.body;
-    if (!name) return res.status(400).json({ error: 'Name is required.' });
-    try {
-        const [result] = await db.promise().query('INSERT INTO mold_shapes (name, price_modifier, is_available) VALUES (?, ?, ?)', [name, parseFloat(price_modifier) || 0, is_available !== false]);
-        res.status(201).json({ message: 'Mold shape added.', id: result.insertId });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+app.post('/admin/inventory/mold-shapes', (req, res) => {
+    const { name, price_modifier, layers, model_url, is_available } = req.body;
+    const sql = 'INSERT INTO mold_shapes (name, price_modifier, layers, model_url, is_available) VALUES (?, ?, ?, ?, ?)';
+    db.query(sql, [name, price_modifier || 0, layers || 1, model_url || null, is_available], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ id: result.insertId });
+    });
 });
-app.put('/admin/inventory/mold-shapes/:id', async (req, res) => {
-    const { name, price_modifier, is_available } = req.body;
-    try { await db.promise().query('UPDATE mold_shapes SET name=?, price_modifier=?, is_available=? WHERE id=?', [name, parseFloat(price_modifier) || 0, is_available, req.params.id]); res.json({ message: 'Mold shape updated.' }); }
-    catch (e) { res.status(500).json({ error: e.message }); }
+
+app.put('/admin/inventory/mold-shapes/:id', (req, res) => {
+    const { name, price_modifier, layers, model_url, is_available } = req.body;
+    const sql = 'UPDATE mold_shapes SET name=?, price_modifier=?, layers=?, model_url=?, is_available=? WHERE id=?';
+    db.query(sql, [name, price_modifier || 0, layers || 1, model_url || null, is_available, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
 });
+
 app.delete('/admin/inventory/mold-shapes/:id', async (req, res) => {
     try { await db.promise().query('DELETE FROM mold_shapes WHERE id = ?', [req.params.id]); res.json({ message: 'Mold shape deleted.' }); }
     catch (e) { res.status(500).json({ error: 'Cannot delete — may be linked to existing orders.' }); }

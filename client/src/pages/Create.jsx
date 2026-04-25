@@ -78,11 +78,11 @@ const Create = () => {
     }
   }, [selectedMoldShape, moldShapes]);
 
-  // --- SAFE MODEL URL LOGIC ---
-  const currentModelUrl = (candleType === 'cup' && Array.isArray(cupShapes))
-    ? cupShapes.find(s => s.id?.toString() === selectedCupShape?.toString())?.model_url
-    : (Array.isArray(moldShapes) ? moldShapes.find(s => s.id?.toString() === selectedMoldShape?.toString())?.model_url : null);
-
+// Determination of current Model URL with aggressive type matching
+const currentModelUrl = (candleType === 'cup' && Array.isArray(cupShapes))
+  ? cupShapes.find(s => String(s.id) === String(selectedCupShape))?.model_url
+  : (Array.isArray(moldShapes) ? moldShapes.find(s => String(s.id) === String(selectedMoldShape))?.model_url : null);
+    
   const handleLayerColorChange = (index, colorId) => {
     const newLayers = [...moldLayers];
     newLayers[index] = colorId;

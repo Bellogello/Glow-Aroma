@@ -2,10 +2,12 @@ import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { API_BASE_URL } from '../config';
 
 const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, ref) => {
   const canvasRef = useRef(null);
-  const meshesRef = useRef({});
+  // Changed to store arrays to support models with multiple parts like your 3x3
+  const meshesRef = useRef({ cup: [], wax: [], wick: [] });
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
 
@@ -66,49 +68,47 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, r
     controls.update();
 
     const finalModelUrl = modelUrl
-      ? (modelUrl.startsWith('http') ? modelUrl : `http://localhost:5000${modelUrl}`)
+      ? (modelUrl.startsWith('http') ? modelUrl : `${API_BASE_URL}${modelUrl}`)
       : '/candle.glb';
 
     const loader = new GLTFLoader();
     loader.load(
       finalModelUrl,
       (gltf) => {
+        // Clear old models if switching
+        scene.children = scene.children.filter(c => c.type !== 'Group');
         scene.add(gltf.scene);
+
+        // Reset references
+        meshesRef.current = { cup: [], wax: [], wick: [] };
 
         gltf.scene.traverse((obj) => {
           if (obj.isMesh) {
             obj.material = obj.material.clone();
             obj.castShadow = !isMobile;
+            
+            const name = obj.name.toLowerCase();
+
+            // --- COLOR PART LOGIC START ---
+            // Identify Cup/Glass
+            if (name.includes('cylinder_0') || name.endsWith('_0')) {
+              obj.material.transparent = true;
+              obj.material.opacity = 0.4;
+              meshesRef.current.cup.push(obj);
+              if (cupColor) obj.material.color.set(cupColor);
+            } 
+            // Identify Wax (Supports Cylinder001_1 and Sphere.001)
+            else if (name.includes('cylinder001_1') || name.endsWith('_1') || name.includes('sphere')) {
+              meshesRef.current.wax.push(obj);
+              if (waxColor) obj.material.color.set(waxColor);
+            }
+            // Identify Wick
+            else if (name.includes('cylinder002_2') || name.includes('wick')) {
+              meshesRef.current.wick.push(obj);
+            }
+            // --- COLOR PART LOGIC END ---
           }
         });
-
-        const cup  = gltf.scene.getObjectByName('Cylinder_0');
-        const wax  = gltf.scene.getObjectByName('Cylinder001_1');
-        const wick = gltf.scene.getObjectByName('Cylinder002_2');
-
-        if (cup)  meshesRef.current['cup']  = cup;
-        if (wax)  meshesRef.current['wax']  = wax;
-        if (wick) meshesRef.current['wick'] = wick;
-
-        if (cup) {
-          cup.traverse((child) => {
-            if (child.isMesh) {
-              child.material.transparent = true;
-              child.material.opacity = 0.4;
-            }
-          });
-        }
-
-        if (cupColor && meshesRef.current['cup']) {
-          meshesRef.current['cup'].traverse((child) => {
-            if (child.isMesh) child.material.color.set(cupColor);
-          });
-        }
-        if (waxColor && meshesRef.current['wax']) {
-          meshesRef.current['wax'].traverse((child) => {
-            if (child.isMesh) child.material.color.set(waxColor);
-          });
-        }
       },
       undefined,
       (err) => console.error('Failed to load 3D model:', err)
@@ -131,29 +131,24 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, r
     };
   }, [modelUrl]);
 
+  // COLOR UPDATES FOR CUP
   useEffect(() => {
-    const node = meshesRef.current['cup'];
-    if (node && cupColor) {
-      node.traverse((child) => {
-        if (child.isMesh) child.material.color.set(cupColor);
-      });
-    }
+    meshesRef.current.cup.forEach(mesh => {
+        if (cupColor) mesh.material.color.set(cupColor);
+    });
   }, [cupColor]);
 
+  // COLOR UPDATES FOR WAX (Handles all spheres or cylinders)
   useEffect(() => {
-    const node = meshesRef.current['wax'];
-    if (node && waxColor) {
-      node.traverse((child) => {
-        if (child.isMesh) child.material.color.set(waxColor);
-      });
-    }
+    meshesRef.current.wax.forEach(mesh => {
+        if (waxColor) mesh.material.color.set(waxColor);
+    });
   }, [waxColor]);
 
   useEffect(() => {
     const scales = { small: 0.75, medium: 1.0, large: 1.3 };
     const s = scales[cupSize] || 1.0;
-    ['cup', 'wax', 'wick'].forEach((key) => {
-      const node = meshesRef.current[key];
+    Object.values(meshesRef.current).flat().forEach((node) => {
       if (node) node.scale.set(s, s, s);
     });
   }, [cupSize]);

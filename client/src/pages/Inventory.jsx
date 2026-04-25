@@ -83,7 +83,7 @@ const CATEGORIES = [
     fields: [
       { name: 'name',           label: 'Shape Name',            type: 'text',   required: true },
       { name: 'price_modifier', label: 'Base Price (L.E.)',     type: 'number', required: false },
-      { name: 'model_url',      label: '3D Model URL (.glb)',   type: 'text',   required: false },
+      { name: 'model_url',      label: 'Linked 3D Model',       type: 'model',  required: false },
       { name: 'is_available',   label: 'Available',             type: 'toggle', required: false },
     ],
     display: (item) => item.name,
@@ -97,11 +97,12 @@ const CATEGORIES = [
     fields: [
       { name: 'name',           label: 'Shape Name',            type: 'text',   required: true },
       { name: 'price_modifier', label: 'Base Price (L.E.)',     type: 'number', required: false },
-      { name: 'model_url',      label: '3D Model URL (.glb)',   type: 'text',   required: false },
+      { name: 'layers',         label: 'Number of Layers',      type: 'number', required: true },
+      { name: 'model_url',      label: 'Linked 3D Model',       type: 'model',  required: false },
       { name: 'is_available',   label: 'Available',             type: 'toggle', required: false },
     ],
     display: (item) => item.name,
-    sub: (item) => `+${Number(item.price_modifier || 0).toFixed(2)} L.E.`,
+    sub: (item) => `+${Number(item.price_modifier || 0).toFixed(2)} L.E. | ${item.layers || 1} Layer(s)`,
   },
 ];
 
@@ -109,7 +110,7 @@ const defaultForm = (fields) => {
   const obj = {};
   fields.forEach(f => {
     if (f.type === 'toggle') obj[f.name] = true;
-    else if (f.type === 'number') obj[f.name] = '';
+    else if (f.type === 'number') obj[f.name] = f.name === 'layers' ? 1 : '';
     else if (f.type === 'color') obj[f.name] = '#c8a97e';
     else obj[f.name] = '';
   });
@@ -117,15 +118,13 @@ const defaultForm = (fields) => {
 };
 
 // ── MODELS TAB ───────────────────────────────────────────────────────────────
-const ModelsTab = ({ notify }) => {
+const ModelsTab = ({ notify, models, fetchModels }) => {
   const { success, error } = notify;
-  const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [editingModel, setEditingModel] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form state
   const [name, setName] = useState('');
   const [type, setType] = useState('cup');
   const [layers, setLayers] = useState(1);
@@ -134,18 +133,6 @@ const ModelsTab = ({ notify }) => {
   const [isAvailable, setIsAvailable] = useState(true);
   const [modelFile, setModelFile] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
-
-  useEffect(() => { fetchModels(); }, []);
-
-  const fetchModels = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/models`);
-      const data = await res.json();
-      setModels(Array.isArray(data) ? data : []);
-    } catch { error('Failed to load models.'); }
-    finally { setLoading(false); }
-  };
 
   const openAdd = () => {
     setEditingModel(null);
@@ -210,7 +197,7 @@ const ModelsTab = ({ notify }) => {
     if (!window.confirm(`Delete model "${m.name}"?`)) return;
     try {
       await fetch(`${API_BASE_URL}/admin/models/${m.id}`, { method: 'DELETE' });
-      setModels(prev => prev.filter(x => x.id !== m.id));
+      await fetchModels();
       success('Model deleted.');
     } catch { error('Delete failed.'); }
   };
@@ -232,15 +219,11 @@ const ModelsTab = ({ notify }) => {
                 )}
                 <div className="inv-item-info">
                   <span className="inv-item-name">{m.name}</span>
-                  <span className="inv-item-sub">Click 'Edit' to copy URL for shapes</span>
+                  <span className="inv-item-sub">{m.type} • {Array.isArray(m.colorable_parts) ? m.colorable_parts.join(', ') : ''}</span>
                 </div>
               </div>
               <div className="inv-item-actions">
-                <button className="inv-edit-btn" onClick={() => {
-                   openEdit(m);
-                   navigator.clipboard.writeText(m.model_url);
-                   success('Model URL copied to clipboard!');
-                }}>URL & Edit</button>
+                <button className="inv-edit-btn" onClick={() => openEdit(m)}>Edit</button>
                 <button className="inv-delete-btn" onClick={() => handleDelete(m)}>Delete</button>
               </div>
             </div>
@@ -252,7 +235,7 @@ const ModelsTab = ({ notify }) => {
         <div className="inv-dialog-overlay" onClick={e => e.target === e.currentTarget && setShowDialog(false)}>
           <div className="inv-dialog">
             <div className="inv-dialog-header">
-              <h3>{editingModel ? 'Edit Model' : 'Upload Model'}</h3>
+              <h3>{editingModel ? 'Edit Model Info' : 'Upload Model'}</h3>
               <button className="inv-dialog-close" onClick={() => setShowDialog(false)}>×</button>
             </div>
             <div className="inv-dialog-body">
@@ -261,8 +244,13 @@ const ModelsTab = ({ notify }) => {
                 <input className="inv-input" value={name} onChange={e => setName(e.target.value)} />
               </div>
               <div className="inv-field">
-                <label>Model URL (Read Only)</label>
-                <input className="inv-input" value={editingModel?.model_url || ''} readOnly />
+                <label>Colorable Parts (Comma Separated)</label>
+                <input 
+                  className="inv-input" 
+                  placeholder="e.g. Sphere.001, Sphere.002" 
+                  value={colorableParts} 
+                  onChange={e => setColorableParts(e.target.value)} 
+                />
               </div>
               {!editingModel && (
                 <div className="inv-field">
@@ -295,6 +283,8 @@ const Inventory = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [form, setForm]               = useState({});
   const [scentFamilies, setScentFamilies] = useState([]);
+  
+  const [availableModels, setAvailableModels] = useState([]);
 
   const category = CATEGORIES.find(c => c.key === activeKey);
   const isModelsTab = activeKey === 'models';
@@ -308,7 +298,17 @@ const Inventory = () => {
     fetch(`${API_BASE_URL}/admin/inventory/scent-families`)
       .then(r => r.json())
       .then(d => { if (Array.isArray(d)) setScentFamilies(d); });
+      
+    fetchModels();
   }, []);
+
+  const fetchModels = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/models`);
+      const data = await res.json();
+      setAvailableModels(Array.isArray(data) ? data : []);
+    } catch (err) { console.error('Failed to load available models.'); }
+  };
 
   useEffect(() => {
     if (!isModelsTab) fetchItems();
@@ -338,6 +338,21 @@ const Inventory = () => {
     });
     setForm(f);
     setShowDialog(true);
+  };
+
+  // --- NEW: DELETE LOGIC FOR SHAPES/ITEMS ---
+  const handleDeleteItem = async (item) => {
+    if (!window.confirm(`Are you sure you want to delete "${category.display(item)}"?`)) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/inventory/${category.endpoint}/${item.id}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      success(`${category.label} deleted.`);
+      fetchItems();
+    } catch (err) {
+      error('Failed to delete item.');
+    }
   };
 
   const handleFormChange = (name, value) => setForm(prev => ({ ...prev, [name]: value }));
@@ -398,7 +413,7 @@ const Inventory = () => {
         </div>
 
         {isModelsTab ? (
-          <ModelsTab notify={{ success, error }} />
+          <ModelsTab notify={{ success, error }} models={availableModels} fetchModels={fetchModels} />
         ) : (
           <div className="inv-card">
             <div className="inv-card-header">
@@ -412,8 +427,10 @@ const Inventory = () => {
                       <span className="inv-item-name">{category.display(item)}</span>
                       <span className="inv-item-sub">{category.sub(item)}</span>
                    </div>
+                   {/* --- NEW: DELETE BUTTON ADDED --- */}
                    <div className="inv-item-actions">
                       <button className="inv-edit-btn" onClick={() => openEditDialog(item)}>Edit</button>
+                      <button className="inv-delete-btn" onClick={() => handleDeleteItem(item)}>Delete</button>
                    </div>
                 </div>
               ))}
@@ -433,16 +450,23 @@ const Inventory = () => {
               {category.fields.map(field => (
                 <div key={field.name} className="inv-field">
                   <label>{field.label}</label>
+                  
                   {field.type === 'scent_family' ? (
                     <select className="inv-input" value={form[field.name] || ''} onChange={e => handleFormChange(field.name, e.target.value)}>
                       <option value="">None</option>
                       {scentFamilies.map(sf => <option key={sf.id} value={sf.id}>{sf.name}</option>)}
+                    </select>
+                  ) : field.type === 'model' ? (
+                    <select className="inv-input" value={form[field.name] || ''} onChange={e => handleFormChange(field.name, e.target.value)}>
+                      <option value="">Select a 3D Model</option>
+                      {availableModels.map(m => <option key={m.id} value={m.model_url}>{m.name}</option>)}
                     </select>
                   ) : field.type === 'toggle' ? (
                     <input type="checkbox" checked={!!form[field.name]} onChange={e => handleFormChange(field.name, e.target.checked)} />
                   ) : (
                     <input className="inv-input" type={field.type} value={form[field.name] || ''} onChange={e => handleFormChange(field.name, e.target.value)} />
                   )}
+                  
                 </div>
               ))}
             </div>
