@@ -121,14 +121,14 @@ app.get('/mold-shapes', (req, res) => {
     });
 });
 
-// Public models endpoint
-app.get('/models', (req, res) => {
-    db.query('SELECT * FROM candle_models WHERE is_available = TRUE ORDER BY type, name', (err, results) => {
+
+app.get('/admin/models', (req, res) => {
+    db.query('SELECT * FROM candle_models ORDER BY created_at DESC', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results.map(m => ({
             ...m,
-            colorable_parts: typeof m.colorable_parts === 'string'
-                ? JSON.parse(m.colorable_parts || '[]')
+            colorable_parts: typeof m.colorable_parts === 'string' 
+                ? JSON.parse(m.colorable_parts || '[]') 
                 : (m.colorable_parts || [])
         })));
     });
@@ -186,6 +186,8 @@ app.delete('/admin/products/:id', (req, res) => {
 // ==========================================
 // --- 3D MODELS MANAGEMENT ---
 // ==========================================
+
+// 1. GET ALL MODELS (Used by Inventory)
 app.get('/admin/models', (req, res) => {
     db.query('SELECT * FROM candle_models ORDER BY created_at DESC', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -198,7 +200,55 @@ app.get('/admin/models', (req, res) => {
     });
 });
 
+// 2. CREATE NEW MODEL (This was missing!)
+app.post('/admin/models', uploadModelWithThumbnail, async (req, res) => {
+    const { name, type, layers, flat_shading, colorable_parts, is_available } = req.body;
 
+    if (!name || !type) return res.status(400).json({ error: 'Name and type are required.' });
+    if (!req.files?.model?.[0]) return res.status(400).json({ error: 'GLB model file is required.' });
+
+    try {
+        // Upload .glb to Cloudinary as raw file
+        const modelResult = await uploadToCloudinary(req.files.model[0].buffer, {
+            folder: 'glow-aroma/models',
+            resource_type: 'raw',
+            public_id: `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.glb`,
+        });
+
+        // Upload thumbnail if provided
+        let thumbnailUrl = null;
+        if (req.files?.thumbnail?.[0]) {
+            const thumbResult = await uploadToCloudinary(req.files.thumbnail[0].buffer, {
+                folder: 'glow-aroma/thumbnails',
+                resource_type: 'image',
+            });
+            thumbnailUrl = thumbResult.secure_url;
+        }
+
+        const parsedParts = colorable_parts || '[]';
+
+        const [result] = await db.promise().query(
+            'INSERT INTO candle_models (name, type, model_url, thumbnail_url, flat_shading, layers, colorable_parts, is_available) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                name, 
+                type,
+                modelResult.secure_url,
+                thumbnailUrl,
+                flat_shading === 'true' || flat_shading === true ? 1 : 0,
+                parseInt(layers) || 1,
+                parsedParts,
+                is_available === 'true' || is_available === true ? 1 : 0
+            ]
+        );
+
+        res.status(201).json({ message: 'Model uploaded successfully!', id: result.insertId });
+    } catch (err) {
+        console.error('Model upload error:', err);
+        res.status(500).json({ error: 'Failed to upload model: ' + err.message });
+    }
+});
+
+// 3. UPDATE MODEL
 app.put('/admin/models/:id', async (req, res) => {
     const { name, type, layers, flat_shading, colorable_parts, is_available } = req.body;
     const parsedParts = colorable_parts
@@ -220,6 +270,7 @@ app.put('/admin/models/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// 4. DELETE MODEL
 app.delete('/admin/models/:id', async (req, res) => {
     try {
         await db.promise().query('DELETE FROM candle_models WHERE id = ?', [req.params.id]);
