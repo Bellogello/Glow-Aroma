@@ -1,3 +1,7 @@
+html {
+  scroll-behavior: smooth;
+}
+
 body {
     background-color: #f5efe1;
     font-family: "Averia Libre", system-ui;
