@@ -390,35 +390,47 @@ app.post('/cart/add', (req, res) => {
                 );
             } 
             // --- 2. CUSTOM CUP STACKING ---
-            else if (type === 'cup') {
-                // Look for a candle in this user's cart with the EXACT same specs
-                const findSql = `
-                    SELECT ci.id, ci.quantity FROM cart_items ci
-                    JOIN custom_candles cc ON ci.custom_candle_id = cc.id
-                    JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
-                    WHERE ci.cart_id = ? 
-                    AND cc.cup_shape_id = ? AND cc.cup_size = ? 
-                    AND cc.cup_color_id = ? AND cc.scent_id = ?
-                    AND ccl.color_id = ?`;
+else if (type === 'cup') {
+    // 1. We look for a match. 
+    // We use CAST to ensure we aren't failing because of ID vs String types.
+    const findSql = `
+        SELECT ci.id, ci.quantity FROM cart_items ci
+        JOIN custom_candles cc ON ci.custom_candle_id = cc.id
+        JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
+        WHERE ci.cart_id = ? 
+        AND cc.cup_shape_id = ? 
+        AND CAST(cc.cup_size AS CHAR) = CAST(? AS CHAR)
+        AND cc.cup_color_id = ? 
+        AND cc.scent_id = ?
+        AND ccl.color_id = ?`;
+    
+    const params = [cId, cupShapeId, cupSize, cupColor, scentId, candleColorId];
+
+    db.query(findSql, params, (err, existing) => {
+        if (err) return res.status(500).json({ error: "Find match failed: " + err.message });
+
+        if (existing && existing.length > 0) {
+            // MATCH FOUND: Update the quantity of the EXISTING cart item
+            db.query('UPDATE cart_items SET quantity = quantity + ? WHERE id = ?', [quantity, existing[0].id], (updErr) => {
+                if (updErr) return res.status(500).json({ error: updErr.message });
+                res.json({ message: 'Quantity stacked' });
+            });
+        } else {
+            // NO MATCH: Create new candle
+            db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
+            [scentId, cupShapeId, cupSize, cupColor, totalPrice, snapshot], (insErr, result) => {
+                if (insErr) return res.status(500).json({ error: insErr.message });
                 
-                db.query(findSql, [cId, cupShapeId, cupSize, cupColor, scentId, candleColorId], (err, existing) => {
-                    if (existing && existing.length > 0) {
-                        // We found a twin! Just bump the quantity.
-                        db.query('UPDATE cart_items SET quantity = quantity + ? WHERE id = ?', [quantity, existing[0].id], () => {
-                            res.json({ message: 'Quantity updated' });
-                        });
-                    } else {
-                        // Truly unique candle, create new entry
-                        db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
-                        [scentId, cupShapeId, cupSize, cupColor, totalPrice, snapshot], (err, result) => {
-                            const customId = result.insertId;
-                            db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)', [customId, candleColorId], () => {
-                                db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cId, customId, quantity], () => res.json({ message: 'Added New Custom' }));
-                            });
-                        });
-                    }
+                const customId = result.insertId;
+                db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)', [customId, candleColorId], () => {
+                    db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cId, customId, quantity], () => {
+                        res.json({ message: 'New item added' });
+                    });
                 });
-            }
+            });
+        }
+    });
+}
             // --- 3. CUSTOM MOLD STACKING ---
             else if (type === 'mold') {
                 const findMoldSql = `
