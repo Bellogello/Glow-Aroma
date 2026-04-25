@@ -12,23 +12,21 @@ const Create = () => {
   const { success, error, warning } = useNotification();
   const previewRef = useRef(null);
 
+  // Data States
   const [scents, setScents] = useState([]);
-  const [colors, setColors] = useState([]);
+  const [waxColors, setWaxColors] = useState([]); 
   const [cupShapes, setCupShapes] = useState([]);
-  const [cupSizes, setCupSizes] = useState([]);
-  const [cupColors, setCupColors] = useState([]);
   const [moldShapes, setMoldShapes] = useState([]);
-  
-  // --- NEW: State to hold the 3D Models library data ---
   const [dbModels, setDbModels] = useState([]); 
 
+  // Selection States
   const [candleType, setCandleType] = useState('cup'); 
   const [quantity, setQuantity] = useState(1);
   const [selectedScentId, setSelectedScentId] = useState("default");
 
   const [selectedCupShape, setSelectedCupShape] = useState("default");
-  const [selectedCupSize, setSelectedCupSize] = useState("default");
-  const [selectedCupColor, setSelectedCupColor] = useState("default");
+  const [selectedCupSizeIdx, setSelectedCupSizeIdx] = useState("default"); 
+  const [selectedCupColor, setSelectedCupColor] = useState("default"); 
   const [selectedCandleColor, setSelectedCandleColor] = useState("default");
 
   const [selectedMoldShape, setSelectedMoldShape] = useState("default");
@@ -38,92 +36,69 @@ const Create = () => {
     const fetchData = (endpoint, setter) => {
       fetch(`${API_BASE_URL}/${endpoint}`)
         .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) setter(data);
-          else setter([]);
-        })
-        .catch(err => {
-          console.error(`Error fetching ${endpoint}:`, err);
-          setter([]);
-        });
+        .then(data => setter(Array.isArray(data) ? data : []))
+        .catch(err => console.error(`Error fetching ${endpoint}:`, err));
     };
 
     fetchData('scents', setScents);
-    fetchData('colors', setColors);
+    fetchData('colors', setWaxColors);
     fetchData('admin/inventory/cup-shapes', setCupShapes);
-    fetchData('admin/inventory/cup-sizes', setCupSizes);
-    fetchData('admin/inventory/cup-colors', setCupColors);
     fetchData('mold-shapes', setMoldShapes);
-    
-    // --- NEW: Fetch the library models to get the mesh names ---
     fetchData('admin/models', setDbModels); 
   }, []);
 
-  useEffect(() => {
-    if (candleType === 'cup' && Array.isArray(cupShapes) && cupShapes.length > 0 && selectedCupShape === 'default') {
-      setSelectedCupShape(cupShapes[0].id);
-    } else if (candleType === 'mold' && Array.isArray(moldShapes) && moldShapes.length > 0 && selectedMoldShape === 'default') {
-      setSelectedMoldShape(moldShapes[0].id);
-    }
-  }, [cupShapes, moldShapes, candleType, selectedCupShape, selectedMoldShape]);
+  // --- Master Cup Data Parsing ---
+  const activeCup = cupShapes.find(s => String(s.id) === String(selectedCupShape));
+  const availableSizes = activeCup ? (typeof activeCup.sizes === 'string' ? JSON.parse(activeCup.sizes) : activeCup.sizes) : [];
+  const availableCupColors = activeCup ? (typeof activeCup.colors === 'string' ? JSON.parse(activeCup.colors) : activeCup.colors) : [];
+
+  const currentModelUrl = candleType === 'cup'
+    ? activeCup?.model_url
+    : moldShapes.find(s => String(s.id) === String(selectedMoldShape))?.model_url;
 
   useEffect(() => {
-    if (selectedMoldShape !== "default" && Array.isArray(moldShapes)) {
+    if (candleType === 'cup' && cupShapes.length > 0 && selectedCupShape === 'default') {
+      setSelectedCupShape(cupShapes[0].id);
+    }
+  }, [cupShapes, candleType, selectedCupShape]);
+
+  useEffect(() => {
+    if (selectedMoldShape !== "default") {
       const shape = moldShapes.find(m => m.id.toString() === selectedMoldShape.toString());
-      if (shape) {
-        setMoldLayers(Array(shape.layers || 1).fill("default"));
-      }
-    } else {
-      setMoldLayers([]);
+      if (shape) setMoldLayers(Array(shape.layers || 1).fill("default"));
     }
   }, [selectedMoldShape, moldShapes]);
-
-  const currentModelUrl = (candleType === 'cup' && Array.isArray(cupShapes))
-    ? cupShapes.find(s => String(s.id) === String(selectedCupShape))?.model_url
-    : (Array.isArray(moldShapes) ? moldShapes.find(s => String(s.id) === String(selectedMoldShape))?.model_url : null);
-      
-  const handleLayerColorChange = (index, colorId) => {
-    const newLayers = [...moldLayers];
-    newLayers[index] = colorId;
-    setMoldLayers(newLayers);
-  };
 
   const handleConfirm = async () => {
     if (selectedScentId === "default") return warning("Please pick a scent!");
 
     let totalPrice = 0;
-    const scent = scents.find(s => s.id.toString() === selectedScentId.toString());
+    const scent = scents.find(s => String(s.id) === String(selectedScentId));
     if (scent) totalPrice += Number(scent.price_modifier || 0);
 
     if (candleType === 'cup') {
-      if (selectedCupShape === "default" || selectedCupSize === "default" || selectedCupColor === "default" || selectedCandleColor === "default") {
-        return warning("Please fill out all Cup options!");
+      if (selectedCupShape === "default" || selectedCupSizeIdx === "default" || selectedCupColor === "default") {
+        return warning("Please complete your selections!");
       }
-      const shape = cupShapes.find(s => s.id.toString() === selectedCupShape.toString());
-      const size = cupSizes.find(s => s.id.toString() === selectedCupSize.toString());
-      const waxColor = colors.find(c => c.id.toString() === selectedCandleColor.toString());
+      const sizeObj = availableSizes[selectedCupSizeIdx];
+      const colorObj = availableCupColors.find(c => c.hex_code === selectedCupColor);
+      const waxObj = waxColors.find(c => String(c.id) === String(selectedCandleColor));
 
-      if (shape) totalPrice += Number(shape.price_modifier || 0);
-      if (size) totalPrice += Number(size.price_modifier || 0);
-      if (waxColor) totalPrice += Number(waxColor.price_modifier || 0);
-
+      totalPrice += Number(activeCup.price_modifier || 0);
+      if (sizeObj) totalPrice += Number(sizeObj.price_modifier || 0);
+      if (colorObj) totalPrice += Number(colorObj.price_modifier || 0);
+      if (waxObj) totalPrice += Number(waxObj.price_modifier || 0);
     } else {
-      if (selectedMoldShape === "default") return warning("Please pick a Mold Shape!");
-      if (moldLayers.includes("default")) return warning("Please pick a color for every layer!");
-
-      const shape = moldShapes.find(s => s.id.toString() === selectedMoldShape.toString());
+      const shape = moldShapes.find(s => String(s.id) === String(selectedMoldShape));
       if (shape) totalPrice += Number(shape.price_modifier || 0);
-
-      moldLayers.forEach(layerColorId => {
-        const color = colors.find(c => c.id.toString() === layerColorId.toString());
-        if (color) totalPrice += Number(color.price_modifier || 0);
+      moldLayers.forEach(id => {
+        const c = waxColors.find(wc => String(wc.id) === String(id));
+        if (c) totalPrice += Number(c.price_modifier || 0);
       });
     }
 
     const userId = localStorage.getItem("userId");
-    if (!userId) return warning("You need to be logged in to add stuff to your cart!");
-
-    const snapshot = previewRef.current?.getSnapshot() || null;
+    if (!userId) return warning("Log in to add to cart!");
 
     const payload = {
       type: candleType,
@@ -131,31 +106,22 @@ const Create = () => {
       quantity,
       scentId: selectedScentId,
       totalPrice: Number(totalPrice.toFixed(2)),
-      snapshot,
+      snapshot: previewRef.current?.getSnapshot() || null,
       ...(candleType === 'cup' 
-        ? { cupShapeId: selectedCupShape, cupSizeId: selectedCupSize, cupColorId: selectedCupColor, candleColorId: selectedCandleColor }
+        ? { cupShapeId: selectedCupShape, cupSize: availableSizes[selectedCupSizeIdx]?.ml, cupColor: selectedCupColor, candleColorId: selectedCandleColor }
         : { moldShapeId: selectedMoldShape, layers: moldLayers }
       )
     };
 
     try {
-      const response = await fetch(`${API_BASE_URL}/cart/add`, {
+      const res = await fetch(`${API_BASE_URL}/cart/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
-      const data = await response.json();
-      if (response.ok) {
-        success("Success! Your custom candle was added to the cart.");
-        setQuantity(1);
-        setSelectedScentId("default");
-      } else {
-        error("Error from server: " + data.error);
-      }
-    } catch (err) {
-      error("Server error. Please try again later.");
-    }
+      if (res.ok) success("Added to cart!");
+      else error("Failed to add.");
+    } catch (err) { error("Server error."); }
   };
 
   return (
@@ -169,77 +135,28 @@ const Create = () => {
           <CandlePreview3D
             ref={previewRef}
             modelUrl={currentModelUrl}
-            
-            flatShading={(() => {
-              if (!currentModelUrl || dbModels.length === 0) return false;
-              const modelObj = dbModels.find(m => m.model_url === currentModelUrl);
-              return modelObj ? !!modelObj.flat_shading : false;
-            })()}
-
-            
+            flatShading={dbModels.find(m => m.model_url === currentModelUrl)?.flat_shading}
             colorableParts={(() => {
-              if (!currentModelUrl || dbModels.length === 0) return [];
               const modelObj = dbModels.find(m => m.model_url === currentModelUrl);
               if (!modelObj || !modelObj.colorable_parts) return [];
-              
-              try {
-                return typeof modelObj.colorable_parts === 'string' 
-                  ? JSON.parse(modelObj.colorable_parts) 
-                  : modelObj.colorable_parts;
-              } catch (e) {
-                return [];
-              }
+              try { return typeof modelObj.colorable_parts === 'string' ? JSON.parse(modelObj.colorable_parts) : modelObj.colorable_parts; }
+              catch { return []; }
             })()}
-            
-            layerColors={
-              candleType === 'mold'
-                ? moldLayers.map(colorId => {
-                    const colorObj = colors.find(c => String(c.id) === String(colorId));
-                    return colorObj ? colorObj.hex_code : '#ffffff';
-                  })
-                : []
-            }
-
-            cupColor={
-              cupColors.find(c => c.id.toString() === selectedCupColor.toString())?.hex_code ?? '#ffffff'
-            }
-            waxColor={
-              colors.find(c => c.id.toString() === selectedCandleColor.toString())?.hex_code ?? '#ffffff'
-            }
-            cupSize={
-              selectedCupSize === 'default' ? 'medium' :
-              (() => {
-                const s = cupSizes.find(s => s.id.toString() === selectedCupSize.toString());
-                if (!s) return 'medium';
-                const ml = Number(s.size_ml);
-                if (ml <= 200) return 'small';
-                if (ml <= 400) return 'medium';
-                return 'large';
-              })()
-            }
+            cupColor={selectedCupColor === 'default' ? 'rgba(255,255,255,0.45)' : selectedCupColor}
+            waxColor={waxColors.find(c => String(c.id) === String(selectedCandleColor))?.hex_code ?? '#ffffff'}
+            layerColors={moldLayers.map(id => waxColors.find(c => String(c.id) === String(id))?.hex_code || '#ffffff')}
+            cupSize={availableSizes[selectedCupSizeIdx]?.ml <= 200 ? 'small' : availableSizes[selectedCupSizeIdx]?.ml <= 400 ? 'medium' : 'large'}
           />
         </div>
         
         <div className='choices'> 
           <div className="type-toggle">
             <label className={`radio-label ${candleType === 'cup' ? 'active-radio' : ''}`}>
-              <input 
-                type="radio" 
-                value="cup" 
-                className="radio-input"
-                checked={candleType === 'cup'} 
-                onChange={() => setCandleType('cup')}
-              />
+              <input type="radio" checked={candleType === 'cup'} onChange={() => setCandleType('cup')} className="radio-input" />
               Cup Candle
             </label>
             <label className={`radio-label ${candleType === 'mold' ? 'active-radio' : ''}`}>
-              <input 
-                type="radio" 
-                value="mold" 
-                className="radio-input"
-                checked={candleType === 'mold'} 
-                onChange={() => setCandleType('mold')}
-              />
+              <input type="radio" checked={candleType === 'mold'} onChange={() => setCandleType('mold')} className="radio-input" />
               Mold Candle
             </label>
           </div>
@@ -247,24 +164,24 @@ const Create = () => {
           <div className='selections'>
             {candleType === 'cup' && (
               <>
-                <select value={selectedCupShape} onChange={(e) => setSelectedCupShape(e.target.value)}>
+                <select value={selectedCupShape} onChange={(e) => { setSelectedCupShape(e.target.value); setSelectedCupSizeIdx("default"); setSelectedCupColor("default"); }}>
                   <option value="default">Cup Shape</option>
-                  {cupShapes.map(shape => <option key={shape.id} value={shape.id}>{shape.name}</option>)}
+                  {cupShapes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
 
-                <select value={selectedCupSize} onChange={(e) => setSelectedCupSize(e.target.value)}>
+                <select value={selectedCupSizeIdx} onChange={(e) => setSelectedCupSizeIdx(e.target.value)}>
                   <option value="default">Cup Size</option>
-                  {cupSizes.map(size => <option key={size.id} value={size.id}>{size.size_ml} ml</option>)}
+                  {availableSizes.map((s, i) => <option key={i} value={i}>{s.ml} ml</option>)}
                 </select>
 
                 <select value={selectedCupColor} onChange={(e) => setSelectedCupColor(e.target.value)}>
                   <option value="default">Cup Color</option>
-                  {cupColors.map(color => <option key={color.id} value={color.id}>{color.name}</option>)}
+                  {availableCupColors.map((c, i) => <option key={i} value={c.hex_code}>{c.name}</option>)}
                 </select>
 
                 <select value={selectedCandleColor} onChange={(e) => setSelectedCandleColor(e.target.value)}>
                   <option value="default">Candle Wax Color</option>
-                  {colors.map(color => <option key={color.id} value={color.id}>{color.name}</option>)}
+                  {waxColors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </>
             )}
@@ -273,22 +190,12 @@ const Create = () => {
               <>
                 <select value={selectedMoldShape} onChange={(e) => setSelectedMoldShape(e.target.value)}>
                   <option value="default">Mold Shape</option>
-                  {moldShapes.map(shape => (
-                    <option key={shape.id} value={shape.id}>
-                      {shape.name} ({shape.layers} {shape.layers === 1 ? 'Layer' : 'Layers'})
-                    </option>
-                  ))}
+                  {moldShapes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
-
-                {moldLayers.map((selectedColor, index) => (
-                  <select 
-                    key={index} 
-                    className="layer-select"
-                    value={selectedColor} 
-                    onChange={(e) => handleLayerColorChange(index, e.target.value)}
-                  >
-                    <option value="default">Layer {index + 1} Color</option>
-                    {colors.map(color => <option key={color.id} value={color.id}>{color.name}</option>)}
+                {moldLayers.map((val, i) => (
+                  <select key={i} value={val} onChange={(e) => { const n = [...moldLayers]; n[i] = e.target.value; setMoldLayers(n); }} className="layer-select">
+                    <option value="default">Layer {i+1} Color</option>
+                    {waxColors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 ))}
               </>
@@ -296,7 +203,7 @@ const Create = () => {
 
             <select value={selectedScentId} onChange={(e) => setSelectedScentId(e.target.value)}>
               <option value="default">Scent</option>
-              {scents.map(scent => <option key={scent.id} value={scent.id}>{scent.name}</option>)}
+              {scents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
 
             <div className="confirmation-area">
@@ -305,10 +212,7 @@ const Create = () => {
                 <span className="qty-amount">{quantity}</span>
                 <button className="btn-qty" onClick={() => setQuantity(quantity + 1)}>+</button>            
               </div>
-              
-              <button className="confirm" onClick={handleConfirm}>
-                Confirm Candle
-              </button>
+              <button className="confirm" onClick={handleConfirm}>Confirm Candle</button>
             </div>
           </div>
         </div>

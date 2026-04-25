@@ -369,17 +369,22 @@ app.post('/auth/google', async (req, res) => {
 // --- SHOPPING CART ---
 // ==========================================
 app.post('/cart/add', (req, res) => {
-    const { userId, type, scentId, quantity = 1, prebuiltCandleId, totalPrice, cupShapeId, cupSizeId, cupColorId, candleColorId, moldShapeId, layers, snapshot } = req.body;
+    const { userId, type, scentId, quantity = 1, prebuiltCandleId, totalPrice, cupShapeId, cupSize, cupColor, candleColorId, moldShapeId, layers, snapshot } = req.body;
+    
     if (!userId) return res.status(401).json({ error: 'Auth Required' });
+
     db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, results) => {
         const cartId = results.length > 0 ? results[0].id : null;
+
         const handleAddition = (cId) => {
             if (prebuiltCandleId) {
                 db.query('INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?',
                     [cId, prebuiltCandleId, quantity, quantity], () => res.json({ message: 'Added' }));
             } else if (type === 'cup') {
-                db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size_id, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
-                    [scentId, cupShapeId, cupSizeId, cupColorId, totalPrice, snapshot], (err, result) => {
+                // UPDATED: Now inserts into 'cup_size' column (the ml value) and 'cup_color_id' (which is the rgba string)
+                db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
+                    [scentId, cupShapeId, cupSize, cupColor, totalPrice, snapshot], (err, result) => {
+                        if (err) return res.status(500).json({ error: err.message });
                         const customId = result.insertId;
                         db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)', [customId, candleColorId], () => {
                             db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cId, customId, quantity], () => res.json({ message: 'Added Custom' }));
@@ -388,6 +393,7 @@ app.post('/cart/add', (req, res) => {
             } else if (type === 'mold') {
                 db.query("INSERT INTO custom_candles (type, scent_id, mold_shape_id, total_price, preview_image) VALUES ('mold', ?, ?, ?, ?)",
                     [scentId, moldShapeId, totalPrice, snapshot], (err, result) => {
+                        if (err) return res.status(500).json({ error: err.message });
                         const customId = result.insertId;
                         const layerVals = layers.map((colorId, index) => [customId, colorId, index + 1]);
                         db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES ?', [layerVals], () => {
@@ -396,21 +402,23 @@ app.post('/cart/add', (req, res) => {
                     });
             }
         };
+
         if (!cartId) db.query('INSERT INTO carts (user_id) VALUES (?)', [userId], (err, reslt) => handleAddition(reslt.insertId));
         else handleAddition(cartId);
     });
 });
 app.get('/cart/:userId', (req, res) => {
     const sql = `
-        SELECT ci.id AS cart_item_id, ci.quantity, cc.type AS candle_type, cc.total_price AS custom_price, cc.preview_image AS snapshot,
-        cs.name AS cup_shape_name, csz.size_ml, ccol.name AS cup_color_name, ms.name AS mold_shape_name, s.name AS scent_name,
+        SELECT ci.id AS cart_item_id, ci.quantity, cc.type AS candle_type, 
+        cc.total_price AS custom_price, cc.preview_image AS snapshot,
+        cc.cup_size AS cup_size_val, -- Selecting the new column
+        cs.name AS cup_shape_name, ms.name AS mold_shape_name, s.name AS scent_name,
         GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', ') AS wax_colors,
         pc.name AS prebuilt_name, pc.price AS prebuilt_price, pc.image_url AS prebuilt_image, pc.stock_quantity AS prebuilt_stock
         FROM cart_items ci
         LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
         LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
-        LEFT JOIN cup_sizes csz ON cc.cup_size_id = csz.id
-        LEFT JOIN cup_colors ccol ON cc.cup_color_id = ccol.id
+        -- We no longer join cup_sizes table here
         LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
         LEFT JOIN scents s ON cc.scent_id = s.id
         LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
@@ -418,13 +426,22 @@ app.get('/cart/:userId', (req, res) => {
         LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
         JOIN carts ct ON ci.cart_id = ct.id
         WHERE ct.user_id = ? GROUP BY ci.id`;
+
     db.query(sql, [req.params.userId], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results.map(item => ({
-            cart_item_id: item.cart_item_id, quantity: item.quantity, is_custom: !!item.candle_type,
-            name: item.prebuilt_name || (item.candle_type === 'cup' ? `${item.cup_shape_name} (${item.size_ml}ml)` : `${item.mold_shape_name} Mold`),
-            price: item.prebuilt_price || item.custom_price, image: item.prebuilt_image || item.snapshot,
-            max_stock: item.prebuilt_stock || 99, color_info: item.candle_type ? `Wax: ${item.wax_colors}` : 'Standard', scent: item.scent_name || 'Original'
+            cart_item_id: item.cart_item_id, 
+            quantity: item.quantity, 
+            is_custom: !!item.candle_type,
+            // UPDATED: Combined shape name and ml value
+            name: item.prebuilt_name || (item.candle_type === 'cup' 
+                ? `${item.cup_shape_name} (${item.cup_size_val || 'Standard'}ml)` 
+                : `${item.mold_shape_name} Mold`),
+            price: item.prebuilt_price || item.custom_price, 
+            image: item.prebuilt_image || item.snapshot,
+            max_stock: item.prebuilt_stock || 99, 
+            color_info: item.candle_type ? `Wax: ${item.wax_colors}` : 'Standard', 
+            scent: item.scent_name || 'Original'
         })));
     });
 });

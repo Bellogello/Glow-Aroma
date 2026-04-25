@@ -6,14 +6,10 @@ import { ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import useTitle from '../components/useTitles';
 import { API_BASE_URL } from '../config';
-
-// 1. Import the notification hook
 import { useNotification } from '../components/NotificationContext';
 
 const Cart = () => {
   useTitle("Cart");
-  
-  // 2. Initialize the hook
   const { success, error, warning } = useNotification();
   
   const [cartItems, setCartItems] = useState([]);
@@ -26,11 +22,19 @@ const Cart = () => {
     fetch(`${API_BASE_URL}/cart/${userId}`)
       .then(res => res.json())
       .then(data => {
-        if (data.error) { console.error("Backend Error:", data.error); setCartItems([]); }
-        else setCartItems(data);
+        if (data.error) { 
+            console.error("Backend Error:", data.error); 
+            setCartItems([]); 
+        } else {
+            setCartItems(data);
+        }
         setLoading(false);
       })
-      .catch(err => { console.error("Fetch failed:", err); setCartItems([]); setLoading(false); });
+      .catch(err => { 
+          console.error("Fetch failed:", err); 
+          setCartItems([]); 
+          setLoading(false); 
+      });
   }, []);
 
   const handleQuantityChange = async (cartItemId, action) => {
@@ -38,7 +42,7 @@ const Cart = () => {
       const response = await fetch(`${API_BASE_URL}/cart/update/${cartItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }), // FIX: was sending wrong body (total/items instead of action)
+        body: JSON.stringify({ action }),
       });
 
       if (response.ok) {
@@ -51,12 +55,9 @@ const Cart = () => {
         }));
       } else {
         const errorData = await response.json();
-        // 3a. Replaced alert
         error(errorData.error || "Cannot update quantity.");
       }
     } catch (err) {
-      console.error("Failed to update quantity:", err);
-      // Added network fallback
       error("Connection error. Could not update quantity.");
     }
   };
@@ -66,16 +67,12 @@ const Cart = () => {
       const response = await fetch(`${API_BASE_URL}/cart/remove/${cartItemId}`, { method: 'DELETE' });
       if (response.ok) {
         setCartItems(prevItems => prevItems.filter(item => item.cart_item_id !== cartItemId));
-        // 3b. Added a subtle success toast so the user knows it worked
         success("Item removed from cart.");
       } else {
         const data = await response.json();
-        // 3c. Replaced alert
         error("Error removing item: " + data.error);
       }
     } catch (err) {
-      console.error("Failed to delete item:", err);
-      // Added network fallback
       error("Connection error. Could not remove item.");
     }
   };
@@ -111,14 +108,14 @@ const Cart = () => {
 
                 <div className="cart-item-image">
                   {item.is_custom ? (
-                    item.snapshot ? (
+                    item.image ? ( // Changed from item.snapshot to match standard naming
                       <img
-                        src={item.snapshot}
+                        src={item.image}
                         alt="Custom candle preview"
                         style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', display: 'block' }}
                       />
                     ) : (
-                      <div className="custom-candle-placeholder">✨</div>
+                      <div className="custom-candle-placeholder">🕯️</div>
                     )
                   ) : (
                     item.image && (
@@ -131,10 +128,12 @@ const Cart = () => {
                 </div>
 
                 <div className="cart-item-details">
+                  {/* Item Name (Now includes size ml from backend) */}
                   <h3>{item.name}</h3>
+                  
                   {item.is_custom && (
                     <div className="custom-specs">
-                      <p><span>Color:</span> {item.color_info}</p>
+                      <p><span>Details:</span> {item.color_info}</p>
                       <p><span>Scent:</span> {item.scent}</p>
                     </div>
                   )}
@@ -150,7 +149,6 @@ const Cart = () => {
                       onClick={() => handleQuantityChange(item.cart_item_id, 'increase')}
                       disabled={item.quantity >= item.max_stock}
                       style={{ opacity: item.quantity >= item.max_stock ? 0.4 : 1, cursor: item.quantity >= item.max_stock ? 'not-allowed' : 'pointer' }}
-                      title={item.quantity >= item.max_stock ? "Maximum stock reached" : ""}
                     >+</button>
                   </div>
                   {item.quantity >= item.max_stock && !item.is_custom && (

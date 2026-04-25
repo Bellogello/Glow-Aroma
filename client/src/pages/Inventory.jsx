@@ -6,8 +6,18 @@ import useTitle from '../components/useTitles';
 import { API_BASE_URL } from '../config';
 import '../styles/Inventory.css';
 import { useNotification } from '../components/NotificationContext';
+import { RgbaColorPicker } from "react-colorful";
 
 // ── Inventory categories config ───────────────────────────────────────────────
+const parseRgba = (rgbaString) => {
+  const match = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  return match ? {
+    r: parseInt(match[1]),
+    g: parseInt(match[2]),
+    b: parseInt(match[3]),
+    a: match[4] ? parseFloat(match[4]) : 1
+  } : { r: 255, g: 255, b: 255, a: 1 };
+};
 const CATEGORIES = [
   {
     key: 'scent-families',
@@ -108,12 +118,12 @@ const CupsTab = ({ notify, availableModels }) => {
     finally { setLoading(false); }
   };
 
-  const openAdd = () => {
+const openAdd = () => {
     setEditingCup(null);
     setName(''); setPriceModifier(''); setModelUrl(''); setIsAvailable(true);
     setSizes([{ ml: 200, price_modifier: 0 }]);
-    // --- UPDATED: Removed 'type' entirely. This is just for the Glass/Cup now.
-    setColors([{ name: 'Clear', hex_code: '#ffffff', price_modifier: 0 }]);
+    // Use rgba for the default so the picker starts in transparency mode
+    setColors([{ name: 'Clear', hex_code: 'rgba(255, 255, 255, 0.45)', price_modifier: 0, showPicker: false }]);
     setShowDialog(true);
   };
 
@@ -250,29 +260,67 @@ const CupsTab = ({ notify, availableModels }) => {
               <div style={{ background: '#f5f5f5', padding: '15px', borderRadius: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <h4 style={{ margin: 0, color: '#333' }}>Available Glass/Cup Colors</h4>
-                  <button onClick={() => setColors([...colors, { name: '', hex_code: '#ffffff', price_modifier: 0 }])} style={{ background: '#222', color: '#fff', border: 'none', borderRadius: '4px', padding: '5px 10px', cursor: 'pointer' }}>+ Add Color</button>
+                  <button onClick={() => setColors([...colors, { name: '', hex_code: 'rgba(255,255,255,1)', price_modifier: 0 }])} className="inv-add-btn" style={{ padding: '5px 10px' }}>+ Add Color</button>
                 </div>
-                
-                {colors.length === 0 && <p style={{ fontSize: '12px', color: '#666' }}>No colors added yet.</p>}
 
                 {colors.map((c, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'flex-end' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '12px' }}>Color Name</label>
-                      <input className="inv-input" type="text" value={c.name} onChange={e => { const newArr = [...colors]; newArr[index].name = e.target.value; setColors(newArr); }} />
-                    </div>
+                  <div key={index} style={{ display: 'flex', gap: '10px', marginBottom: '15px', alignItems: 'flex-end', position: 'relative' }}>
                     
-                    <div style={{ width: '50px' }}>
-                      <label style={{ fontSize: '12px' }}>Hex</label>
-                      <input type="color" value={c.hex_code} onChange={e => { const newArr = [...colors]; newArr[index].hex_code = e.target.value; setColors(newArr); }} style={{ height: '38px', width: '100%', padding: '0', border: 'none', borderRadius: '4px', cursor: 'pointer' }} />
+                    {/* Color Name */}
+                    <div style={{ flex: 2 }}>
+                      <label style={{ fontSize: '12px' }}>Color Name</label>
+                      <input className="inv-input" type="text" value={c.name} onChange={e => {
+                        const newArr = [...colors];
+                        newArr[index].name = e.target.value;
+                        setColors(newArr);
+                      }} />
                     </div>
 
+                    {/* Spectrum Picker with Transparency */}
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '12px' }}>Spectrum & Alpha</label>
+                      <div 
+                        className="color-swatch" 
+                        style={{ backgroundColor: c.hex_code }}
+                        onClick={() => {
+                          const newArr = [...colors];
+                          newArr[index].showPicker = !newArr[index].showPicker;
+                          setColors(newArr);
+                        }}
+                      />
+                      {c.showPicker && (
+                        <div className="picker-popover">
+                          <div 
+                            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }} 
+                            onClick={() => {
+                              const newArr = [...colors];
+                              newArr[index].showPicker = false;
+                              setColors(newArr);
+                            }} 
+                          />
+                          <RgbaColorPicker 
+                            color={parseRgba(c.hex_code)} 
+                            onChange={(newColor) => {
+                              const newArr = [...colors];
+                              newArr[index].hex_code = `rgba(${newColor.r}, ${newColor.g}, ${newColor.b}, ${newColor.a})`;
+                              setColors(newArr);
+                            }} 
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Price Modifier */}
                     <div style={{ flex: 1 }}>
                       <label style={{ fontSize: '12px' }}>Price (+ L.E.)</label>
-                      <input className="inv-input" type="number" value={c.price_modifier} onChange={e => { const newArr = [...colors]; newArr[index].price_modifier = e.target.value; setColors(newArr); }} />
+                      <input className="inv-input" type="number" value={c.price_modifier} onChange={e => {
+                        const newArr = [...colors];
+                        newArr[index].price_modifier = e.target.value;
+                        setColors(newArr);
+                      }} />
                     </div>
 
-                    <button onClick={() => setColors(colors.filter((_, i) => i !== index))} style={{ height: '38px', padding: '0 15px', background: '#ff4d4f', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>X</button>
+                    <button onClick={() => setColors(colors.filter((_, i) => i !== index))} className="inv-delete-btn" style={{ height: '38px' }}>X</button>
                   </div>
                 ))}
               </div>

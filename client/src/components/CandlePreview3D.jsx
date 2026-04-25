@@ -10,19 +10,27 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
 
-  useImperativeHandle(ref, () => ({
+useImperativeHandle(ref, () => ({
     getSnapshot: () => {
-      const canvas = canvasRef.current;
       const renderer = rendererRef.current;
       const scene = sceneRef.current;
-      if (!canvas || !renderer || !scene) return null;
+      if (!renderer || !scene) return null;
 
-      const tempCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-      tempCamera.position.set(0, 6, 4);
-      tempCamera.lookAt(0, 1, 0);
+      // 1. Create a dedicated "Photo Studio" camera
+      const photoCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+      
+      // 2. Set the constant angle (Adjust these numbers to find your 'best' side)
+      photoCamera.position.set(4, 3, 4); 
+      photoCamera.lookAt(0, 1.2, 0);
 
-      renderer.render(scene, tempCamera);
-      return canvas.toDataURL('image/png');
+      // 3. Render and capture
+      renderer.render(scene, photoCamera);
+      const data = canvasRef.current.toDataURL('image/png');
+
+      // 4. Important: Re-render the user's current view so the screen doesn't flicker
+      // (This assumes your main camera and controls are handled in the animate loop)
+      
+      return data;
     }
   }));
 
@@ -114,23 +122,36 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
                 obj.material.color.set(layerColors[layerIndex]);
               }
             } 
-            // 2. CUP GLASS (Premium Crystal Refraction)
+// 2. CUP GLASS (Upgraded with Smart Transparency)
             else if (lowerName.includes('cylinder_0') || lowerName.endsWith('_0')) {
+              
+              // 1. Detect if the color from inventory is RGBA or HEX
+              const parsedColor = new THREE.Color(cupColor); 
+              const opacity = cupColor.includes('rgba') 
+                  ? parseFloat(cupColor.split(',')[3]) // Pull the 'a' value
+                  : 1.0;
+
+              // 2. Apply the premium material
               const crystalMaterial = new THREE.MeshPhysicalMaterial({
-                color: cupColor ? new THREE.Color(cupColor) : new THREE.Color(0xffffff),
+                color: parsedColor,
                 metalness: 0.1,
-                roughness: 0.05,       
-                transmission: 1.0,     // True light bending
-                ior: 1.52,             // Glass refraction index
-                thickness: 0.3,        // Simulates glass chunkiness
+                roughness: 0.05,
+                
+                // --- SMART TRANSPARENCY MODE ---
+                // If opacity is less than 1, we turn on 'transmission' to make it look like real glass
+                transmission: opacity < 1 ? 1.0 : 0.0, 
+                opacity: opacity,                      
                 transparent: true,
-                flatShading: !!flatShading, // Makes facets pop sharply
-                depthWrite: false      // Fixes wireframe glitches
+                
+                ior: 1.52,             // Real glass refraction index
+                thickness: 0.5,        // Makes the glass look thick/premium
+                flatShading: !!flatShading, 
+                depthWrite: false      // Prevents "clipping" issues with the wax inside
               });
 
               obj.material = crystalMaterial;
               meshesRef.current.cup.push(obj);
-            } 
+            }
             // 3. WAX
             else if (lowerName.includes('cylinder001_1') || lowerName.endsWith('_1') || lowerName.includes('sphere') || lowerName.includes('wax')) {
               obj.material = obj.material.clone();
@@ -182,9 +203,22 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
     };
   }, [modelUrl, colorableParts, flatShading]); // Re-run if flat shading toggles
 
-  useEffect(() => {
+useEffect(() => {
     meshesRef.current.cup.forEach(mesh => {
-        if (cupColor) mesh.material.color.set(cupColor);
+      if (cupColor) {
+        // 1. Update the base color
+        mesh.material.color.set(new THREE.Color(cupColor));
+        
+        // 2. Extract and apply alpha transparency
+        const opacity = cupColor.includes('rgba') 
+          ? parseFloat(cupColor.split(',')[3]) 
+          : 1.0;
+          
+        mesh.material.opacity = opacity;
+        mesh.material.transmission = opacity < 1 ? 1.0 : 0.0;
+        mesh.material.transparent = true;
+        mesh.material.needsUpdate = true;
+      }
     });
   }, [cupColor]);
 
