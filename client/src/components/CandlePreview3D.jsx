@@ -4,11 +4,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { API_BASE_URL } from '../config';
 
-// 1. ADDED: layerColors and colorableParts to props
 const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupSize, modelUrl, colorableParts }, ref) => {
   const canvasRef = useRef(null);
-  
-  // 2. ADDED: moldLayers to store the specific mapped parts
   const meshesRef = useRef({ cup: [], wax: [], wick: [], moldLayers: [] });
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -43,12 +40,16 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: !isMobile,
+      antialias: !isMobile, // Keeps antialiasing off for mobile (great for performance)
       powerPreference: 'high-performance',
       preserveDrawingBuffer: true,
     });
     renderer.setSize(size, size);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5));
+    
+    // --- PERF FIX 1: Cap Pixel Ratio on Mobile ---
+    // Phones have massive pixel densities. Rendering 3D at 3x ratio cooks the GPU.
+    renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2.5));
+    
     renderer.shadowMap.enabled = !isMobile;
     rendererRef.current = renderer;
 
@@ -69,6 +70,8 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
     controls.target.set(0, 1, 0);
     controls.update();
 
+    let loadedGroup = null; // Keep track of the loaded model for memory cleanup
+
     const finalModelUrl = modelUrl
       ? (modelUrl.startsWith('http') ? modelUrl : `${API_BASE_URL}${modelUrl}`)
       : '/candle.glb';
@@ -77,14 +80,13 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
     loader.load(
       finalModelUrl,
       (gltf) => {
-        // Clear old models if switching
         scene.children = scene.children.filter(c => c.type !== 'Group');
-        scene.add(gltf.scene);
+        
+        loadedGroup = gltf.scene;
+        scene.add(loadedGroup);
 
-        // Reset references
         meshesRef.current = { cup: [], wax: [], wick: [], moldLayers: [] };
 
-        // 3. Parse the colorableParts list from the database
         let allowedParts = [];
         try {
           allowedParts = Array.isArray(colorableParts) 
@@ -93,37 +95,23 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
         } catch (e) {
           allowedParts = [];
         }
-        // DEBUGGING: Check what the 3D file actually contains
-        console.log("--- 3D MODEL DATA ---", {
-          allowedPartsFromDB: allowedParts,
-          receivedLayerColors: layerColors
-        });
-        
-        console.log("--- MESHES INSIDE GLB FILE ---");
-        gltf.scene.traverse((obj) => {
-          if (obj.isMesh) {
-            console.log(`Mesh Name: "${obj.name}"`);
-          }
-        });
-        gltf.scene.traverse((obj) => {
+
+        loadedGroup.traverse((obj) => {
           if (obj.isMesh) {
             obj.material = obj.material.clone();
             obj.castShadow = !isMobile;
             
-            const exactName = obj.name; // Keep exact case for array matching
+            const exactName = obj.name; 
             const lowerName = exactName.toLowerCase();
 
-            // 4. MULTI-LAYER MOLD LOGIC
             const layerIndex = allowedParts.indexOf(exactName);
 
             if (layerIndex !== -1) {
-              // It's a mapped layer! Save it exactly at the index it matches
               meshesRef.current.moldLayers[layerIndex] = obj;
               if (layerColors[layerIndex]) {
                 obj.material.color.set(layerColors[layerIndex]);
               }
             } 
-            // 5. REGULAR CUP LOGIC (Your exact fallbacks)
             else if (lowerName.includes('cylinder_0') || lowerName.endsWith('_0')) {
               obj.material.transparent = true;
               obj.material.opacity = 0.4;
@@ -148,8 +136,12 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
     let lastTime = 0;
     const animate = (time) => {
       frameId = requestAnimationFrame(animate);
-      if (time - lastTime < 32) return;
+      
+      // --- PERF FIX 2: 30FPS Throttle on Mobile ---
+      // Halves the CPU/GPU workload so the phone doesn't heat up or lag.
+      if (isMobile && time - lastTime < 33) return;
       lastTime = time;
+      
       controls.update();
       renderer.render(scene, camera);
     };
@@ -157,26 +149,39 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
 
     return () => {
       cancelAnimationFrame(frameId);
+      
+      // --- PERF FIX 3: Deep VRAM Memory Cleanup ---
+      // Prevents iOS Safari and Android Chrome from crashing after switching models.
+      if (loadedGroup) {
+        loadedGroup.traverse((child) => {
+          if (child.isMesh) {
+            child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach(m => m.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
+          }
+        });
+      }
       renderer.dispose();
     };
-  // Add colorableParts to dependency array so it re-renders if the map changes
   }, [modelUrl, colorableParts]); 
 
-  // COLOR UPDATES FOR CUP
   useEffect(() => {
     meshesRef.current.cup.forEach(mesh => {
         if (cupColor) mesh.material.color.set(cupColor);
     });
   }, [cupColor]);
 
-  // COLOR UPDATES FOR WAX 
   useEffect(() => {
     meshesRef.current.wax.forEach(mesh => {
         if (waxColor) mesh.material.color.set(waxColor);
     });
   }, [waxColor]);
 
-  // 6. ADDED: LIVE COLOR UPDATES FOR MOLD LAYERS
   useEffect(() => {
     meshesRef.current.moldLayers.forEach((mesh, index) => {
       if (mesh && layerColors[index]) {
@@ -188,7 +193,6 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
   useEffect(() => {
     const scales = { small: 0.75, medium: 1.0, large: 1.3 };
     const s = scales[cupSize] || 1.0;
-    // Object.values().flat() automatically handles the new moldLayers array too!
     Object.values(meshesRef.current).flat().forEach((node) => {
       if (node) node.scale.set(s, s, s);
     });
