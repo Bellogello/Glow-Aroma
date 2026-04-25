@@ -1,394 +1,304 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import "../styles/create.css";
+import CandlePreview3D from '../components/CandlePreview3D';
 import useTitle from '../components/useTitles';
+import Footer from '../components/Footer';
 import { API_BASE_URL } from '../config';
-import '../styles/Inventory.css';
 
-// 1. Import your notification hook!
+// 1. Import the notification hook
 import { useNotification } from '../components/NotificationContext';
 
-// ── Config for each category (Mapped EXACTLY to your Database columns) ──
-const CATEGORIES = [
-  {
-    key: 'scents',
-    label: 'Scents',
-    icon: '🕯️',
-    endpoint: 'scents',
-    fields: [
-      { name: 'name',         label: 'Scent Name',   type: 'text',   required: true },
-      { name: 'price',        label: 'Price (L.E.)', type: 'number', required: false },
-      { name: 'is_available', label: 'Available',    type: 'toggle', required: false },
-    ],
-    display: (item) => item.name,
-    sub: (item) => `+${Number(item.price || 0).toFixed(2)} L.E.`,
-  },
-  {
-    key: 'colors',
-    label: 'Wax Colors',
-    icon: '🎨',
-    endpoint: 'colors',
-    fields: [
-      { name: 'name',         label: 'Color Name',   type: 'text',   required: true },
-      { name: 'hex_code',     label: 'Hex Code',     type: 'color',  required: false },
-      { name: 'price',        label: 'Price (L.E.)', type: 'number', required: false },
-      { name: 'is_available', label: 'Available',    type: 'toggle', required: false },
-    ],
-    display: (item) => item.name,
-    sub: (item) => `+${Number(item.price || 0).toFixed(2)} L.E.`,
-    swatch: (item) => item.hex_code,
-  },
-  {
-    key: 'cup-colors',
-    label: 'Cup Colors',
-    icon: '🫙',
-    endpoint: 'cup-colors',
-    fields: [
-      { name: 'name',         label: 'Color Name',   type: 'text',   required: true },
-      { name: 'hex_code',     label: 'Hex Code',     type: 'color',  required: false },
-      { name: 'price',        label: 'Price (L.E.)', type: 'number', required: false },
-    ],
-    display: (item) => item.name,
-    sub: (item) => `+${Number(item.price || 0).toFixed(2)} L.E.`,
-    swatch: (item) => item.hex_code,
-  },
-  {
-    key: 'cup-sizes',
-    label: 'Cup Sizes',
-    icon: '📏',
-    endpoint: 'cup-sizes',
-    fields: [
-      { name: 'size_ml',        label: 'Size (ml)',            type: 'number', required: true },
-      { name: 'price_modifier', label: 'Price Modifier (L.E.)', type: 'number', required: false },
-    ],
-    display: (item) => `${item.size_ml} ml`,
-    sub: (item) => `+${Number(item.price_modifier || 0).toFixed(2)} L.E.`,
-  },
-  {
-    key: 'cup-shapes',
-    label: 'Cup Shapes',
-    icon: '🔷',
-    endpoint: 'cup-shapes',
-    fields: [
-      { name: 'name',         label: 'Shape Name',        type: 'text',   required: true },
-      { name: 'base_price',   label: 'Base Price (L.E.)', type: 'number', required: false },
-      { name: 'is_available', label: 'Available',         type: 'toggle', required: false },
-    ],
-    display: (item) => item.name,
-    sub: (item) => `+${Number(item.base_price || 0).toFixed(2)} L.E.`,
-  },
-  {
-    key: 'mold-shapes',
-    label: 'Mold Shapes',
-    icon: '🔶',
-    endpoint: 'mold-shapes',
-    fields: [
-      { name: 'name',         label: 'Shape Name',        type: 'text',   required: true },
-      { name: 'base_price',   label: 'Base Price (L.E.)', type: 'number', required: false },
-      { name: 'layers',       label: 'Number of Layers',  type: 'number', required: true }, // ADDED: Missing layers field!
-      { name: 'is_available', label: 'Available',         type: 'toggle', required: false },
-    ],
-    display: (item) => item.name,
-    sub: (item) => `+${Number(item.base_price || 0).toFixed(2)} L.E.`,
-  },
-];
-
-// ── Default form state for a category ─────────────────────────────────────────
-const defaultForm = (fields) => {
-  const obj = {};
-  fields.forEach(f => {
-    if (f.type === 'toggle') obj[f.name] = true;
-    else if (f.type === 'number') obj[f.name] = '';
-    else if (f.type === 'color') obj[f.name] = '#c8a97e';
-    else obj[f.name] = '';
-  });
-  return obj;
-};
-
-// ── Main Component ─────────────────────────────────────────────────────────────
-const Inventory = () => {
-  useTitle("Inventory | Glow Aroma");
-  const navigate = useNavigate();
-
-  // 2. Initialize the notification hook
+const Create = () => {
+  useTitle("Create Your Own");
+  
+  // 2. Initialize the hook
   const { success, error, warning } = useNotification();
 
-  const [activeKey, setActiveKey]   = useState('scents');
-  const [items, setItems]           = useState([]);
-  const [loading, setLoading]       = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [showDialog, setShowDialog] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [form, setForm]             = useState({});
+  const previewRef = useRef(null);
 
-  const category = CATEGORIES.find(c => c.key === activeKey);
+  const [scents, setScents] = useState([]);
+  const [colors, setColors] = useState([]);
+  const [cupShapes, setCupShapes] = useState([]);
+  const [cupSizes, setCupSizes] = useState([]);
+  const [cupColors, setCupColors] = useState([]);
+  const [moldShapes, setMoldShapes] = useState([]);
 
-  // Auth guard — super admin only
+  const [candleType, setCandleType] = useState('cup'); 
+  const [quantity, setQuantity] = useState(1);
+  const [selectedScentId, setSelectedScentId] = useState("default");
+
+  const [selectedCupShape, setSelectedCupShape] = useState("default");
+  const [selectedCupSize, setSelectedCupSize] = useState("default");
+  const [selectedCupColor, setSelectedCupColor] = useState("default");
+  const [selectedCandleColor, setSelectedCandleColor] = useState("default");
+
+  const [selectedMoldShape, setSelectedMoldShape] = useState("default");
+  const [moldLayers, setMoldLayers] = useState([]); 
+
   useEffect(() => {
-    const roleId = localStorage.getItem('roleId');
-    if (roleId !== '2' && roleId !== '3') navigate('/');
-  }, [navigate]);
+    fetch(`${API_BASE_URL}/scents`)
+      .then(res => res.json())
+      .then(data => setScents(data))
+      .catch(err => console.error("Error fetching scents:", err));
 
-  // Fetch items whenever category changes
+    fetch(`${API_BASE_URL}/colors`)
+      .then(res => res.json())
+      .then(data => setColors(data))
+      .catch(err => console.error("Error fetching colors:", err));
+
+    fetch(`${API_BASE_URL}/cup-shapes`)
+      .then(res => res.json())
+      .then(data => setCupShapes(data))
+      .catch(err => console.error("Error fetching cup shapes:", err));
+
+    fetch(`${API_BASE_URL}/cup-sizes`)
+      .then(res => res.json())
+      .then(data => setCupSizes(data))
+      .catch(err => console.error("Error fetching cup sizes:", err));
+
+    fetch(`${API_BASE_URL}/cup-colors`)
+      .then(res => res.json())
+      .then(data => setCupColors(data))
+      .catch(err => console.error("Error fetching cup colors:", err));
+
+    fetch(`${API_BASE_URL}/mold-shapes`)
+      .then(res => res.json())
+      .then(data => setMoldShapes(data))
+      .catch(err => console.error("Error fetching mold shapes:", err));
+  }, []);
+
   useEffect(() => {
-    fetchItems();
-  }, [activeKey]);
-
-  const fetchItems = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/inventory/${category.endpoint}`);
-      const data = await res.json();
-      setItems(Array.isArray(data) ? data : []);
-    } catch (err) {
-      error('Failed to load items.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const openAddDialog = () => {
-    setEditingItem(null);
-    setForm(defaultForm(category.fields));
-    setShowDialog(true);
-  };
-
-  const openEditDialog = (item) => {
-    setEditingItem(item);
-    const f = {};
-    category.fields.forEach(field => {
-      f[field.name] = item[field.name] !== undefined ? item[field.name] : (field.type === 'toggle' ? true : '');
-    });
-    setForm(f);
-    setShowDialog(true);
-  };
-
-  const handleFormChange = (name, value) => {
-    setForm(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async () => {
-    const requiredField = category.fields.find(f => f.required && (form[f.name] === '' || form[f.name] === undefined));
-    if (requiredField) {
-      warning(`${requiredField.label} is required.`);
-      return;
-    }
-    
-    setSubmitting(true);
-    
-    // SANITIZE: Convert empty strings to 0 for number fields to prevent DB crashes
-    const sanitizedForm = { ...form };
-    category.fields.forEach(field => {
-      if (field.type === 'number') {
-        sanitizedForm[field.name] = sanitizedForm[field.name] === '' ? 0 : Number(sanitizedForm[field.name]);
+    if (selectedMoldShape !== "default") {
+      const shape = moldShapes.find(m => m.id.toString() === selectedMoldShape.toString());
+      if (shape) {
+        setMoldLayers(Array(shape.layers).fill("default"));
       }
-    });
-
-    try {
-      const url = editingItem
-        ? `${API_BASE_URL}/admin/inventory/${category.endpoint}/${editingItem.id}`
-        : `${API_BASE_URL}/admin/inventory/${category.endpoint}`;
-      const method = editingItem ? 'PUT' : 'POST';
-      
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sanitizedForm)
-      });
-      
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to save.');
-      
-      success(editingItem ? 'Updated successfully!' : 'Added successfully!');
-      await fetchItems();
-      setTimeout(() => setShowDialog(false), 800);
-    } catch (err) {
-      error(err.message);
-    } finally {
-      setSubmitting(false);
+    } else {
+      setMoldLayers([]);
     }
+  }, [selectedMoldShape, moldShapes]);
+
+  const handleLayerColorChange = (index, colorId) => {
+    const newLayers = [...moldLayers];
+    newLayers[index] = colorId;
+    setMoldLayers(newLayers);
   };
 
-  const handleDelete = async (item) => {
-    if (!window.confirm(`Delete "${category.display(item)}"? This cannot be undone.`)) return;
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/inventory/${category.endpoint}/${item.id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to delete.');
-      
-      setItems(prev => prev.filter(i => i.id !== item.id));
-      success("Item deleted.");
-    } catch (err) {
-      error(err.message);
-    }
-  };
+  const handleConfirm = async () => {
+    // 3a. Replaced alert with a warning toast
+    if (selectedScentId === "default") return warning("Please pick a scent!");
 
-  const handleToggleAvailability = async (item) => {
-    try {
-      await fetch(`${API_BASE_URL}/admin/inventory/${category.endpoint}/${item.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...item, is_available: !item.is_available })
-      });
+    let totalPrice = 0;
+    
+    const scent = scents.find(s => s.id.toString() === selectedScentId.toString());
+    if (scent) totalPrice += Number(scent.price);
+
+    if (candleType === 'cup') {
+      if (selectedCupShape === "default" || selectedCupSize === "default" || selectedCupColor === "default" || selectedCandleColor === "default") {
+        // 3b. Replaced alert
+        return warning("Please fill out all Cup options!");
+      }
       
-      setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: !i.is_available } : i));
-      success(item.is_available ? "Item hidden from customers." : "Item is now available.");
+      const shape = cupShapes.find(s => s.id.toString() === selectedCupShape.toString());
+      const size = cupSizes.find(s => s.id.toString() === selectedCupSize.toString());
+      const waxColor = colors.find(c => c.id.toString() === selectedCandleColor.toString());
+
+      if (shape) totalPrice += Number(shape.base_price);
+      if (size) totalPrice += Number(size.price_modifier);
+      if (waxColor) totalPrice += Number(waxColor.price);
+
+    } else {
+      // 3c. Replaced alerts
+      if (selectedMoldShape === "default") return warning("Please pick a Mold Shape!");
+      if (moldLayers.includes("default")) return warning("Please pick a color for every layer of your mold!");
+
+      const shape = moldShapes.find(s => s.id.toString() === selectedMoldShape.toString());
+      if (shape) totalPrice += Number(shape.base_price);
+
+      moldLayers.forEach(layerColorId => {
+        const color = colors.find(c => c.id.toString() === layerColorId.toString());
+        if (color) totalPrice += Number(color.price);
+      });
+    }
+
+    const userId = localStorage.getItem("userId");
+    if (!userId) return warning("You need to be logged in to add stuff to your cart!");
+
+    const snapshot = previewRef.current?.getSnapshot() || null;
+
+    const payload = {
+      type: candleType,
+      userId,
+      quantity,
+      scentId: selectedScentId,
+      totalPrice: Number(totalPrice.toFixed(2)),
+      snapshot,
+      ...(candleType === 'cup' 
+        ? { cupShapeId: selectedCupShape, cupSizeId: selectedCupSize, cupColorId: selectedCupColor, candleColorId: selectedCandleColor }
+        : { moldShapeId: selectedMoldShape, layers: moldLayers }
+      )
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/cart/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // 3d. Replaced alert with a nice success toast
+        success("Success! Your custom candle was added to the cart.");
+        setQuantity(1);
+        setSelectedScentId("default");
+        setSelectedCupShape("default");
+        setSelectedCupSize("default");
+        setSelectedCupColor("default");
+        setSelectedCandleColor("default");
+        setSelectedMoldShape("default");
+        setMoldLayers([]);
+      } else {
+        // 3e. Replaced alert
+        error("Error from server: " + data.error);
+      }
     } catch (err) {
-      error('Failed to update availability.');
+      console.error("Failed to add to cart:", err);
+      // 3f. Replaced alert
+      error("Server error. Please try again later.");
     }
   };
 
   return (
-    <div className="home-container inventory-bg">
+    <div className="home-container">
       <Navbar />
-      <div className="inventory-wrapper">
-
-        <div className="inventory-header">
-          <div>
-            <h1 className="inventory-title">Custom Candle Inventory</h1>
-            <p className="inventory-subtitle">Manage options available to customers when building their candles</p>
+      <h1 style={{ textAlign: 'center' }}>Create Your Own Candle</h1>
+      <hr className="hr--create" />
+      
+      <div className='creation'>
+        <div className='candle-div'>
+          <CandlePreview3D
+            ref={previewRef}
+            cupColor={
+              cupColors.find(c => c.id.toString() === selectedCupColor.toString())?.hex_code ?? '#ffffff'
+            }
+            waxColor={
+              colors.find(c => c.id.toString() === selectedCandleColor.toString())?.hex_code ?? '#ffffff'
+            }
+            cupSize={
+              selectedCupSize === 'default' ? 'medium' :
+              (() => {
+                const s = cupSizes.find(s => s.id.toString() === selectedCupSize.toString());
+                if (!s) return 'medium';
+                const ml = Number(s.size_ml);
+                if (ml <= 200) return 'small';
+                if (ml <= 400) return 'medium';
+                return 'large';
+              })()
+            }
+          />
+        </div>
+        
+        <div className='choices'> 
+          <div className="type-toggle">
+            <label className={`radio-label ${candleType === 'cup' ? 'active-radio' : ''}`}>
+              <input 
+                type="radio" 
+                value="cup" 
+                className="radio-input"
+                checked={candleType === 'cup'} 
+                onChange={() => setCandleType('cup')}
+              />
+              Cup Candle
+            </label>
+            <label className={`radio-label ${candleType === 'mold' ? 'active-radio' : ''}`}>
+              <input 
+                type="radio" 
+                value="mold" 
+                className="radio-input"
+                checked={candleType === 'mold'} 
+                onChange={() => setCandleType('mold')}
+              />
+              Mold Candle
+            </label>
           </div>
-          <Link to="/Dashboard" className="inv-back-btn">← Dashboard</Link>
-        </div>
 
-        {/* Category Tabs */}
-        <div className="inv-tabs">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.key}
-              className={`inv-tab ${activeKey === cat.key ? 'active' : ''}`}
-              onClick={() => setActiveKey(cat.key)}
-            >
-              <span className="inv-tab-icon">{cat.icon}</span>
-              <span>{cat.label}</span>
-              {activeKey === cat.key && <span className="inv-tab-count">{items.length}</span>}
-            </button>
-          ))}
-        </div>
+          <div className='selections'>
+            
+            {candleType === 'cup' && (
+              <>
+                <select value={selectedCupShape} onChange={(e) => setSelectedCupShape(e.target.value)}>
+                  <option value="default">Cup Shape</option>
+                  {cupShapes.map(shape => <option key={shape.id} value={shape.id}>{shape.name}</option>)}
+                </select>
 
-        {/* Content Card */}
-        <div className="inv-card">
-          <div className="inv-card-header">
-            <h2>{category.icon} {category.label}</h2>
-            <button className="inv-add-btn" onClick={openAddDialog}>+ Add {category.label.replace(/s$/, '')}</button>
-          </div>
+                <select value={selectedCupSize} onChange={(e) => setSelectedCupSize(e.target.value)}>
+                  <option value="default">Cup Size</option>
+                  {cupSizes.map(size => <option key={size.id} value={size.id}>{size.size_ml} ml</option>)}
+                </select>
 
-          {loading ? (
-            <div className="inv-loading">Loading...</div>
-          ) : items.length === 0 ? (
-            <div className="inv-empty">
-              <p>No {category.label.toLowerCase()} yet.</p>
-              <button className="inv-add-btn" onClick={openAddDialog}>Add your first one</button>
-            </div>
-          ) : (
-            <div className="inv-grid">
-              {items.map(item => (
-                <div key={item.id} className={`inv-item ${item.is_available === false ? 'inv-item-disabled' : ''}`}>
-                  <div className="inv-item-left">
-                    {category.swatch && category.swatch(item) && (
-                      <div className="inv-swatch" style={{ backgroundColor: category.swatch(item) }} />
-                    )}
-                    <div className="inv-item-info">
-                      <span className="inv-item-name">{category.display(item)}</span>
-                      <span className="inv-item-sub">{category.sub(item)}</span>
-                    </div>
-                  </div>
-                  <div className="inv-item-actions">
-                    {item.is_available !== undefined && (
-                      <button
-                        className={`inv-toggle-btn ${item.is_available ? 'available' : 'unavailable'}`}
-                        onClick={() => handleToggleAvailability(item)}
-                        title={item.is_available ? 'Click to hide from customers' : 'Click to show to customers'}
-                      >
-                        {item.is_available ? 'Active' : 'Hidden'}
-                      </button>
-                    )}
-                    <button className="inv-edit-btn" onClick={() => openEditDialog(item)}>Edit</button>
-                    <button className="inv-delete-btn" onClick={() => handleDelete(item)}>Delete</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+                <select value={selectedCupColor} onChange={(e) => setSelectedCupColor(e.target.value)}>
+                  <option value="default">Cup Color</option>
+                  {cupColors.map(color => <option key={color.id} value={color.id}>{color.name}</option>)}
+                </select>
 
-      {/* Add / Edit Dialog */}
-      {showDialog && (
-        <div className="inv-dialog-overlay" onClick={(e) => e.target === e.currentTarget && setShowDialog(false)}>
-          <div className="inv-dialog">
-            <div className="inv-dialog-header">
-              <h3>{editingItem ? `Edit ${category.label.replace(/s$/, '')}` : `Add ${category.label.replace(/s$/, '')}`}</h3>
-              <button className="inv-dialog-close" onClick={() => setShowDialog(false)}>×</button>
-            </div>
+                <select value={selectedCandleColor} onChange={(e) => setSelectedCandleColor(e.target.value)}>
+                  <option value="default">Candle Wax Color</option>
+                  {colors.map(color => <option key={color.id} value={color.id}>{color.name}</option>)}
+                </select>
+              </>
+            )}
 
-            <div className="inv-dialog-body">
+            {candleType === 'mold' && (
+              <>
+                <select value={selectedMoldShape} onChange={(e) => setSelectedMoldShape(e.target.value)}>
+                  <option value="default">Mold Shape</option>
+                  {moldShapes.map(shape => (
+                    <option key={shape.id} value={shape.id}>
+                      {shape.name} ({shape.layers} {shape.layers === 1 ? 'Layer' : 'Layers'})
+                    </option>
+                  ))}
+                </select>
 
-              {category.fields.map(field => (
-                <div key={field.name} className="inv-field">
-                  <label className="inv-field-label">
-                    {field.label}
-                    {field.required && <span className="inv-required">*</span>}
-                  </label>
+                {moldLayers.map((selectedColor, index) => (
+                  <select 
+                    key={index} 
+                    className="layer-select"
+                    value={selectedColor} 
+                    onChange={(e) => handleLayerColorChange(index, e.target.value)}
+                  >
+                    <option value="default">Layer {index + 1} Color</option>
+                    {colors.map(color => <option key={color.id} value={color.id}>{color.name}</option>)}
+                  </select>
+                ))}
+              </>
+            )}
 
-                  {field.type === 'toggle' ? (
-                    <div className="inv-toggle-row">
-                      <label className="inv-switch">
-                        <input
-                          type="checkbox"
-                          checked={!!form[field.name]}
-                          onChange={e => handleFormChange(field.name, e.target.checked)}
-                        />
-                        <span className="inv-switch-slider" />
-                      </label>
-                      <span className="inv-toggle-label">{form[field.name] ? 'Available to customers' : 'Hidden from customers'}</span>
-                    </div>
-                  ) : field.type === 'color' ? (
-                    <div className="inv-color-row">
-                      <input
-                        type="color"
-                        value={form[field.name] || '#c8a97e'}
-                        onChange={e => handleFormChange(field.name, e.target.value)}
-                        className="inv-color-picker"
-                      />
-                      <input
-                        type="text"
-                        value={form[field.name] || ''}
-                        onChange={e => handleFormChange(field.name, e.target.value)}
-                        placeholder="#c8a97e"
-                        className="inv-input"
-                        style={{ flex: 1 }}
-                      />
-                    </div>
-                  ) : (
-                    <input
-                      type={field.type}
-                      value={form[field.name] || ''}
-                      onChange={e => handleFormChange(field.name, e.target.value)}
-                      placeholder={field.type === 'number' ? '0' : `Enter ${field.label.toLowerCase()}`}
-                      className="inv-input"
-                      step={field.type === 'number' ? '0.01' : undefined}
-                      min={field.type === 'number' ? '0' : undefined}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
+            <select value={selectedScentId} onChange={(e) => setSelectedScentId(e.target.value)}>
+              <option value="default">Scent</option>
+              {scents.map(scent => <option key={scent.id} value={scent.id}>{scent.name}</option>)}
+            </select>
 
-            <div className="inv-dialog-footer">
-              <button className="inv-cancel-btn" onClick={() => setShowDialog(false)} disabled={submitting}>Cancel</button>
-              <button className="inv-save-btn" onClick={handleSubmit} disabled={submitting}>
-                {submitting ? 'Saving...' : (editingItem ? 'Save Changes' : 'Add')}
+            <div className="confirmation-area">
+              <div className="quantity-wrapper">
+                <button className="btn-qty" onClick={() => setQuantity(Math.max(1, quantity - 1))}>−</button>
+                <span className="qty-amount">{quantity}</span>
+                <button className="btn-qty" onClick={() => setQuantity(quantity + 1)}>+</button>            
+              </div>
+              
+              <button className="confirm" onClick={handleConfirm}>
+                Confirm Candle
               </button>
             </div>
+
           </div>
         </div>
-      )}
-
+      </div>
       <Footer />
     </div>
   );
 };
 
-export default Inventory;
+export default Create;

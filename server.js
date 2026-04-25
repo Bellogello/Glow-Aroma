@@ -3,13 +3,18 @@ const mysql = require('mysql2');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const axios = require('axios');
 
 require('dotenv').config();
+
+const {
+    uploadImage,
+    uploadModelWithThumbnail,
+    uploadToCloudinary,
+} = require('./cloudinary');
 
 const app = express();
 
@@ -20,17 +25,18 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// Keep local uploads dir for fallback
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 app.use('/uploads', express.static(uploadDir));
 
 const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
+    host:     process.env.DB_HOST,
+    user:     process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    port: process.env.DB_PORT || 3306,
-    ssl: { rejectUnauthorized: false }
+    port:     process.env.DB_PORT || 3306,
+    ssl:      { rejectUnauthorized: false }
 });
 
 db.connect((err) => {
@@ -39,18 +45,8 @@ db.connect((err) => {
 });
 
 const SALT_ROUNDS = 10;
-const JWT_SECRET = process.env.JWT_SECRET || 'glow_aroma_secure_key_2026';
+const JWT_SECRET  = process.env.JWT_SECRET || 'glow_aroma_secure_key_2026';
 const PAYMOB_BASE = 'https://accept.paymob.com/api';
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/'),
-    filename: (req, file, cb) => {
-        const rawName = req.body.name || 'candle';
-        const safeName = rawName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-        cb(null, `${safeName}-${Date.now()}${path.extname(file.originalname)}`);
-    }
-});
-const upload = multer({ storage });
 
 // ==========================================
 // --- PAYMOB HELPERS ---
@@ -89,7 +85,7 @@ app.get('/', (req, res) => res.status(200).send('Glow Aroma Production API Activ
 // --- CANDLE BUILDER ASSETS ---
 // ==========================================
 app.get('/scents', (req, res) => {
-    db.query('SELECT * FROM scents WHERE is_available = TRUE', (err, results) => {
+    db.query(`SELECT s.*, sf.name AS family_name FROM scents s LEFT JOIN scent_families sf ON s.scent_family_id = sf.id WHERE s.is_available = TRUE`, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
@@ -125,6 +121,19 @@ app.get('/mold-shapes', (req, res) => {
     });
 });
 
+// Public models endpoint
+app.get('/models', (req, res) => {
+    db.query('SELECT * FROM candle_models WHERE is_available = TRUE ORDER BY type, name', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results.map(m => ({
+            ...m,
+            colorable_parts: typeof m.colorable_parts === 'string'
+                ? JSON.parse(m.colorable_parts || '[]')
+                : (m.colorable_parts || [])
+        })));
+    });
+});
+
 // ==========================================
 // --- PRODUCT CATALOG ---
 // ==========================================
@@ -141,9 +150,11 @@ app.get('/products/:id', (req, res) => {
         res.json(results[0]);
     });
 });
-app.post('/admin/products', upload.single('image'), (req, res) => {
+
+// Admin product management — now uses Cloudinary for images
+app.post('/admin/products', uploadImage.single('image'), (req, res) => {
     const { name, price, stock_quantity, description } = req.body;
-    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+    const image_url = req.file ? req.file.path : null; // Cloudinary returns path as the URL
     if (!name || price === undefined || stock_quantity === undefined)
         return res.status(400).json({ message: 'Name, price, and stock are required.' });
     db.query('INSERT INTO prebuilt_candles (name, price, stock_quantity, description, image_url) VALUES (?, ?, ?, ?, ?)',
@@ -154,9 +165,9 @@ app.post('/admin/products', upload.single('image'), (req, res) => {
         }
     );
 });
-app.put('/admin/products/:id', upload.single('image'), (req, res) => {
+app.put('/admin/products/:id', uploadImage.single('image'), (req, res) => {
     const { name, price, stock_quantity, description, existing_image_url } = req.body;
-    const image_url = req.file ? `/uploads/${req.file.filename}` : (existing_image_url || null);
+    const image_url = req.file ? req.file.path : (existing_image_url || null);
     db.query('UPDATE prebuilt_candles SET name=?, price=?, stock_quantity=?, description=?, image_url=? WHERE id=?',
         [name, parseFloat(price), parseInt(stock_quantity), description || null, image_url, req.params.id],
         (err) => {
@@ -170,6 +181,98 @@ app.delete('/admin/products/:id', (req, res) => {
         if (err) return res.status(500).json({ message: 'Delete failed. Product may be linked to an order.' });
         res.json({ message: 'Product deleted.' });
     });
+});
+
+// ==========================================
+// --- 3D MODELS MANAGEMENT ---
+// ==========================================
+app.get('/admin/models', (req, res) => {
+    db.query('SELECT * FROM candle_models ORDER BY created_at DESC', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results.map(m => ({
+            ...m,
+            colorable_parts: typeof m.colorable_parts === 'string'
+                ? JSON.parse(m.colorable_parts || '[]')
+                : (m.colorable_parts || [])
+        })));
+    });
+});
+
+app.post('/admin/models', uploadModelWithThumbnail, async (req, res) => {
+    const { name, type, layers, flat_shading, colorable_parts, is_available } = req.body;
+
+    if (!name || !type) return res.status(400).json({ error: 'Name and type are required.' });
+    if (!req.files?.model?.[0]) return res.status(400).json({ error: 'GLB model file is required.' });
+
+    try {
+        // Upload .glb to Cloudinary as raw file
+        const modelResult = await uploadToCloudinary(req.files.model[0].buffer, {
+            folder: 'glow-aroma/models',
+            resource_type: 'raw',
+            public_id: `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+            format: 'glb',
+        });
+
+        // Upload thumbnail if provided
+        let thumbnailUrl = null;
+        if (req.files?.thumbnail?.[0]) {
+            const thumbResult = await uploadToCloudinary(req.files.thumbnail[0].buffer, {
+                folder: 'glow-aroma/thumbnails',
+                resource_type: 'image',
+            });
+            thumbnailUrl = thumbResult.secure_url;
+        }
+
+        const parsedParts = colorable_parts
+            ? (typeof colorable_parts === 'string' ? colorable_parts : JSON.stringify(colorable_parts))
+            : '[]';
+
+        const [result] = await db.promise().query(
+            'INSERT INTO candle_models (name, type, model_url, thumbnail_url, flat_shading, layers, colorable_parts, is_available) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                name, type,
+                modelResult.secure_url,
+                thumbnailUrl,
+                flat_shading === 'true' || flat_shading === true ? 1 : 0,
+                parseInt(layers) || 1,
+                parsedParts,
+                is_available !== 'false' ? 1 : 0
+            ]
+        );
+
+        res.status(201).json({ message: 'Model uploaded.', id: result.insertId, model_url: modelResult.secure_url });
+    } catch (err) {
+        console.error('Model upload error:', err);
+        res.status(500).json({ error: 'Failed to upload model: ' + err.message });
+    }
+});
+
+app.put('/admin/models/:id', async (req, res) => {
+    const { name, type, layers, flat_shading, colorable_parts, is_available } = req.body;
+    const parsedParts = colorable_parts
+        ? (typeof colorable_parts === 'string' ? colorable_parts : JSON.stringify(colorable_parts))
+        : '[]';
+    try {
+        await db.promise().query(
+            'UPDATE candle_models SET name=?, type=?, flat_shading=?, layers=?, colorable_parts=?, is_available=? WHERE id=?',
+            [
+                name, type,
+                flat_shading === 'true' || flat_shading === true ? 1 : 0,
+                parseInt(layers) || 1,
+                parsedParts,
+                is_available !== false && is_available !== 'false' ? 1 : 0,
+                req.params.id
+            ]
+        );
+        res.json({ message: 'Model updated.' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/admin/models/:id', async (req, res) => {
+    try {
+        await db.promise().query('DELETE FROM candle_models WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Model deleted.' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ==========================================
@@ -507,35 +610,28 @@ app.delete('/admin/delete-account', (req, res) => {
 
 // ==========================================
 // --- CHECKOUT ---
-// FIX: increments coupon times_used after successful order
 // ==========================================
 app.post('/checkout', (req, res) => {
     const { userId, total, items, couponCode } = req.body;
     const numericTotal = parseFloat(total) || 0;
-
     db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
         if (err || cartResults.length === 0) return res.status(400).json({ error: 'Empty Cart' });
         const cartId = cartResults[0].id;
-
         db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, numericTotal], (err, result) => {
             if (err) return res.status(500).json({ error: 'Order Creation Failed: ' + err.message });
             const orderId = result.insertId;
-
             if (!items || items.length === 0) return res.status(400).json({ error: 'No items received from frontend' });
-
             const values = items.map(i => {
                 let exactItemType = 'prebuilt';
                 if (i.is_custom) exactItemType = (i.name && i.name.toLowerCase().includes('mold')) ? 'mold' : 'cup';
                 return [orderId, exactItemType, i.name || 'Candle', parseFloat(i.price) || 0, parseInt(i.quantity, 10) || 1, i.details || i.color_info || 'Standard Pre-built'];
             });
-
             db.query('INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity, details) VALUES ?', [values], (itemErr) => {
                 if (itemErr) {
                     console.error("DB REJECTED ITEMS INSERT:", itemErr.message);
                     return res.status(500).json({ error: 'DB Error on Items: ' + itemErr.message });
                 }
                 db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], () => {
-                    // Increment coupon usage counter if a coupon was applied
                     if (couponCode) {
                         db.query('UPDATE discount_codes SET times_used = times_used + 1 WHERE code = ?',
                             [couponCode.toUpperCase()],
@@ -615,25 +711,61 @@ app.post('/coupons/validate', async (req, res) => {
 });
 
 // ==========================================
+// --- INVENTORY: SCENT FAMILIES ---
+// ==========================================
+app.get('/admin/inventory/scent-families', async (req, res) => {
+    try { const [rows] = await db.promise().query('SELECT * FROM scent_families ORDER BY name ASC'); res.json(rows); }
+    catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/admin/inventory/scent-families', async (req, res) => {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name is required.' });
+    try {
+        const [result] = await db.promise().query('INSERT INTO scent_families (name) VALUES (?)', [name]);
+        res.status(201).json({ message: 'Scent family added.', id: result.insertId });
+    } catch (e) {
+        if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'This family already exists.' });
+        res.status(500).json({ error: e.message });
+    }
+});
+app.put('/admin/inventory/scent-families/:id', async (req, res) => {
+    try { await db.promise().query('UPDATE scent_families SET name=? WHERE id=?', [req.body.name, req.params.id]); res.json({ message: 'Updated.' }); }
+    catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete('/admin/inventory/scent-families/:id', async (req, res) => {
+    try { await db.promise().query('DELETE FROM scent_families WHERE id = ?', [req.params.id]); res.json({ message: 'Deleted.' }); }
+    catch (e) { res.status(500).json({ error: 'Cannot delete — scents are using this family.' }); }
+});
+
+// ==========================================
 // --- INVENTORY: SCENTS ---
 // ==========================================
 app.get('/admin/inventory/scents', async (req, res) => {
-    try { const [rows] = await db.promise().query('SELECT * FROM scents ORDER BY id DESC'); res.json(rows); }
-    catch (e) { res.status(500).json({ error: e.message }); }
+    try {
+        const [rows] = await db.promise().query(`SELECT s.*, sf.name AS family_name FROM scents s LEFT JOIN scent_families sf ON s.scent_family_id = sf.id ORDER BY s.id DESC`);
+        res.json(rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/scents', async (req, res) => {
-    // FIXED: Using 'price' instead of 'price_modifier'
-    const { name, price, is_available } = req.body;
+    const { name, price_modifier, is_available, scent_family_id } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     try {
-        const [result] = await db.promise().query('INSERT INTO scents (name, price, is_available) VALUES (?, ?, ?)', [name, parseFloat(price) || 0, is_available !== false]);
+        const [result] = await db.promise().query(
+            'INSERT INTO scents (name, price_modifier, is_available, scent_family_id) VALUES (?, ?, ?, ?)',
+            [name, parseFloat(price_modifier) || 0, is_available !== false, scent_family_id || null]
+        );
         res.status(201).json({ message: 'Scent added.', id: result.insertId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/admin/inventory/scents/:id', async (req, res) => {
-    const { name, price, is_available } = req.body;
-    try { await db.promise().query('UPDATE scents SET name=?, price=?, is_available=? WHERE id=?', [name, parseFloat(price) || 0, is_available, req.params.id]); res.json({ message: 'Scent updated.' }); }
-    catch (e) { res.status(500).json({ error: e.message }); }
+    const { name, price_modifier, is_available, scent_family_id } = req.body;
+    try {
+        await db.promise().query(
+            'UPDATE scents SET name=?, price_modifier=?, is_available=?, scent_family_id=? WHERE id=?',
+            [name, parseFloat(price_modifier) || 0, is_available, scent_family_id || null, req.params.id]
+        );
+        res.json({ message: 'Scent updated.' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/scents/:id', async (req, res) => {
     try { await db.promise().query('DELETE FROM scents WHERE id = ?', [req.params.id]); res.json({ message: 'Scent deleted.' }); }
@@ -648,17 +780,16 @@ app.get('/admin/inventory/colors', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/colors', async (req, res) => {
-    // FIXED: Using 'price'
-    const { name, hex_code, price, is_available } = req.body;
+    const { name, hex_code, price_modifier, is_available } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     try {
-        const [result] = await db.promise().query('INSERT INTO colors (name, hex_code, price, is_available) VALUES (?, ?, ?, ?)', [name, hex_code || null, parseFloat(price) || 0, is_available !== false]);
+        const [result] = await db.promise().query('INSERT INTO colors (name, hex_code, price_modifier, is_available) VALUES (?, ?, ?, ?)', [name, hex_code || null, parseFloat(price_modifier) || 0, is_available !== false]);
         res.status(201).json({ message: 'Color added.', id: result.insertId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/admin/inventory/colors/:id', async (req, res) => {
-    const { name, hex_code, price, is_available } = req.body;
-    try { await db.promise().query('UPDATE colors SET name=?, hex_code=?, price=?, is_available=? WHERE id=?', [name, hex_code || null, parseFloat(price) || 0, is_available, req.params.id]); res.json({ message: 'Color updated.' }); }
+    const { name, hex_code, price_modifier, is_available } = req.body;
+    try { await db.promise().query('UPDATE colors SET name=?, hex_code=?, price_modifier=?, is_available=? WHERE id=?', [name, hex_code || null, parseFloat(price_modifier) || 0, is_available, req.params.id]); res.json({ message: 'Color updated.' }); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/colors/:id', async (req, res) => {
@@ -674,17 +805,16 @@ app.get('/admin/inventory/cup-colors', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/cup-colors', async (req, res) => {
-    // FIXED: Removed price completely. Your SQL database for cup_colors doesn't have a price column!
-    const { name, hex_code } = req.body;
+    const { name, hex_code, price_modifier } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     try {
-        const [result] = await db.promise().query('INSERT INTO cup_colors (name, hex_code) VALUES (?, ?)', [name, hex_code || null]);
+        const [result] = await db.promise().query('INSERT INTO cup_colors (name, hex_code, price_modifier) VALUES (?, ?, ?)', [name, hex_code || null, parseFloat(price_modifier) || 0]);
         res.status(201).json({ message: 'Cup color added.', id: result.insertId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/admin/inventory/cup-colors/:id', async (req, res) => {
-    const { name, hex_code } = req.body;
-    try { await db.promise().query('UPDATE cup_colors SET name=?, hex_code=? WHERE id=?', [name, hex_code || null, req.params.id]); res.json({ message: 'Cup color updated.' }); }
+    const { name, hex_code, price_modifier } = req.body;
+    try { await db.promise().query('UPDATE cup_colors SET name=?, hex_code=?, price_modifier=? WHERE id=?', [name, hex_code || null, parseFloat(price_modifier) || 0, req.params.id]); res.json({ message: 'Cup color updated.' }); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/cup-colors/:id', async (req, res) => {
@@ -700,7 +830,6 @@ app.get('/admin/inventory/cup-sizes', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/cup-sizes', async (req, res) => {
-    // This one was actually correct! It uses price_modifier in the DB.
     const { size_ml, price_modifier } = req.body;
     if (!size_ml) return res.status(400).json({ error: 'Size (ml) is required.' });
     try {
@@ -726,17 +855,16 @@ app.get('/admin/inventory/cup-shapes', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/cup-shapes', async (req, res) => {
-    // FIXED: Using 'base_price'
-    const { name, base_price, is_available } = req.body;
+    const { name, price_modifier, is_available } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     try {
-        const [result] = await db.promise().query('INSERT INTO cup_shapes (name, base_price, is_available) VALUES (?, ?, ?)', [name, parseFloat(base_price) || 0, is_available !== false]);
+        const [result] = await db.promise().query('INSERT INTO cup_shapes (name, price_modifier, is_available) VALUES (?, ?, ?)', [name, parseFloat(price_modifier) || 0, is_available !== false]);
         res.status(201).json({ message: 'Cup shape added.', id: result.insertId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/admin/inventory/cup-shapes/:id', async (req, res) => {
-    const { name, base_price, is_available } = req.body;
-    try { await db.promise().query('UPDATE cup_shapes SET name=?, base_price=?, is_available=? WHERE id=?', [name, parseFloat(base_price) || 0, is_available, req.params.id]); res.json({ message: 'Cup shape updated.' }); }
+    const { name, price_modifier, is_available } = req.body;
+    try { await db.promise().query('UPDATE cup_shapes SET name=?, price_modifier=?, is_available=? WHERE id=?', [name, parseFloat(price_modifier) || 0, is_available, req.params.id]); res.json({ message: 'Cup shape updated.' }); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/cup-shapes/:id', async (req, res) => {
@@ -752,17 +880,16 @@ app.get('/admin/inventory/mold-shapes', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/inventory/mold-shapes', async (req, res) => {
-    // FIXED: Using 'base_price' AND added 'layers'
-    const { name, base_price, layers, is_available } = req.body;
+    const { name, price_modifier, is_available } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     try {
-        const [result] = await db.promise().query('INSERT INTO mold_shapes (name, layers, base_price, is_available) VALUES (?, ?, ?, ?)', [name, parseInt(layers) || 1, parseFloat(base_price) || 0, is_available !== false]);
+        const [result] = await db.promise().query('INSERT INTO mold_shapes (name, price_modifier, is_available) VALUES (?, ?, ?)', [name, parseFloat(price_modifier) || 0, is_available !== false]);
         res.status(201).json({ message: 'Mold shape added.', id: result.insertId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/admin/inventory/mold-shapes/:id', async (req, res) => {
-    const { name, base_price, layers, is_available } = req.body;
-    try { await db.promise().query('UPDATE mold_shapes SET name=?, layers=?, base_price=?, is_available=? WHERE id=?', [name, parseInt(layers) || 1, parseFloat(base_price) || 0, is_available, req.params.id]); res.json({ message: 'Mold shape updated.' }); }
+    const { name, price_modifier, is_available } = req.body;
+    try { await db.promise().query('UPDATE mold_shapes SET name=?, price_modifier=?, is_available=? WHERE id=?', [name, parseFloat(price_modifier) || 0, is_available, req.params.id]); res.json({ message: 'Mold shape updated.' }); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/mold-shapes/:id', async (req, res) => {

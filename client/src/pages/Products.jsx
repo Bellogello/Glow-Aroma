@@ -45,8 +45,9 @@ const Products = () => {
     // 2. Check if the product category matches the selected button
     // NOTE: Make sure 'product.category' matches your actual database column name! 
     // It might be 'product.type', 'product.material', etc.
-    const matchesFilter = activeFilter === 'All' || product.category === activeFilter;
-
+const matchesFilter = activeFilter === 'All' || 
+  (product.description && product.description.toLowerCase().includes(activeFilter.toLowerCase())) ||
+  (product.name && product.name.toLowerCase().includes(activeFilter.toLowerCase()));
     return matchesSearch && matchesFilter;
   });
 

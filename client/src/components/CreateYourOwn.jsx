@@ -5,7 +5,7 @@ import '../styles/CreateYourOwn.css';
 
 const CreateYourOwn = () => {
   return (
-    <Link to="/Create" className="create-banner-link">
+    <Link to="/create" className="create-banner-link">
       <img 
         src={BannerImage} 
         alt="Make Your Own Candle - Customize Scents and Colors" 

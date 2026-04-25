@@ -24,13 +24,12 @@ function App() {
   return (
     <div className="App">
       <Routes>
-        {/* Standard Routes */}
         <Route path="/" element={<Home />} />
         <Route path="/products" element={<Products />} />
         <Route path="/Cart" element={<Cart />} />
         <Route path="/Profile" element={<Profile />} />
         <Route path="/Contact" element={<Contact />} />
-        <Route path="/Create" element={<Create />} />
+        <Route path="/Create" element={<Create />} />  {/* Capital C! */}
         <Route path="/Sign-in" element={<SignIn />} />
         <Route path="/Sign-up" element={<Signup />} />
         <Route path="/Dashboard" element={<Dashboard />} />
@@ -38,7 +37,7 @@ function App() {
         <Route path="/order-success" element={<OrderSuccess />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/checkout" element={<Elements stripe={stripePromise}><Checkout /></Elements>} />
-      </Routes>
+      </Routes> 
     </div>
   );
 }
