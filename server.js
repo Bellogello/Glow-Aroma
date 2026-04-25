@@ -904,54 +904,37 @@ app.post('/admin/inventory/cup-shapes', async (req, res) => {
 });
 
 app.put('/admin/inventory/cup-shapes/:id', async (req, res) => {
-    // 1. Destructure with defaults
-    const { 
-        name, 
-        price_modifier, 
-        model_url, 
-        is_available, 
-        sizes = [], 
-        colors = [] 
-    } = req.body;
+    const { name, price_modifier, model_url, is_available, sizes, colors } = req.body;
     
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     
     try {
-        // 2. Explicitly ensure these are strings. 
-        // If they are already strings, don't double-stringify them.
-        const sizesStr = typeof sizes === 'string' ? sizes : JSON.stringify(sizes);
-        const colorsStr = typeof colors === 'string' ? colors : JSON.stringify(colors);
+        // Ensure we are sending valid JSON strings
+        const sizesStr = JSON.stringify(sizes || []);
+        const colorsStr = JSON.stringify(colors || []);
 
         const [result] = await db.promise().query(
-            `UPDATE cup_shapes 
-             SET name = ?, 
-                 price_modifier = ?, 
-                 model_url = ?, 
-                 is_available = ?, 
-                 sizes = ?, 
-                 colors = ? 
-             WHERE id = ?`, 
+            'UPDATE cup_shapes SET name = ?, price_modifier = ?, model_url = ?, is_available = ?, sizes = ?, colors = ? WHERE id = ?', 
             [
                 name, 
                 parseFloat(price_modifier) || 0, 
                 model_url || null, 
-                is_available !== false ? 1 : 0, // Explicit 1/0 for boolean columns
+                is_available !== false, 
                 sizesStr, 
                 colorsStr, 
                 req.params.id
             ]
         );
 
-        // 3. MySQL returns 0 affectedRows if you save without changing anything.
-        // We check "changedRows" or simply success of the query.
-        res.json({ 
-            message: 'Cup shape updated.', 
-            changed: result.changedRows > 0 
-        });
-
+        res.json({ message: 'Cup shape updated.', affectedRows: result.affectedRows });
     } catch (e) { 
-        console.error("CRITICAL DB ERROR:", e.message);
-        res.status(500).json({ error: "Database error: " + e.message }); 
+        // This is crucial: It sends the actual error message back to your browser console
+        console.error("PRODUCTION DB ERROR:", e); 
+        res.status(500).json({ 
+            error: 'Internal Server Error', 
+            details: e.message, // Look for "Unknown column 'sizes'" here!
+            code: e.code 
+        }); 
     }
 });
 
