@@ -868,8 +868,22 @@ app.put('/admin/inventory/scents/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/scents/:id', async (req, res) => {
-    try { await db.promise().query('DELETE FROM scents WHERE id = ?', [req.params.id]); res.json({ message: 'Scent deleted.' }); }
-    catch (e) { res.status(500).json({ error: 'Cannot delete — may be linked to existing orders.' }); }
+    try {
+        // Option A: Hard Delete (Will fail if used in cart)
+        // Option B: Safety Check
+        const [usage] = await db.promise().query('SELECT id FROM custom_candles WHERE scent_id = ?', [req.params.id]);
+        
+        if (usage.length > 0) {
+            // Instead of deleting, we just hide it from the store
+            await db.promise().query('UPDATE scents SET is_available = FALSE WHERE id = ?', [req.params.id]);
+            return res.json({ message: 'Scent is active in carts. It has been hidden from the store instead of deleted.' });
+        }
+
+        await db.promise().query('DELETE FROM scents WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Scent deleted.' });
+    } catch (e) {
+        res.status(500).json({ error: "Database error during deletion." });
+    }
 });
 
 // ==========================================
@@ -1042,8 +1056,19 @@ app.put('/admin/inventory/mold-shapes/:id', (req, res) => {
 });
 
 app.delete('/admin/inventory/mold-shapes/:id', async (req, res) => {
-    try { await db.promise().query('DELETE FROM mold_shapes WHERE id = ?', [req.params.id]); res.json({ message: 'Mold shape deleted.' }); }
-    catch (e) { res.status(500).json({ error: 'Cannot delete — may be linked to existing orders.' }); }
+    try {
+        const [usage] = await db.promise().query('SELECT id FROM custom_candles WHERE mold_shape_id = ?', [req.params.id]);
+        
+        if (usage.length > 0) {
+            await db.promise().query('UPDATE mold_shapes SET is_available = FALSE WHERE id = ?', [req.params.id]);
+            return res.json({ message: 'Mold is in a cart. Hidden from store instead.' });
+        }
+
+        await db.promise().query('DELETE FROM mold_shapes WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Mold deleted.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 

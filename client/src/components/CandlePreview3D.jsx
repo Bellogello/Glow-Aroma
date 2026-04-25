@@ -11,34 +11,31 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
   const sceneRef = useRef(null);
   const cameraRef = useRef(null); // Ref to store the main camera for snapshot resetting
 
-  useImperativeHandle(ref, () => ({
-    getSnapshot: () => {
-      const renderer = rendererRef.current;
-      const scene = sceneRef.current;
-      const canvas = canvasRef.current;
-      const mainCamera = cameraRef.current; // Access the main camera from ref
+useImperativeHandle(ref, () => ({
+  getSnapshot: () => {
+    const renderer = rendererRef.current;
+    const scene = sceneRef.current;
+    const canvas = canvasRef.current;
+    const mainCamera = cameraRef.current;
 
-      if (!renderer || !scene || !canvas || !mainCamera) return null;
+    if (!renderer || !scene || !canvas || !mainCamera) return null;
 
-      // 1. Create a dedicated "Photo Studio" camera for a constant angle
-      const photoCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-      
-      // 2. Set the constant angle (Professional 3/4 view)
-      photoCamera.position.set(2, 4.5, 2); 
-      photoCamera.lookAt(0, 1.2, 0); 
+    // 1. Create the studio camera
+    const photoCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    
+    // 2. MOVE CAMERA BACK: (x, y, z)
+    // We increase these values to pull the camera away from the candle
+    // Position (6, 5, 6) gives a great high-angle diagonal without the "zoom"
+    photoCamera.position.set(6, 5, 6); 
+    photoCamera.lookAt(0, 1.0, 0); // Aim at the middle/base
 
-      // 3. Render the studio view
-      renderer.render(scene, photoCamera);
-      
-      // 4. Capture as a compressed JPEG to save database space
-      const data = canvas.toDataURL('image/jpeg', 0.6);
-
-      // 5. Reset the renderer to the user's actual camera view
-      renderer.render(scene, mainCamera);
-      
-      return data;
-    }
-  }));
+    renderer.render(scene, photoCamera);
+    const data = canvas.toDataURL('image/jpeg', 0.6);
+    renderer.render(scene, mainCamera);
+    
+    return data;
+  }
+}));
 
   useEffect(() => {
     const canvas = canvasRef.current;
