@@ -904,28 +904,54 @@ app.post('/admin/inventory/cup-shapes', async (req, res) => {
 });
 
 app.put('/admin/inventory/cup-shapes/:id', async (req, res) => {
-    const { name, price_modifier, model_url, is_available, sizes, colors } = req.body;
+    // 1. Destructure with defaults
+    const { 
+        name, 
+        price_modifier, 
+        model_url, 
+        is_available, 
+        sizes = [], 
+        colors = [] 
+    } = req.body;
     
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     
     try {
-        const sizesJson = JSON.stringify(sizes || []);
-        const colorsJson = JSON.stringify(colors || []);
+        // 2. Explicitly ensure these are strings. 
+        // If they are already strings, don't double-stringify them.
+        const sizesStr = typeof sizes === 'string' ? sizes : JSON.stringify(sizes);
+        const colorsStr = typeof colors === 'string' ? colors : JSON.stringify(colors);
 
         const [result] = await db.promise().query(
-            'UPDATE cup_shapes SET name = ?, price_modifier = ?, model_url = ?, is_available = ?, sizes = ?, colors = ? WHERE id = ?', 
-            [name, parseFloat(price_modifier) || 0, model_url || null, is_available !== false, sizesJson, colorsJson, req.params.id]
+            `UPDATE cup_shapes 
+             SET name = ?, 
+                 price_modifier = ?, 
+                 model_url = ?, 
+                 is_available = ?, 
+                 sizes = ?, 
+                 colors = ? 
+             WHERE id = ?`, 
+            [
+                name, 
+                parseFloat(price_modifier) || 0, 
+                model_url || null, 
+                is_available !== false ? 1 : 0, // Explicit 1/0 for boolean columns
+                sizesStr, 
+                colorsStr, 
+                req.params.id
+            ]
         );
 
-        if (result.affectedRows > 0) {
-            res.json({ message: 'Cup shape updated.' });
-        } else {
-            // This happens if you hit "Save" but didn't actually change any text
-            res.json({ message: 'No changes made (Data was identical).' });
-        }
+        // 3. MySQL returns 0 affectedRows if you save without changing anything.
+        // We check "changedRows" or simply success of the query.
+        res.json({ 
+            message: 'Cup shape updated.', 
+            changed: result.changedRows > 0 
+        });
+
     } catch (e) { 
-        console.error("DB Error on PUT:", e); // This will show up in your TERMINAL
-        res.status(500).json({ error: e.message }); 
+        console.error("CRITICAL DB ERROR:", e.message);
+        res.status(500).json({ error: "Database error: " + e.message }); 
     }
 });
 
