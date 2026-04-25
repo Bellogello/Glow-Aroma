@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { API_BASE_URL } from '../config';
 
-const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupSize, modelUrl, colorableParts }, ref) => {
+const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupSize, modelUrl, colorableParts, flatShading }, ref) => {
   const canvasRef = useRef(null);
   const meshesRef = useRef({ cup: [], wax: [], wick: [], moldLayers: [] });
   const rendererRef = useRef(null);
@@ -40,13 +40,13 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true, // Restored for smooth edges
+      antialias: true, // Smooth edges
       powerPreference: 'high-performance',
       preserveDrawingBuffer: true,
     });
     renderer.setSize(size, size);
     
-    // Allows high-res Retina displays to look sharp, capped at 2x for safety
+    // High-res rendering capped at 2x for safety
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     
     renderer.shadowMap.enabled = !isMobile;
@@ -97,31 +97,52 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
 
         loadedGroup.traverse((obj) => {
           if (obj.isMesh) {
-            obj.material = obj.material.clone();
             obj.castShadow = !isMobile;
             
             const exactName = obj.name; 
             const lowerName = exactName.toLowerCase();
-
             const layerIndex = allowedParts.indexOf(exactName);
 
+            // 1. MOLD LAYERS
             if (layerIndex !== -1) {
+              obj.material = obj.material.clone();
+              obj.material.flatShading = !!flatShading;
+              obj.material.needsUpdate = true;
+              
               meshesRef.current.moldLayers[layerIndex] = obj;
               if (layerColors[layerIndex]) {
                 obj.material.color.set(layerColors[layerIndex]);
               }
             } 
+            // 2. CUP GLASS (Premium Crystal Refraction)
             else if (lowerName.includes('cylinder_0') || lowerName.endsWith('_0')) {
-              obj.material.transparent = true;
-              obj.material.opacity = 0.4;
+              const crystalMaterial = new THREE.MeshPhysicalMaterial({
+                color: cupColor ? new THREE.Color(cupColor) : new THREE.Color(0xffffff),
+                metalness: 0.1,
+                roughness: 0.05,       
+                transmission: 1.0,     // True light bending
+                ior: 1.52,             // Glass refraction index
+                thickness: 0.3,        // Simulates glass chunkiness
+                transparent: true,
+                flatShading: !!flatShading, // Makes facets pop sharply
+                depthWrite: false      // Fixes wireframe glitches
+              });
+
+              obj.material = crystalMaterial;
               meshesRef.current.cup.push(obj);
-              if (cupColor) obj.material.color.set(cupColor);
             } 
+            // 3. WAX
             else if (lowerName.includes('cylinder001_1') || lowerName.endsWith('_1') || lowerName.includes('sphere') || lowerName.includes('wax')) {
+              obj.material = obj.material.clone();
+              obj.material.flatShading = !!flatShading;
+              obj.material.needsUpdate = true;
+              
               meshesRef.current.wax.push(obj);
               if (waxColor) obj.material.color.set(waxColor);
             }
+            // 4. WICK
             else if (lowerName.includes('cylinder002_2') || lowerName.includes('wick')) {
+              obj.material = obj.material.clone();
               meshesRef.current.wick.push(obj);
             }
           }
@@ -133,7 +154,6 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
 
     let frameId;
     const animate = () => {
-      // requestAnimationFrame naturally runs at the screen's refresh rate (60Hz, 120Hz, etc.)
       frameId = requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
@@ -143,7 +163,7 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
     return () => {
       cancelAnimationFrame(frameId);
       
-      // Deep VRAM Memory Cleanup (Crucial for mobile stability)
+      // Deep VRAM Memory Cleanup
       if (loadedGroup) {
         loadedGroup.traverse((child) => {
           if (child.isMesh) {
@@ -160,7 +180,7 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
       }
       renderer.dispose();
     };
-  }, [modelUrl, colorableParts]); 
+  }, [modelUrl, colorableParts, flatShading]); // Re-run if flat shading toggles
 
   useEffect(() => {
     meshesRef.current.cup.forEach(mesh => {

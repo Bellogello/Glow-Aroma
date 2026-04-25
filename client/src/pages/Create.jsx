@@ -161,14 +161,6 @@ const Create = () => {
   return (
     <div className="home-container">
       <Navbar />
-      {/* --- TEMPORARY DEBUG BANNER --- */}
-      <div style={{ background: 'black', color: 'lime', padding: '10px', textAlign: 'center', fontFamily: 'monospace' }}>
-        <strong>DEBUG DATA:</strong><br/>
-        Cups Loaded: {cupShapes.length} | 
-        Molds Loaded: {moldShapes.length} | 
-        Scents Loaded: {scents.length}
-      </div>
-      {/* ------------------------------ */}
       <h1 style={{ textAlign: 'center' }}>Create Your Own Candle</h1>
       <hr className="hr--create" />
       
@@ -178,7 +170,13 @@ const Create = () => {
             ref={previewRef}
             modelUrl={currentModelUrl}
             
-            // --- NEW: Look up the model by URL to find your configured mesh names! ---
+            flatShading={(() => {
+              if (!currentModelUrl || dbModels.length === 0) return false;
+              const modelObj = dbModels.find(m => m.model_url === currentModelUrl);
+              return modelObj ? !!modelObj.flat_shading : false;
+            })()}
+
+            
             colorableParts={(() => {
               if (!currentModelUrl || dbModels.length === 0) return [];
               const modelObj = dbModels.find(m => m.model_url === currentModelUrl);

@@ -876,41 +876,57 @@ app.get('/admin/inventory/cup-shapes', async (req, res) => {
     try { const [rows] = await db.promise().query('SELECT * FROM cup_shapes ORDER BY id DESC'); res.json(rows); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
+
 app.post('/admin/inventory/cup-shapes', async (req, res) => {
-    // 1. Added model_url here
-    const { name, price_modifier, model_url, is_available } = req.body; 
+    const { name, price_modifier, model_url, is_available, sizes, colors } = req.body; 
     
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     
     try {
-        // 2. Added model_url to the SQL query and the array of values
+        // We MUST stringify the arrays so the JSON column accepts them as a valid string
+        const sizesJson = JSON.stringify(sizes || []);
+        const colorsJson = JSON.stringify(colors || []);
+
         const [result] = await db.promise().query(
-            'INSERT INTO cup_shapes (name, price_modifier, model_url, is_available) VALUES (?, ?, ?, ?)', 
-            [name, parseFloat(price_modifier) || 0, model_url || null, is_available !== false]
+            'INSERT INTO cup_shapes (name, price_modifier, model_url, is_available, sizes, colors) VALUES (?, ?, ?, ?, ?, ?)', 
+            [name, parseFloat(price_modifier) || 0, model_url || null, is_available !== false, sizesJson, colorsJson]
         );
-        res.status(201).json({ message: 'Cup shape added.', id: result.insertId });
+
+        if (result.affectedRows > 0) {
+            res.status(201).json({ message: 'Cup shape added.', id: result.insertId });
+        } else {
+            res.status(400).json({ error: 'Database accepted query but no rows were created.' });
+        }
     } catch (e) { 
+        console.error("DB Error on POST:", e); // This will show up in your TERMINAL, not browser console
         res.status(500).json({ error: e.message }); 
     }
 });
+
 app.put('/admin/inventory/cup-shapes/:id', async (req, res) => {
-    const { name, price_modifier, model_url, is_available } = req.body;
+    const { name, price_modifier, model_url, is_available, sizes, colors } = req.body;
     
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     
     try {
-        await db.promise().query(
-            'UPDATE cup_shapes SET name = ?, price_modifier = ?, model_url = ?, is_available = ? WHERE id = ?', 
-            [name, parseFloat(price_modifier) || 0, model_url || null, is_available !== false, req.params.id]
+        const sizesJson = JSON.stringify(sizes || []);
+        const colorsJson = JSON.stringify(colors || []);
+
+        const [result] = await db.promise().query(
+            'UPDATE cup_shapes SET name = ?, price_modifier = ?, model_url = ?, is_available = ?, sizes = ?, colors = ? WHERE id = ?', 
+            [name, parseFloat(price_modifier) || 0, model_url || null, is_available !== false, sizesJson, colorsJson, req.params.id]
         );
-        res.json({ message: 'Cup shape updated.' });
+
+        if (result.affectedRows > 0) {
+            res.json({ message: 'Cup shape updated.' });
+        } else {
+            // This happens if you hit "Save" but didn't actually change any text
+            res.json({ message: 'No changes made (Data was identical).' });
+        }
     } catch (e) { 
+        console.error("DB Error on PUT:", e); // This will show up in your TERMINAL
         res.status(500).json({ error: e.message }); 
     }
-});
-app.delete('/admin/inventory/cup-shapes/:id', async (req, res) => {
-    try { await db.promise().query('DELETE FROM cup_shapes WHERE id = ?', [req.params.id]); res.json({ message: 'Cup shape deleted.' }); }
-    catch (e) { res.status(500).json({ error: 'Cannot delete — may be linked to existing orders.' }); }
 });
 
 // ==========================================
