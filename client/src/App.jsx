@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react'; // <-- Added useEffect here
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import Lenis from '@studio-freight/lenis'; // <-- Added Lenis import
 
 // Import your pages
 import Home from './pages/Home';
@@ -22,31 +21,6 @@ import Inventory from './pages/Inventory';
 const stripePromise = loadStripe('pk_test_51TLsHTFTbNVdlFGS8I4gWECo2WMYrPt9uci7WvSBet1AUBUJbVYNdCXlML8mmgPfJquqtZCsx8PBA15Ifv3zoqZd00IMWU0jTR');
 
 function App() {
-  
-  // --- NEW: Lenis Smooth Scrolling Engine ---
-  useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.2, // Controls the "weight" and glide of the scroll
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), 
-      smoothWheel: true,
-      wheelMultiplier: 1, // Change to > 1 to make mouse wheels scroll faster
-    });
-
-    // Synchronize the scroll animation with your monitor's refresh rate
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-
-    requestAnimationFrame(raf);
-
-    // Clean up memory if the app unmounts
-    return () => {
-      lenis.destroy();
-    };
-  }, []);
-  // ------------------------------------------
-
   return (
     <div className="App">
       <Routes>
