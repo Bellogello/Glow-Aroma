@@ -122,13 +122,14 @@ app.get('/cup-colors', (req, res) => {
     });
 });
 app.get('/mold-shapes', (req, res) => {
-    const sql = `
-        SELECT ms.*, cm.model_url 
-        FROM mold_shapes ms 
-        LEFT JOIN candle_models cm ON ms.model_id = cm.id 
-        WHERE ms.is_available = TRUE`;
-    db.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+    // Explicitly selecting everything to ensure model_url is included
+    db.query('SELECT * FROM mold_shapes WHERE is_available = TRUE', (err, results) => {
+        if (err) {
+            console.error("MOLD FETCH ERROR:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        // This log will show up in your Railway Logs so you can verify the data
+        console.log("MOLD DATA SENT TO FRONTEND:", results); 
         res.json(results);
     });
 });

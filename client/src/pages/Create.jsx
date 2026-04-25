@@ -37,48 +37,38 @@ const Create = () => {
   const [moldLayers, setMoldLayers] = useState([]); 
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/scents`)
-      .then(res => res.json())
-      .then(data => setScents(data))
-      .catch(err => console.error("Error fetching scents:", err));
+    const fetchData = (endpoint, setter) => {
+      fetch(`${API_BASE_URL}/${endpoint}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) setter(data);
+          else setter([]);
+        })
+        .catch(err => {
+          console.error(`Error fetching ${endpoint}:`, err);
+          setter([]);
+        });
+    };
 
-    fetch(`${API_BASE_URL}/colors`)
-      .then(res => res.json())
-      .then(data => setColors(data))
-      .catch(err => console.error("Error fetching colors:", err));
-
-    fetch(`${API_BASE_URL}/cup-shapes`)
-      .then(res => res.json())
-      .then(data => setCupShapes(data))
-      .catch(err => console.error("Error fetching cup shapes:", err));
-
-    fetch(`${API_BASE_URL}/cup-sizes`)
-      .then(res => res.json())
-      .then(data => setCupSizes(data))
-      .catch(err => console.error("Error fetching cup sizes:", err));
-
-    fetch(`${API_BASE_URL}/cup-colors`)
-      .then(res => res.json())
-      .then(data => setCupColors(data))
-      .catch(err => console.error("Error fetching cup colors:", err));
-
-    fetch(`${API_BASE_URL}/mold-shapes`)
-      .then(res => res.json())
-      .then(data => setMoldShapes(data))
-      .catch(err => console.error("Error fetching mold shapes:", err));
+    fetchData('scents', setScents);
+    fetchData('colors', setColors);
+    fetchData('cup-shapes', setCupShapes);
+    fetchData('cup-sizes', setCupSizes);
+    fetchData('cup-colors', setCupColors);
+    fetchData('mold-shapes', setMoldShapes);
   }, []);
 
-  // --- AUTO-SELECT FIRST SHAPE ON LOAD ---
+  // --- SAFE AUTO-SELECT FIRST SHAPE ---
   useEffect(() => {
-    if (candleType === 'cup' && cupShapes.length > 0 && selectedCupShape === 'default') {
+    if (candleType === 'cup' && Array.isArray(cupShapes) && cupShapes.length > 0 && selectedCupShape === 'default') {
       setSelectedCupShape(cupShapes[0].id);
-    } else if (candleType === 'mold' && moldShapes.length > 0 && selectedMoldShape === 'default') {
+    } else if (candleType === 'mold' && Array.isArray(moldShapes) && moldShapes.length > 0 && selectedMoldShape === 'default') {
       setSelectedMoldShape(moldShapes[0].id);
     }
   }, [cupShapes, moldShapes, candleType, selectedCupShape, selectedMoldShape]);
 
   useEffect(() => {
-    if (selectedMoldShape !== "default") {
+    if (selectedMoldShape !== "default" && Array.isArray(moldShapes)) {
       const shape = moldShapes.find(m => m.id.toString() === selectedMoldShape.toString());
       if (shape) {
         setMoldLayers(Array(shape.layers || 1).fill("default"));
@@ -88,10 +78,10 @@ const Create = () => {
     }
   }, [selectedMoldShape, moldShapes]);
 
-  // Determine current Model URL for the 3D Preview
-  const currentModelUrl = candleType === 'cup'
-    ? cupShapes.find(s => s.id.toString() === selectedCupShape.toString())?.model_url
-    : moldShapes.find(s => s.id.toString() === selectedMoldShape.toString())?.model_url;
+  // --- SAFE MODEL URL LOGIC ---
+  const currentModelUrl = (candleType === 'cup' && Array.isArray(cupShapes))
+    ? cupShapes.find(s => s.id?.toString() === selectedCupShape?.toString())?.model_url
+    : (Array.isArray(moldShapes) ? moldShapes.find(s => s.id?.toString() === selectedMoldShape?.toString())?.model_url : null);
 
   const handleLayerColorChange = (index, colorId) => {
     const newLayers = [...moldLayers];
