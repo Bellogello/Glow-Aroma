@@ -4,10 +4,12 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { API_BASE_URL } from '../config';
 
-const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, ref) => {
+// 1. ADDED: layerColors and colorableParts to props
+const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupSize, modelUrl, colorableParts }, ref) => {
   const canvasRef = useRef(null);
-  // Changed to store arrays to support models with multiple parts like your 3x3
-  const meshesRef = useRef({ cup: [], wax: [], wick: [] });
+  
+  // 2. ADDED: moldLayers to store the specific mapped parts
+  const meshesRef = useRef({ cup: [], wax: [], wick: [], moldLayers: [] });
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
 
@@ -80,33 +82,61 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, r
         scene.add(gltf.scene);
 
         // Reset references
-        meshesRef.current = { cup: [], wax: [], wick: [] };
+        meshesRef.current = { cup: [], wax: [], wick: [], moldLayers: [] };
 
+        // 3. Parse the colorableParts list from the database
+        let allowedParts = [];
+        try {
+          allowedParts = Array.isArray(colorableParts) 
+            ? colorableParts 
+            : (typeof colorableParts === 'string' ? JSON.parse(colorableParts) : []);
+        } catch (e) {
+          allowedParts = [];
+        }
+        // DEBUGGING: Check what the 3D file actually contains
+        console.log("--- 3D MODEL DATA ---", {
+          allowedPartsFromDB: allowedParts,
+          receivedLayerColors: layerColors
+        });
+        
+        console.log("--- MESHES INSIDE GLB FILE ---");
+        gltf.scene.traverse((obj) => {
+          if (obj.isMesh) {
+            console.log(`Mesh Name: "${obj.name}"`);
+          }
+        });
         gltf.scene.traverse((obj) => {
           if (obj.isMesh) {
             obj.material = obj.material.clone();
             obj.castShadow = !isMobile;
             
-            const name = obj.name.toLowerCase();
+            const exactName = obj.name; // Keep exact case for array matching
+            const lowerName = exactName.toLowerCase();
 
-            // --- COLOR PART LOGIC START ---
-            // Identify Cup/Glass
-            if (name.includes('cylinder_0') || name.endsWith('_0')) {
+            // 4. MULTI-LAYER MOLD LOGIC
+            const layerIndex = allowedParts.indexOf(exactName);
+
+            if (layerIndex !== -1) {
+              // It's a mapped layer! Save it exactly at the index it matches
+              meshesRef.current.moldLayers[layerIndex] = obj;
+              if (layerColors[layerIndex]) {
+                obj.material.color.set(layerColors[layerIndex]);
+              }
+            } 
+            // 5. REGULAR CUP LOGIC (Your exact fallbacks)
+            else if (lowerName.includes('cylinder_0') || lowerName.endsWith('_0')) {
               obj.material.transparent = true;
               obj.material.opacity = 0.4;
               meshesRef.current.cup.push(obj);
               if (cupColor) obj.material.color.set(cupColor);
             } 
-            // Identify Wax (Supports Cylinder001_1 and Sphere.001)
-            else if (name.includes('cylinder001_1') || name.endsWith('_1') || name.includes('sphere')) {
+            else if (lowerName.includes('cylinder001_1') || lowerName.endsWith('_1') || lowerName.includes('sphere') || lowerName.includes('wax')) {
               meshesRef.current.wax.push(obj);
               if (waxColor) obj.material.color.set(waxColor);
             }
-            // Identify Wick
-            else if (name.includes('cylinder002_2') || name.includes('wick')) {
+            else if (lowerName.includes('cylinder002_2') || lowerName.includes('wick')) {
               meshesRef.current.wick.push(obj);
             }
-            // --- COLOR PART LOGIC END ---
           }
         });
       },
@@ -129,7 +159,8 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, r
       cancelAnimationFrame(frameId);
       renderer.dispose();
     };
-  }, [modelUrl]);
+  // Add colorableParts to dependency array so it re-renders if the map changes
+  }, [modelUrl, colorableParts]); 
 
   // COLOR UPDATES FOR CUP
   useEffect(() => {
@@ -138,16 +169,26 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, r
     });
   }, [cupColor]);
 
-  // COLOR UPDATES FOR WAX (Handles all spheres or cylinders)
+  // COLOR UPDATES FOR WAX 
   useEffect(() => {
     meshesRef.current.wax.forEach(mesh => {
         if (waxColor) mesh.material.color.set(waxColor);
     });
   }, [waxColor]);
 
+  // 6. ADDED: LIVE COLOR UPDATES FOR MOLD LAYERS
+  useEffect(() => {
+    meshesRef.current.moldLayers.forEach((mesh, index) => {
+      if (mesh && layerColors[index]) {
+        mesh.material.color.set(layerColors[index]);
+      }
+    });
+  }, [layerColors]);
+
   useEffect(() => {
     const scales = { small: 0.75, medium: 1.0, large: 1.3 };
     const s = scales[cupSize] || 1.0;
+    // Object.values().flat() automatically handles the new moldLayers array too!
     Object.values(meshesRef.current).flat().forEach((node) => {
       if (node) node.scale.set(s, s, s);
     });

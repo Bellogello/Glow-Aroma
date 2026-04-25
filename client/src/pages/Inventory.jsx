@@ -129,15 +129,35 @@ const ModelsTab = ({ notify, models, fetchModels }) => {
   const [type, setType] = useState('cup');
   const [layers, setLayers] = useState(1);
   const [flatShading, setFlatShading] = useState(false);
-  const [colorableParts, setColorableParts] = useState('');
   const [isAvailable, setIsAvailable] = useState(true);
   const [modelFile, setModelFile] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
 
+  // --- NEW: Dynamic Layer Inputs Array ---
+  const [layerNames, setLayerNames] = useState(['']); 
+
+  // Auto-adjust the number of text boxes when you change "layers"
+  useEffect(() => {
+    const num = parseInt(layers) || 1;
+    setLayerNames(prev => {
+      const newArr = [...prev];
+      while (newArr.length < num) newArr.push('');
+      while (newArr.length > num) newArr.pop();
+      return newArr;
+    });
+  }, [layers]);
+
+  const handleLayerNameChange = (index, value) => {
+    const newArr = [...layerNames];
+    newArr[index] = value;
+    setLayerNames(newArr);
+  };
+
   const openAdd = () => {
     setEditingModel(null);
     setName(''); setType('cup'); setLayers(1); setFlatShading(false);
-    setColorableParts(''); setIsAvailable(true); setModelFile(null); setThumbnailFile(null);
+    setIsAvailable(true); setModelFile(null); setThumbnailFile(null);
+    setLayerNames(['']);
     setShowDialog(true);
   };
 
@@ -145,18 +165,37 @@ const ModelsTab = ({ notify, models, fetchModels }) => {
     setEditingModel(m);
     setName(m.name); setType(m.type); setLayers(m.layers || 1);
     setFlatShading(!!m.flat_shading); setIsAvailable(!!m.is_available);
-    setColorableParts(Array.isArray(m.colorable_parts) ? m.colorable_parts.join(', ') : '');
     setModelFile(null); setThumbnailFile(null);
+    
+    // Load existing names if they exist
+    try {
+      const parts = typeof m.colorable_parts === 'string' ? JSON.parse(m.colorable_parts) : m.colorable_parts;
+      if (Array.isArray(parts) && parts.length > 0) {
+        setLayerNames(parts);
+      } else {
+        setLayerNames(Array(m.layers || 1).fill(''));
+      }
+    } catch(e) {
+      setLayerNames(Array(m.layers || 1).fill(''));
+    }
+    
     setShowDialog(true);
   };
 
   const handleSubmit = async () => {
     if (!name || !type) { error('Name and type are required.'); return; }
     if (!editingModel && !modelFile) { error('Please upload a .glb model file.'); return; }
+    
+    // Check if any layer name is empty
+    if (layerNames.some(ln => ln.trim() === '')) {
+      error('Please provide a mesh name for every layer.'); return;
+    }
+
     setSubmitting(true);
 
     try {
-      const partsArray = colorableParts.split(',').map(s => s.trim()).filter(Boolean);
+      // Save exactly the array our 3D code expects: ["Sphere.001", "Sphere.002"]
+      const partsArrayString = JSON.stringify(layerNames.map(s => s.trim()));
 
       if (editingModel) {
         const res = await fetch(`${API_BASE_URL}/admin/models/${editingModel.id}`, {
@@ -164,7 +203,7 @@ const ModelsTab = ({ notify, models, fetchModels }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name, type, layers: parseInt(layers), flat_shading: flatShading,
-            colorable_parts: partsArray, is_available: isAvailable
+            colorable_parts: partsArrayString, is_available: isAvailable
           })
         });
         if (!res.ok) throw new Error('Update failed');
@@ -175,7 +214,7 @@ const ModelsTab = ({ notify, models, fetchModels }) => {
         formData.append('type', type);
         formData.append('layers', layers);
         formData.append('flat_shading', flatShading);
-        formData.append('colorable_parts', JSON.stringify(partsArray));
+        formData.append('colorable_parts', partsArrayString);
         formData.append('is_available', isAvailable);
         formData.append('model', modelFile);
         if (thumbnailFile) formData.append('thumbnail', thumbnailFile);
@@ -219,7 +258,7 @@ const ModelsTab = ({ notify, models, fetchModels }) => {
                 )}
                 <div className="inv-item-info">
                   <span className="inv-item-name">{m.name}</span>
-                  <span className="inv-item-sub">{m.type} • {Array.isArray(m.colorable_parts) ? m.colorable_parts.join(', ') : ''}</span>
+                  <span className="inv-item-sub">{m.type} • {m.layers} Layer(s)</span>
                 </div>
               </div>
               <div className="inv-item-actions">
@@ -233,34 +272,52 @@ const ModelsTab = ({ notify, models, fetchModels }) => {
 
       {showDialog && (
         <div className="inv-dialog-overlay" onClick={e => e.target === e.currentTarget && setShowDialog(false)}>
-          <div className="inv-dialog">
+          <div className="inv-dialog" style={{ maxWidth: '600px' }}>
             <div className="inv-dialog-header">
               <h3>{editingModel ? 'Edit Model Info' : 'Upload Model'}</h3>
               <button className="inv-dialog-close" onClick={() => setShowDialog(false)}>×</button>
             </div>
-            <div className="inv-dialog-body">
-              <div className="inv-field">
-                <label>Name</label>
-                <input className="inv-input" value={name} onChange={e => setName(e.target.value)} />
+            <div className="inv-dialog-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="inv-field" style={{ flex: 1 }}>
+                  <label>Name</label>
+                  <input className="inv-input" value={name} onChange={e => setName(e.target.value)} />
+                </div>
+                <div className="inv-field" style={{ flex: 1 }}>
+                  <label>Number of Layers</label>
+                  <input className="inv-input" type="number" min="1" value={layers} onChange={e => setLayers(e.target.value)} />
+                </div>
               </div>
-              <div className="inv-field">
-                <label>Colorable Parts (Comma Separated)</label>
-                <input 
-                  className="inv-input" 
-                  placeholder="e.g. Sphere.001, Sphere.002" 
-                  value={colorableParts} 
-                  onChange={e => setColorableParts(e.target.value)} 
-                />
+
+              {/* --- NEW: Dynamic Input Boxes --- */}
+              <div style={{ background: '#f5f5f5', padding: '15px', borderRadius: '8px', marginTop: '10px', marginBottom: '15px' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#333' }}>Name Your Layers</h4>
+                <p style={{ margin: '0 0 15px 0', fontSize: '12px', color: '#666' }}>Type the exact mesh name from Blender (e.g. <strong>Sphere.001</strong>).</p>
+                
+                {layerNames.map((layerName, index) => (
+                  <div key={index} className="inv-field">
+                    <label style={{ fontSize: '12px' }}>Layer {index + 1} Mesh Name</label>
+                    <input 
+                      className="inv-input" 
+                      placeholder={`e.g. Sphere.00${index + 1}`}
+                      value={layerName} 
+                      onChange={e => handleLayerNameChange(index, e.target.value)} 
+                    />
+                  </div>
+                ))}
               </div>
+
               {!editingModel && (
                 <div className="inv-field">
                   <label>GLB File</label>
                   <input type="file" accept=".glb" onChange={e => setModelFile(e.target.files[0])} />
                 </div>
               )}
+
             </div>
             <div className="inv-dialog-footer">
-              <button onClick={handleSubmit} className="inv-save-btn">{submitting ? 'Processing...' : 'Save'}</button>
+              <button onClick={handleSubmit} className="inv-save-btn">{submitting ? 'Processing...' : 'Save Config'}</button>
             </div>
           </div>
         </div>
@@ -283,7 +340,6 @@ const Inventory = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [form, setForm]               = useState({});
   const [scentFamilies, setScentFamilies] = useState([]);
-  
   const [availableModels, setAvailableModels] = useState([]);
 
   const category = CATEGORIES.find(c => c.key === activeKey);
@@ -298,7 +354,6 @@ const Inventory = () => {
     fetch(`${API_BASE_URL}/admin/inventory/scent-families`)
       .then(r => r.json())
       .then(d => { if (Array.isArray(d)) setScentFamilies(d); });
-      
     fetchModels();
   }, []);
 
@@ -340,19 +395,14 @@ const Inventory = () => {
     setShowDialog(true);
   };
 
-  // --- NEW: DELETE LOGIC FOR SHAPES/ITEMS ---
   const handleDeleteItem = async (item) => {
     if (!window.confirm(`Are you sure you want to delete "${category.display(item)}"?`)) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/inventory/${category.endpoint}/${item.id}`, {
-        method: 'DELETE'
-      });
+      const res = await fetch(`${API_BASE_URL}/admin/inventory/${category.endpoint}/${item.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
       success(`${category.label} deleted.`);
       fetchItems();
-    } catch (err) {
-      error('Failed to delete item.');
-    }
+    } catch (err) { error('Failed to delete item.'); }
   };
 
   const handleFormChange = (name, value) => setForm(prev => ({ ...prev, [name]: value }));
@@ -397,16 +447,13 @@ const Inventory = () => {
       <Navbar />
       <div className="inventory-wrapper">
         <div className="inventory-header">
-          <div>
-            <h1 className="inventory-title">Inventory Management</h1>
-          </div>
+          <div><h1 className="inventory-title">Inventory Management</h1></div>
           <Link to="/Dashboard" className="inv-back-btn">← Dashboard</Link>
         </div>
 
         <div className="inv-tabs">
           {ALL_TABS.map(tab => (
-            <button key={tab.key} className={`inv-tab ${activeKey === tab.key ? 'active' : ''}`}
-              onClick={() => setActiveKey(tab.key)}>
+            <button key={tab.key} className={`inv-tab ${activeKey === tab.key ? 'active' : ''}`} onClick={() => setActiveKey(tab.key)}>
               <span>{tab.icon} {tab.label}</span>
             </button>
           ))}
@@ -427,7 +474,6 @@ const Inventory = () => {
                       <span className="inv-item-name">{category.display(item)}</span>
                       <span className="inv-item-sub">{category.sub(item)}</span>
                    </div>
-                   {/* --- NEW: DELETE BUTTON ADDED --- */}
                    <div className="inv-item-actions">
                       <button className="inv-edit-btn" onClick={() => openEditDialog(item)}>Edit</button>
                       <button className="inv-delete-btn" onClick={() => handleDeleteItem(item)}>Delete</button>

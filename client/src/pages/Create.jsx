@@ -5,16 +5,11 @@ import CandlePreview3D from '../components/CandlePreview3D';
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
 import { API_BASE_URL } from '../config';
-
-// 1. Import the notification hook
 import { useNotification } from '../components/NotificationContext';
 
 const Create = () => {
   useTitle("Create Your Own");
-  
-  // 2. Initialize the hook
   const { success, error, warning } = useNotification();
-
   const previewRef = useRef(null);
 
   const [scents, setScents] = useState([]);
@@ -23,6 +18,9 @@ const Create = () => {
   const [cupSizes, setCupSizes] = useState([]);
   const [cupColors, setCupColors] = useState([]);
   const [moldShapes, setMoldShapes] = useState([]);
+  
+  // --- NEW: State to hold the 3D Models library data ---
+  const [dbModels, setDbModels] = useState([]); 
 
   const [candleType, setCandleType] = useState('cup'); 
   const [quantity, setQuantity] = useState(1);
@@ -56,9 +54,11 @@ const Create = () => {
     fetchData('cup-sizes', setCupSizes);
     fetchData('cup-colors', setCupColors);
     fetchData('mold-shapes', setMoldShapes);
+    
+    // --- NEW: Fetch the library models to get the mesh names ---
+    fetchData('admin/models', setDbModels); 
   }, []);
 
-  // --- SAFE AUTO-SELECT FIRST SHAPE ---
   useEffect(() => {
     if (candleType === 'cup' && Array.isArray(cupShapes) && cupShapes.length > 0 && selectedCupShape === 'default') {
       setSelectedCupShape(cupShapes[0].id);
@@ -78,11 +78,10 @@ const Create = () => {
     }
   }, [selectedMoldShape, moldShapes]);
 
-// Determination of current Model URL with aggressive type matching
-const currentModelUrl = (candleType === 'cup' && Array.isArray(cupShapes))
-  ? cupShapes.find(s => String(s.id) === String(selectedCupShape))?.model_url
-  : (Array.isArray(moldShapes) ? moldShapes.find(s => String(s.id) === String(selectedMoldShape))?.model_url : null);
-    
+  const currentModelUrl = (candleType === 'cup' && Array.isArray(cupShapes))
+    ? cupShapes.find(s => String(s.id) === String(selectedCupShape))?.model_url
+    : (Array.isArray(moldShapes) ? moldShapes.find(s => String(s.id) === String(selectedMoldShape))?.model_url : null);
+      
   const handleLayerColorChange = (index, colorId) => {
     const newLayers = [...moldLayers];
     newLayers[index] = colorId;
@@ -170,6 +169,31 @@ const currentModelUrl = (candleType === 'cup' && Array.isArray(cupShapes))
           <CandlePreview3D
             ref={previewRef}
             modelUrl={currentModelUrl}
+            
+            // --- NEW: Look up the model by URL to find your configured mesh names! ---
+            colorableParts={(() => {
+              if (!currentModelUrl || dbModels.length === 0) return [];
+              const modelObj = dbModels.find(m => m.model_url === currentModelUrl);
+              if (!modelObj || !modelObj.colorable_parts) return [];
+              
+              try {
+                return typeof modelObj.colorable_parts === 'string' 
+                  ? JSON.parse(modelObj.colorable_parts) 
+                  : modelObj.colorable_parts;
+              } catch (e) {
+                return [];
+              }
+            })()}
+            
+            layerColors={
+              candleType === 'mold'
+                ? moldLayers.map(colorId => {
+                    const colorObj = colors.find(c => String(c.id) === String(colorId));
+                    return colorObj ? colorObj.hex_code : '#ffffff';
+                  })
+                : []
+            }
+
             cupColor={
               cupColors.find(c => c.id.toString() === selectedCupColor.toString())?.hex_code ?? '#ffffff'
             }
