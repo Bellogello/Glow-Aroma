@@ -97,11 +97,18 @@ app.get('/colors', (req, res) => {
     });
 });
 app.get('/cup-shapes', (req, res) => {
-    db.query('SELECT * FROM cup_shapes WHERE is_available = TRUE', (err, results) => {
+    // We JOIN with candle_models to get the actual GLB URL
+    const sql = `
+        SELECT cs.*, cm.model_url 
+        FROM cup_shapes cs 
+        LEFT JOIN candle_models cm ON cs.model_id = cm.id 
+        WHERE cs.is_available = TRUE`;
+    db.query(sql, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
 });
+
 app.get('/cup-sizes', (req, res) => {
     db.query('SELECT * FROM cup_sizes', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -115,7 +122,12 @@ app.get('/cup-colors', (req, res) => {
     });
 });
 app.get('/mold-shapes', (req, res) => {
-    db.query('SELECT * FROM mold_shapes WHERE is_available = TRUE', (err, results) => {
+    const sql = `
+        SELECT ms.*, cm.model_url 
+        FROM mold_shapes ms 
+        LEFT JOIN candle_models cm ON ms.model_id = cm.id 
+        WHERE ms.is_available = TRUE`;
+    db.query(sql, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });

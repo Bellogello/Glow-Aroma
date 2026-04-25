@@ -68,16 +68,30 @@ const Create = () => {
       .catch(err => console.error("Error fetching mold shapes:", err));
   }, []);
 
+  // --- AUTO-SELECT FIRST SHAPE ON LOAD ---
+  useEffect(() => {
+    if (candleType === 'cup' && cupShapes.length > 0 && selectedCupShape === 'default') {
+      setSelectedCupShape(cupShapes[0].id);
+    } else if (candleType === 'mold' && moldShapes.length > 0 && selectedMoldShape === 'default') {
+      setSelectedMoldShape(moldShapes[0].id);
+    }
+  }, [cupShapes, moldShapes, candleType, selectedCupShape, selectedMoldShape]);
+
   useEffect(() => {
     if (selectedMoldShape !== "default") {
       const shape = moldShapes.find(m => m.id.toString() === selectedMoldShape.toString());
       if (shape) {
-        setMoldLayers(Array(shape.layers).fill("default"));
+        setMoldLayers(Array(shape.layers || 1).fill("default"));
       }
     } else {
       setMoldLayers([]);
     }
   }, [selectedMoldShape, moldShapes]);
+
+  // Determine current Model URL for the 3D Preview
+  const currentModelUrl = candleType === 'cup'
+    ? cupShapes.find(s => s.id.toString() === selectedCupShape.toString())?.model_url
+    : moldShapes.find(s => s.id.toString() === selectedMoldShape.toString())?.model_url;
 
   const handleLayerColorChange = (index, colorId) => {
     const newLayers = [...moldLayers];
@@ -86,39 +100,34 @@ const Create = () => {
   };
 
   const handleConfirm = async () => {
-    // 3a. Replaced alert with a warning toast
     if (selectedScentId === "default") return warning("Please pick a scent!");
 
     let totalPrice = 0;
-    
     const scent = scents.find(s => s.id.toString() === selectedScentId.toString());
-    if (scent) totalPrice += Number(scent.price);
+    if (scent) totalPrice += Number(scent.price_modifier || 0);
 
     if (candleType === 'cup') {
       if (selectedCupShape === "default" || selectedCupSize === "default" || selectedCupColor === "default" || selectedCandleColor === "default") {
-        // 3b. Replaced alert
         return warning("Please fill out all Cup options!");
       }
-      
       const shape = cupShapes.find(s => s.id.toString() === selectedCupShape.toString());
       const size = cupSizes.find(s => s.id.toString() === selectedCupSize.toString());
       const waxColor = colors.find(c => c.id.toString() === selectedCandleColor.toString());
 
-      if (shape) totalPrice += Number(shape.base_price);
-      if (size) totalPrice += Number(size.price_modifier);
-      if (waxColor) totalPrice += Number(waxColor.price);
+      if (shape) totalPrice += Number(shape.price_modifier || 0);
+      if (size) totalPrice += Number(size.price_modifier || 0);
+      if (waxColor) totalPrice += Number(waxColor.price_modifier || 0);
 
     } else {
-      // 3c. Replaced alerts
       if (selectedMoldShape === "default") return warning("Please pick a Mold Shape!");
-      if (moldLayers.includes("default")) return warning("Please pick a color for every layer of your mold!");
+      if (moldLayers.includes("default")) return warning("Please pick a color for every layer!");
 
       const shape = moldShapes.find(s => s.id.toString() === selectedMoldShape.toString());
-      if (shape) totalPrice += Number(shape.base_price);
+      if (shape) totalPrice += Number(shape.price_modifier || 0);
 
       moldLayers.forEach(layerColorId => {
         const color = colors.find(c => c.id.toString() === layerColorId.toString());
-        if (color) totalPrice += Number(color.price);
+        if (color) totalPrice += Number(color.price_modifier || 0);
       });
     }
 
@@ -148,25 +157,14 @@ const Create = () => {
       });
 
       const data = await response.json();
-
       if (response.ok) {
-        // 3d. Replaced alert with a nice success toast
         success("Success! Your custom candle was added to the cart.");
         setQuantity(1);
         setSelectedScentId("default");
-        setSelectedCupShape("default");
-        setSelectedCupSize("default");
-        setSelectedCupColor("default");
-        setSelectedCandleColor("default");
-        setSelectedMoldShape("default");
-        setMoldLayers([]);
       } else {
-        // 3e. Replaced alert
         error("Error from server: " + data.error);
       }
     } catch (err) {
-      console.error("Failed to add to cart:", err);
-      // 3f. Replaced alert
       error("Server error. Please try again later.");
     }
   };
@@ -181,6 +179,7 @@ const Create = () => {
         <div className='candle-div'>
           <CandlePreview3D
             ref={previewRef}
+            modelUrl={currentModelUrl}
             cupColor={
               cupColors.find(c => c.id.toString() === selectedCupColor.toString())?.hex_code ?? '#ffffff'
             }
@@ -226,7 +225,6 @@ const Create = () => {
           </div>
 
           <div className='selections'>
-            
             {candleType === 'cup' && (
               <>
                 <select value={selectedCupShape} onChange={(e) => setSelectedCupShape(e.target.value)}>
@@ -292,7 +290,6 @@ const Create = () => {
                 Confirm Candle
               </button>
             </div>
-
           </div>
         </div>
       </div>

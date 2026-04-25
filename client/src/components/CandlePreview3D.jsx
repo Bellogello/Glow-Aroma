@@ -2,8 +2,6 @@ import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-// 1. Import the "Central Brain"
-import { API_BASE_URL } from '../config';
 
 const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, ref) => {
   const canvasRef = useRef(null);
@@ -67,10 +65,9 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, cupSize, modelUrl }, r
     controls.target.set(0, 1, 0);
     controls.update();
 
-    // 2. FIXED MODEL URL LOGIC: Uses the fallback config
     const finalModelUrl = modelUrl
-      ? (modelUrl.startsWith('http') ? modelUrl : `${API_BASE_URL}${modelUrl}`)
-      : '/candle.glb'; // This will look in your public folder locally
+      ? (modelUrl.startsWith('http') ? modelUrl : `http://localhost:5000${modelUrl}`)
+      : '/candle.glb';
 
     const loader = new GLTFLoader();
     loader.load(
