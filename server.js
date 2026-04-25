@@ -369,8 +369,7 @@ app.post('/auth/google', async (req, res) => {
 // --- SHOPPING CART ---
 // ==========================================
 app.post('/cart/add', (req, res) => {
-    const { userId, type, scentId, quantity = 1, prebuiltCandleId, totalPrice, cupShapeId, cupSize, cupColor, candleColorId, moldShapeId, layers, snapshot } = req.body;
-    
+const { userId, type, scentId, quantity, cupShapeId, cupSize, cupColor, candleColorId, totalPrice, snapshot } = req.body;    
     if (!userId) return res.status(401).json({ error: 'Auth Required' });
 
     db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, results) => {
@@ -382,8 +381,10 @@ app.post('/cart/add', (req, res) => {
                     [cId, prebuiltCandleId, quantity, quantity], () => res.json({ message: 'Added' }));
             } else if (type === 'cup') {
                 // UPDATED: Now inserts into 'cup_size' column (the ml value) and 'cup_color_id' (which is the rgba string)
-                db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
-                    [scentId, cupShapeId, cupSize, cupColor, totalPrice, snapshot], (err, result) => {
+                    db.query(
+                            "INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
+                            [scentId, cupShapeId, cupSize, cupColor, totalPrice, snapshot], 
+                            (err, result) => {
                         if (err) return res.status(500).json({ error: err.message });
                         const customId = result.insertId;
                         db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)', [customId, candleColorId], () => {
@@ -411,14 +412,13 @@ app.get('/cart/:userId', (req, res) => {
     const sql = `
         SELECT ci.id AS cart_item_id, ci.quantity, cc.type AS candle_type, 
         cc.total_price AS custom_price, cc.preview_image AS snapshot,
-        cc.cup_size AS cup_size_val, -- Selecting the new column
+        cc.cup_size AS cup_size_val, -- NEW: Select the ml value directly
         cs.name AS cup_shape_name, ms.name AS mold_shape_name, s.name AS scent_name,
         GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', ') AS wax_colors,
         pc.name AS prebuilt_name, pc.price AS prebuilt_price, pc.image_url AS prebuilt_image, pc.stock_quantity AS prebuilt_stock
         FROM cart_items ci
         LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
         LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
-        -- We no longer join cup_sizes table here
         LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
         LEFT JOIN scents s ON cc.scent_id = s.id
         LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
@@ -433,7 +433,7 @@ app.get('/cart/:userId', (req, res) => {
             cart_item_id: item.cart_item_id, 
             quantity: item.quantity, 
             is_custom: !!item.candle_type,
-            // UPDATED: Combined shape name and ml value
+            // UPDATED: Use the cup_size_val we just selected above
             name: item.prebuilt_name || (item.candle_type === 'cup' 
                 ? `${item.cup_shape_name} (${item.cup_size_val || 'Standard'}ml)` 
                 : `${item.mold_shape_name} Mold`),

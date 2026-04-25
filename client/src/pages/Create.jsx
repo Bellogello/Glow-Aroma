@@ -49,8 +49,8 @@ const Create = () => {
 
   // --- Master Cup Data Parsing ---
   const activeCup = cupShapes.find(s => String(s.id) === String(selectedCupShape));
-  const availableSizes = activeCup ? (typeof activeCup.sizes === 'string' ? JSON.parse(activeCup.sizes) : activeCup.sizes) : [];
-  const availableCupColors = activeCup ? (typeof activeCup.colors === 'string' ? JSON.parse(activeCup.colors) : activeCup.colors) : [];
+  const availableSizes = activeCup ? (typeof activeCup.sizes === 'string' ? JSON.parse(activeCup.sizes) : (activeCup.sizes || [])) : [];
+  const availableCupColors = activeCup ? (typeof activeCup.colors === 'string' ? JSON.parse(activeCup.colors) : (activeCup.colors || [])) : [];
 
   const currentModelUrl = candleType === 'cup'
     ? activeCup?.model_url
@@ -76,6 +76,9 @@ const Create = () => {
     const scent = scents.find(s => String(s.id) === String(selectedScentId));
     if (scent) totalPrice += Number(scent.price_modifier || 0);
 
+    // Prepare payload-specific variables
+    let finalCupSize = null;
+
     if (candleType === 'cup') {
       if (selectedCupShape === "default" || selectedCupSizeIdx === "default" || selectedCupColor === "default") {
         return warning("Please complete your selections!");
@@ -85,7 +88,10 @@ const Create = () => {
       const waxObj = waxColors.find(c => String(c.id) === String(selectedCandleColor));
 
       totalPrice += Number(activeCup.price_modifier || 0);
-      if (sizeObj) totalPrice += Number(sizeObj.price_modifier || 0);
+      if (sizeObj) {
+        totalPrice += Number(sizeObj.price_modifier || 0);
+        finalCupSize = sizeObj.ml; // This is what fixes the nullml issue
+      }
       if (colorObj) totalPrice += Number(colorObj.price_modifier || 0);
       if (waxObj) totalPrice += Number(waxObj.price_modifier || 0);
     } else {
@@ -100,15 +106,23 @@ const Create = () => {
     const userId = localStorage.getItem("userId");
     if (!userId) return warning("Log in to add to cart!");
 
+    // Capture snapshot (Angle is handled inside CandlePreview3D useImperativeHandle)
+    const snapshot = previewRef.current?.getSnapshot() || null;
+
     const payload = {
       type: candleType,
       userId,
       quantity,
       scentId: selectedScentId,
       totalPrice: Number(totalPrice.toFixed(2)),
-      snapshot: previewRef.current?.getSnapshot() || null,
+      snapshot: snapshot,
       ...(candleType === 'cup' 
-        ? { cupShapeId: selectedCupShape, cupSize: availableSizes[selectedCupSizeIdx]?.ml, cupColor: selectedCupColor, candleColorId: selectedCandleColor }
+        ? { 
+            cupShapeId: selectedCupShape, 
+            cupSize: finalCupSize, // Explicitly sending the ML value
+            cupColor: selectedCupColor, 
+            candleColorId: selectedCandleColor 
+          }
         : { moldShapeId: selectedMoldShape, layers: moldLayers }
       )
     };
@@ -145,7 +159,10 @@ const Create = () => {
             cupColor={selectedCupColor === 'default' ? 'rgba(255,255,255,0.45)' : selectedCupColor}
             waxColor={waxColors.find(c => String(c.id) === String(selectedCandleColor))?.hex_code ?? '#ffffff'}
             layerColors={moldLayers.map(id => waxColors.find(c => String(c.id) === String(id))?.hex_code || '#ffffff')}
-            cupSize={availableSizes[selectedCupSizeIdx]?.ml <= 200 ? 'small' : availableSizes[selectedCupSizeIdx]?.ml <= 400 ? 'medium' : 'large'}
+            cupSize={
+                availableSizes[selectedCupSizeIdx]?.ml <= 200 ? 'small' : 
+                availableSizes[selectedCupSizeIdx]?.ml <= 400 ? 'medium' : 'large'
+            }
           />
         </div>
         
