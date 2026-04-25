@@ -198,20 +198,6 @@ app.get('/admin/models', (req, res) => {
     });
 });
 
-const uploadToCloudinary = (fileBuffer, options) => {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
-      if (error) {
-        console.error("Cloudinary Stream Error:", error);
-        reject(error);
-      } else {
-        resolve(result);
-      }
-    });
-    // This part is vital!
-    require('streamifier').createReadStream(fileBuffer).pipe(uploadStream);
-  });
-};
 
 app.put('/admin/models/:id', async (req, res) => {
     const { name, type, layers, flat_shading, colorable_parts, is_available } = req.body;

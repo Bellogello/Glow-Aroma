@@ -51,7 +51,6 @@ const uploadModelWithThumbnail = multer({
     { name: 'thumbnail', maxCount: 1 },
 ]);
 
-// Manual Cloudinary upload from buffer (used for multi-file)
 const uploadToCloudinary = (fileBuffer, options) => {
   return new Promise((resolve, reject) => {
     const cld_upload_stream = cloudinary.uploader.upload_stream(
@@ -61,16 +60,8 @@ const uploadToCloudinary = (fileBuffer, options) => {
         else reject(error);
       }
     );
-    // This streams the 7MB file instead of trying to send it in one chunk
     streamifier.createReadStream(fileBuffer).pipe(cld_upload_stream);
   });
 };
 
-module.exports = {
-    cloudinary,
-    uploadImage,
-    uploadModel,
-    uploadThumbnail,
-    uploadModelWithThumbnail,
-    uploadToCloudinary,
-};
+module.exports = { uploadImage, uploadModelWithThumbnail, uploadToCloudinary };
