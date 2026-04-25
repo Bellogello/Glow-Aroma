@@ -96,31 +96,37 @@ app.get('/colors', (req, res) => {
         res.json(results);
     });
 });
-app.get('/cup-shapes', (req, res) => {
-    // We JOIN with candle_models to get the actual GLB URL
-    const sql = `
-        SELECT cs.*, cm.model_url 
-        FROM cup_shapes cs 
-        LEFT JOIN candle_models cm ON cs.model_id = cm.id 
-        WHERE cs.is_available = TRUE`;
-    db.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
-    });
+app.get('/cup-shapes', async (req, res) => {
+  try {
+    // Make sure to select model_url! Also, we usually only want to show available items.
+    const [rows] = await db.query('SELECT id, name, price_modifier, model_url, is_available FROM cup_shapes WHERE is_available = true');
+    res.json(rows);
+  } catch (err) {
+    console.error("Error fetching cup shapes:", err);
+    res.status(500).json({ error: 'Failed to fetch cup shapes' });
+  }
 });
 
-app.get('/cup-sizes', (req, res) => {
-    db.query('SELECT * FROM cup_sizes', (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
-    });
+app.get('/cup-sizes', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT id, size_ml, price_modifier FROM cup_sizes');
+    res.json(rows);
+  } catch (err) {
+    console.error("Error fetching cup sizes:", err);
+    res.status(500).json({ error: 'Failed to fetch cup sizes' });
+  }
 });
-app.get('/cup-colors', (req, res) => {
-    db.query('SELECT * FROM cup_colors', (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
-    });
+
+app.get('/cup-colors', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT id, name, hex_code, price_modifier FROM cup_colors'); // Note: removed is_available if you don't use it for cup colors
+    res.json(rows);
+  } catch (err) {
+    console.error("Error fetching cup colors:", err);
+    res.status(500).json({ error: 'Failed to fetch cup colors' });
+  }
 });
+
 app.get('/mold-shapes', (req, res) => {
     // Explicitly selecting everything to ensure model_url is included
     db.query('SELECT * FROM mold_shapes WHERE is_available = TRUE', (err, results) => {

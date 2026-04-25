@@ -161,6 +161,14 @@ const Create = () => {
   return (
     <div className="home-container">
       <Navbar />
+      {/* --- TEMPORARY DEBUG BANNER --- */}
+      <div style={{ background: 'black', color: 'lime', padding: '10px', textAlign: 'center', fontFamily: 'monospace' }}>
+        <strong>DEBUG DATA:</strong><br/>
+        Cups Loaded: {cupShapes.length} | 
+        Molds Loaded: {moldShapes.length} | 
+        Scents Loaded: {scents.length}
+      </div>
+      {/* ------------------------------ */}
       <h1 style={{ textAlign: 'center' }}>Create Your Own Candle</h1>
       <hr className="hr--create" />
       
