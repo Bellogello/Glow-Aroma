@@ -9,22 +9,35 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
   const meshesRef = useRef({ cup: [], wax: [], wick: [], moldLayers: [] });
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
+  const cameraRef = useRef(null); // Ref to store the main camera for snapshot resetting
 
-useImperativeHandle(ref, () => ({
-getSnapshot: () => {
-  const renderer = rendererRef.current;
-  const scene = sceneRef.current;
-  if (!renderer || !scene) return null;
+  useImperativeHandle(ref, () => ({
+    getSnapshot: () => {
+      const renderer = rendererRef.current;
+      const scene = sceneRef.current;
+      const canvas = canvasRef.current;
+      const mainCamera = cameraRef.current; // Access the main camera from ref
 
-  const photoCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-  photoCamera.position.set(4, 3, 4); 
-  photoCamera.lookAt(0, 1.2, 0);
+      if (!renderer || !scene || !canvas || !mainCamera) return null;
 
-  renderer.render(scene, photoCamera);
-  
-  // CHANGE: Lower the quality from 1.0 to 0.5 or 0.7 to shrink the string size
-  return canvasRef.current.toDataURL('image/jpeg', 0.5); 
-}
+      // 1. Create a dedicated "Photo Studio" camera for a constant angle
+      const photoCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+      
+      // 2. Set the constant angle (Professional 3/4 view)
+      photoCamera.position.set(2, 4.5, 2); 
+      photoCamera.lookAt(0, 1.2, 0); 
+
+      // 3. Render the studio view
+      renderer.render(scene, photoCamera);
+      
+      // 4. Capture as a compressed JPEG to save database space
+      const data = canvas.toDataURL('image/jpeg', 0.6);
+
+      // 5. Reset the renderer to the user's actual camera view
+      renderer.render(scene, mainCamera);
+      
+      return data;
+    }
   }));
 
   useEffect(() => {
@@ -38,16 +51,15 @@ getSnapshot: () => {
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
     camera.position.set(0, 6, 4);
+    cameraRef.current = camera; // Store camera in ref immediately
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true, // Smooth edges
+      antialias: true,
       powerPreference: 'high-performance',
       preserveDrawingBuffer: true,
     });
     renderer.setSize(size, size);
-    
-    // High-res rendering capped at 2x for safety
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     
     renderer.shadowMap.enabled = !isMobile;
@@ -104,7 +116,6 @@ getSnapshot: () => {
             const lowerName = exactName.toLowerCase();
             const layerIndex = allowedParts.indexOf(exactName);
 
-            // 1. MOLD LAYERS
             if (layerIndex !== -1) {
               obj.material = obj.material.clone();
               obj.material.flatShading = !!flatShading;
@@ -115,37 +126,28 @@ getSnapshot: () => {
                 obj.material.color.set(layerColors[layerIndex]);
               }
             } 
-// 2. CUP GLASS (Upgraded with Smart Transparency)
             else if (lowerName.includes('cylinder_0') || lowerName.endsWith('_0')) {
-              
-              // 1. Detect if the color from inventory is RGBA or HEX
               const parsedColor = new THREE.Color(cupColor); 
               const opacity = cupColor.includes('rgba') 
-                  ? parseFloat(cupColor.split(',')[3]) // Pull the 'a' value
+                  ? parseFloat(cupColor.split(',')[3]) 
                   : 1.0;
 
-              // 2. Apply the premium material
               const crystalMaterial = new THREE.MeshPhysicalMaterial({
                 color: parsedColor,
                 metalness: 0.1,
                 roughness: 0.05,
-                
-                // --- SMART TRANSPARENCY MODE ---
-                // If opacity is less than 1, we turn on 'transmission' to make it look like real glass
                 transmission: opacity < 1 ? 1.0 : 0.0, 
                 opacity: opacity,                      
                 transparent: true,
-                
-                ior: 1.52,             // Real glass refraction index
-                thickness: 0.5,        // Makes the glass look thick/premium
+                ior: 1.52,
+                thickness: 0.5,
                 flatShading: !!flatShading, 
-                depthWrite: false      // Prevents "clipping" issues with the wax inside
+                depthWrite: false
               });
 
               obj.material = crystalMaterial;
               meshesRef.current.cup.push(obj);
             }
-            // 3. WAX
             else if (lowerName.includes('cylinder001_1') || lowerName.endsWith('_1') || lowerName.includes('sphere') || lowerName.includes('wax')) {
               obj.material = obj.material.clone();
               obj.material.flatShading = !!flatShading;
@@ -154,7 +156,6 @@ getSnapshot: () => {
               meshesRef.current.wax.push(obj);
               if (waxColor) obj.material.color.set(waxColor);
             }
-            // 4. WICK
             else if (lowerName.includes('cylinder002_2') || lowerName.includes('wick')) {
               obj.material = obj.material.clone();
               meshesRef.current.wick.push(obj);
@@ -176,8 +177,6 @@ getSnapshot: () => {
 
     return () => {
       cancelAnimationFrame(frameId);
-      
-      // Deep VRAM Memory Cleanup
       if (loadedGroup) {
         loadedGroup.traverse((child) => {
           if (child.isMesh) {
@@ -194,15 +193,12 @@ getSnapshot: () => {
       }
       renderer.dispose();
     };
-  }, [modelUrl, colorableParts, flatShading]); // Re-run if flat shading toggles
+  }, [modelUrl, colorableParts, flatShading]);
 
-useEffect(() => {
+  useEffect(() => {
     meshesRef.current.cup.forEach(mesh => {
       if (cupColor) {
-        // 1. Update the base color
         mesh.material.color.set(new THREE.Color(cupColor));
-        
-        // 2. Extract and apply alpha transparency
         const opacity = cupColor.includes('rgba') 
           ? parseFloat(cupColor.split(',')[3]) 
           : 1.0;
