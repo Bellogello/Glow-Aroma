@@ -11,27 +11,20 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
   const sceneRef = useRef(null);
 
 useImperativeHandle(ref, () => ({
-    getSnapshot: () => {
-      const renderer = rendererRef.current;
-      const scene = sceneRef.current;
-      if (!renderer || !scene) return null;
+getSnapshot: () => {
+  const renderer = rendererRef.current;
+  const scene = sceneRef.current;
+  if (!renderer || !scene) return null;
 
-      // 1. Create a dedicated "Photo Studio" camera
-      const photoCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-      
-      // 2. Set the constant angle (Adjust these numbers to find your 'best' side)
-      photoCamera.position.set(4, 3, 4); 
-      photoCamera.lookAt(0, 1.2, 0);
+  const photoCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  photoCamera.position.set(4, 3, 4); 
+  photoCamera.lookAt(0, 1.2, 0);
 
-      // 3. Render and capture
-      renderer.render(scene, photoCamera);
-      const data = canvasRef.current.toDataURL('image/png');
-
-      // 4. Important: Re-render the user's current view so the screen doesn't flicker
-      // (This assumes your main camera and controls are handled in the animate loop)
-      
-      return data;
-    }
+  renderer.render(scene, photoCamera);
+  
+  // CHANGE: Lower the quality from 1.0 to 0.5 or 0.7 to shrink the string size
+  return canvasRef.current.toDataURL('image/jpeg', 0.5); 
+}
   }));
 
   useEffect(() => {

@@ -369,22 +369,39 @@ app.post('/auth/google', async (req, res) => {
 // --- SHOPPING CART ---
 // ==========================================
 app.post('/cart/add', (req, res) => {
-const { userId, type, scentId, quantity, cupShapeId, cupSize, cupColor, candleColorId, totalPrice, snapshot } = req.body;    
+    // UPDATED: Added prebuiltCandleId back into the destructuring list
+    const { 
+        userId, 
+        type, 
+        scentId, 
+        quantity = 1, 
+        prebuiltCandleId, // <--- This was missing!
+        totalPrice, 
+        cupShapeId, 
+        cupSize, 
+        cupColor, 
+        candleColorId, 
+        moldShapeId, 
+        layers, 
+        snapshot 
+    } = req.body;
+
     if (!userId) return res.status(401).json({ error: 'Auth Required' });
 
     db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        
         const cartId = results.length > 0 ? results[0].id : null;
 
         const handleAddition = (cId) => {
+            // Now prebuiltCandleId is defined and won't crash the server
             if (prebuiltCandleId) {
                 db.query('INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?',
                     [cId, prebuiltCandleId, quantity, quantity], () => res.json({ message: 'Added' }));
-            } else if (type === 'cup') {
-                // UPDATED: Now inserts into 'cup_size' column (the ml value) and 'cup_color_id' (which is the rgba string)
-                    db.query(
-                            "INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
-                            [scentId, cupShapeId, cupSize, cupColor, totalPrice, snapshot], 
-                            (err, result) => {
+            } 
+            else if (type === 'cup') {
+                db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
+                    [scentId, cupShapeId, cupSize, cupColor, totalPrice, snapshot], (err, result) => {
                         if (err) return res.status(500).json({ error: err.message });
                         const customId = result.insertId;
                         db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)', [customId, candleColorId], () => {
