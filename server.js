@@ -381,7 +381,7 @@ app.post('/cart/add', (req, res) => {
         const cartId = cartResults[0]?.id;
 
         const handleAddition = (cId) => {
-            // --- 1. PREBUILT STACKING (Standard) ---
+            // --- 1. PREBUILT STACKING ---
             if (prebuiltCandleId) {
                 db.query(
                     'INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?',
@@ -391,7 +391,7 @@ app.post('/cart/add', (req, res) => {
             } 
             // --- 2. CUSTOM CUP STACKING ---
             else if (type === 'cup') {
-                // Check if this exact custom candle already exists in this user's cart
+                // Look for a candle in this user's cart with the EXACT same specs
                 const findSql = `
                     SELECT ci.id, ci.quantity FROM cart_items ci
                     JOIN custom_candles cc ON ci.custom_candle_id = cc.id
@@ -403,12 +403,12 @@ app.post('/cart/add', (req, res) => {
                 
                 db.query(findSql, [cId, cupShapeId, cupSize, cupColor, scentId, candleColorId], (err, existing) => {
                     if (existing && existing.length > 0) {
-                        // Exact match found! Just update quantity
+                        // We found a twin! Just bump the quantity.
                         db.query('UPDATE cart_items SET quantity = quantity + ? WHERE id = ?', [quantity, existing[0].id], () => {
                             res.json({ message: 'Quantity updated' });
                         });
                     } else {
-                        // No match, create new custom candle
+                        // Truly unique candle, create new entry
                         db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
                         [scentId, cupShapeId, cupSize, cupColor, totalPrice, snapshot], (err, result) => {
                             const customId = result.insertId;
@@ -421,7 +421,6 @@ app.post('/cart/add', (req, res) => {
             }
             // --- 3. CUSTOM MOLD STACKING ---
             else if (type === 'mold') {
-                // For molds, we check shape and scent. (Checking every layer color is complex, but this covers most cases)
                 const findMoldSql = `
                     SELECT ci.id FROM cart_items ci
                     JOIN custom_candles cc ON ci.custom_candle_id = cc.id
@@ -453,6 +452,8 @@ app.post('/cart/add', (req, res) => {
         }
     });
 });
+
+
 app.get('/cart/:userId', (req, res) => {
     const sql = `
         SELECT ci.id AS cart_item_id, ci.quantity, cc.type AS candle_type, 
