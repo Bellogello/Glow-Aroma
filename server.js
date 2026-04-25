@@ -382,13 +382,17 @@ app.post('/cart/add', (req, res) => {
 
         const handleAddition = (cId) => {
             // --- 1. PREBUILT STACKING ---
-            if (prebuiltCandleId) {
-                db.query(
-                    'INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?',
-                    [cId, prebuiltCandleId, quantity, quantity], 
-                    () => res.json({ message: 'Added' })
-                );
-            } 
+if (prebuiltCandleId) {
+    const prebuiltSql = `
+        INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) 
+        VALUES (?, ?, ?) 
+        ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)`;
+    
+    db.query(prebuiltSql, [cId, prebuiltCandleId, quantity, quantity], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Prebuilt stacked successfully' });
+    });
+}
             // --- 2. CUSTOM CUP STACKING ---
 else if (type === 'cup') {
     // We only search by the 'Ingredients' of the candle
