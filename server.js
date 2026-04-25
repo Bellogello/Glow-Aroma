@@ -198,54 +198,20 @@ app.get('/admin/models', (req, res) => {
     });
 });
 
-app.post('/admin/models', uploadModelWithThumbnail, async (req, res) => {
-    const { name, type, layers, flat_shading, colorable_parts, is_available } = req.body;
-
-    if (!name || !type) return res.status(400).json({ error: 'Name and type are required.' });
-    if (!req.files?.model?.[0]) return res.status(400).json({ error: 'GLB model file is required.' });
-
-    try {
-        // Upload .glb to Cloudinary as raw file
-        const modelResult = await uploadToCloudinary(req.files.model[0].buffer, {
-            folder: 'glow-aroma/models',
-            resource_type: 'raw',
-            public_id: `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-            format: 'glb',
-        });
-
-        // Upload thumbnail if provided
-        let thumbnailUrl = null;
-        if (req.files?.thumbnail?.[0]) {
-            const thumbResult = await uploadToCloudinary(req.files.thumbnail[0].buffer, {
-                folder: 'glow-aroma/thumbnails',
-                resource_type: 'image',
-            });
-            thumbnailUrl = thumbResult.secure_url;
-        }
-
-        const parsedParts = colorable_parts
-            ? (typeof colorable_parts === 'string' ? colorable_parts : JSON.stringify(colorable_parts))
-            : '[]';
-
-        const [result] = await db.promise().query(
-            'INSERT INTO candle_models (name, type, model_url, thumbnail_url, flat_shading, layers, colorable_parts, is_available) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-                name, type,
-                modelResult.secure_url,
-                thumbnailUrl,
-                flat_shading === 'true' || flat_shading === true ? 1 : 0,
-                parseInt(layers) || 1,
-                parsedParts,
-                is_available !== 'false' ? 1 : 0
-            ]
-        );
-
-        res.status(201).json({ message: 'Model uploaded.', id: result.insertId, model_url: modelResult.secure_url });
-    } catch (err) {
-        console.error('Model upload error:', err);
-        res.status(500).json({ error: 'Failed to upload model: ' + err.message });
-    }
-});
+const uploadToCloudinary = (fileBuffer, options) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
+      if (error) {
+        console.error("Cloudinary Stream Error:", error);
+        reject(error);
+      } else {
+        resolve(result);
+      }
+    });
+    // This part is vital!
+    require('streamifier').createReadStream(fileBuffer).pipe(uploadStream);
+  });
+};
 
 app.put('/admin/models/:id', async (req, res) => {
     const { name, type, layers, flat_shading, colorable_parts, is_available } = req.body;
@@ -897,6 +863,7 @@ app.delete('/admin/inventory/mold-shapes/:id', async (req, res) => {
     catch (e) { res.status(500).json({ error: 'Cannot delete — may be linked to existing orders.' }); }
 });
 
+
 // ==========================================
 // --- SERVER ACTIVATION ---
 // ==========================================
@@ -904,3 +871,5 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);
 });
+
+server.timeout = 120000;

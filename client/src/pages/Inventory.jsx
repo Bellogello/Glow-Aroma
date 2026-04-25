@@ -28,7 +28,7 @@ const CATEGORIES = [
     fields: [
       { name: 'name',             label: 'Scent Name',        type: 'text',         required: true },
       { name: 'scent_family_id',  label: 'Scent Family',      type: 'scent_family', required: false },
-      { name: 'price_modifier',   label: 'Price Modifier (L.E.)', type: 'number',  required: false },
+      { name: 'price_modifier',   label: 'Price (L.E.)',      type: 'number',       required: false }, // Scents use price_modifier
       { name: 'is_available',     label: 'Available',         type: 'toggle',       required: false },
     ],
     display: (item) => item.name,
@@ -42,7 +42,7 @@ const CATEGORIES = [
     fields: [
       { name: 'name',           label: 'Color Name',            type: 'text',   required: true },
       { name: 'hex_code',       label: 'Color',                 type: 'color',  required: false },
-      { name: 'price_modifier', label: 'Price Modifier (L.E.)', type: 'number', required: false },
+      { name: 'price_modifier', label: 'Price (L.E.)',          type: 'number', required: false },
       { name: 'is_available',   label: 'Available',             type: 'toggle', required: false },
     ],
     display: (item) => item.name,
@@ -55,11 +55,12 @@ const CATEGORIES = [
     icon: '🫙',
     endpoint: 'cup-colors',
     fields: [
-      { name: 'name',     label: 'Color Name', type: 'text',  required: true },
-      { name: 'hex_code', label: 'Color',      type: 'color', required: false },
+      { name: 'name',     label: 'Color Name',   type: 'text',   required: true },
+      { name: 'hex_code', label: 'Color',        type: 'color',  required: false },
+      { name: 'price_modifier', label: 'Price (L.E.)', type: 'number', required: false }, // Added this as your backend PUT expects it
     ],
     display: (item) => item.name,
-    sub: () => '',
+    sub: (item) => `+${Number(item.price_modifier || 0).toFixed(2)} L.E.`,
     swatch: (item) => item.hex_code,
   },
   {
@@ -69,7 +70,7 @@ const CATEGORIES = [
     endpoint: 'cup-sizes',
     fields: [
       { name: 'size_ml',        label: 'Size (ml)',             type: 'number', required: true },
-      { name: 'price_modifier', label: 'Price Modifier (L.E.)', type: 'number', required: false },
+      { name: 'price_modifier', label: 'Price (L.E.)',          type: 'number', required: false },
     ],
     display: (item) => `${item.size_ml} ml`,
     sub: (item) => `+${Number(item.price_modifier || 0).toFixed(2)} L.E.`,
@@ -81,7 +82,7 @@ const CATEGORIES = [
     endpoint: 'cup-shapes',
     fields: [
       { name: 'name',           label: 'Shape Name',            type: 'text',   required: true },
-      { name: 'price_modifier', label: 'Price Modifier (L.E.)', type: 'number', required: false },
+      { name: 'price_modifier', label: 'Base Price (L.E.)',     type: 'number', required: false },
       { name: 'is_available',   label: 'Available',             type: 'toggle', required: false },
     ],
     display: (item) => item.name,
@@ -94,7 +95,7 @@ const CATEGORIES = [
     endpoint: 'mold-shapes',
     fields: [
       { name: 'name',           label: 'Shape Name',            type: 'text',   required: true },
-      { name: 'price_modifier', label: 'Price Modifier (L.E.)', type: 'number', required: false },
+      { name: 'price_modifier', label: 'Base Price (L.E.)',     type: 'number', required: false },
       { name: 'is_available',   label: 'Available',             type: 'toggle', required: false },
     ],
     display: (item) => item.name,
