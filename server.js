@@ -369,18 +369,17 @@ app.post('/auth/google', async (req, res) => {
 // --- SHOPPING CART ---
 // ==========================================
 app.post('/cart/add', (req, res) => {
-    // UPDATED: Added prebuiltCandleId back into the destructuring list
     const { 
         userId, 
         type, 
         scentId, 
         quantity = 1, 
-        prebuiltCandleId, // <--- This was missing!
+        prebuiltCandleId, 
         totalPrice, 
         cupShapeId, 
-        cupSize, 
-        cupColor, 
-        candleColorId, 
+        cupSize,       // The ml value (e.g., 200)
+        cupColor,      // The RGBA string
+        candleColorId, // The wax color ID
         moldShapeId, 
         layers, 
         snapshot 
@@ -388,41 +387,96 @@ app.post('/cart/add', (req, res) => {
 
     if (!userId) return res.status(401).json({ error: 'Auth Required' });
 
+    // Internal helper to log errors and respond
+    const handleDbError = (err, customMsg) => {
+        console.error(`[CART_ADD_ERROR] ${customMsg}:`, err.message);
+        return res.status(500).json({ error: err.message });
+    };
+
     db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) return handleDbError(err, "Finding cart failed");
         
         const cartId = results.length > 0 ? results[0].id : null;
 
         const handleAddition = (cId) => {
-            // Now prebuiltCandleId is defined and won't crash the server
+            // 1. PREBUILT ITEM LOGIC
             if (prebuiltCandleId) {
-                db.query('INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?',
-                    [cId, prebuiltCandleId, quantity, quantity], () => res.json({ message: 'Added' }));
+                db.query(
+                    'INSERT INTO cart_items (cart_id, prebuilt_candle_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?',
+                    [cId, prebuiltCandleId, quantity, quantity], 
+                    (err) => {
+                        if (err) return handleDbError(err, "Insert prebuilt failed");
+                        res.json({ message: 'Added' });
+                    }
+                );
             } 
+            // 2. CUSTOM CUP LOGIC
             else if (type === 'cup') {
-                db.query("INSERT INTO custom_candles (type, scent_id, cup_shape_id, cup_size, cup_color_id, total_price, preview_image) VALUES ('cup', ?, ?, ?, ?, ?, ?)",
-                    [scentId, cupShapeId, cupSize, cupColor, totalPrice, snapshot], (err, result) => {
-                        if (err) return res.status(500).json({ error: err.message });
-                        const customId = result.insertId;
-                        db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)', [customId, candleColorId], () => {
-                            db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cId, customId, quantity], () => res.json({ message: 'Added Custom' }));
-                        });
+                const cupSql = `
+                    INSERT INTO custom_candles 
+                    (type, scent_id, cup_shape_id, cup_color_id, preview_image, total_price, cup_size) 
+                    VALUES ('cup', ?, ?, ?, ?, ?, ?)`;
+                    
+                    const cupValues = [
+                            scentId, 
+                            cupShapeId, 
+                            cupColor,       // The RGBA string
+                            snapshot,       // The Base64 image
+                            totalPrice,     // The calculated price
+                            cupSize         // The ML value (e.g., 200)
+                        ];
+
+                db.query(cupSql, cupValues, (err, result) => {
+                    if (err) return handleDbError(err, "Insert custom_cup failed");
+                    
+                    const customId = result.insertId;
+                    // Add the wax color to the layers table
+                    db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES (?, ?, 1)', 
+                        [customId, candleColorId], (layerErr) => {
+                            if (layerErr) return handleDbError(layerErr, "Insert wax layer failed");
+                            
+                            db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', 
+                                [cId, customId, quantity], (itemErr) => {
+                                    if (itemErr) return handleDbError(itemErr, "Link to cart failed");
+                                    res.json({ message: 'Added Custom Cup' });
+                                }
+                            );
+                        }
+                    );
+                });
+            } 
+            // 3. CUSTOM MOLD LOGIC
+            else if (type === 'mold') {
+                const moldSql = "INSERT INTO custom_candles (type, scent_id, mold_shape_id, total_price, preview_image) VALUES ('mold', ?, ?, ?, ?)";
+                db.query(moldSql, [scentId, moldShapeId, totalPrice, snapshot], (err, result) => {
+                    if (err) return handleDbError(err, "Insert custom_mold failed");
+                    
+                    const customId = result.insertId;
+                    const layerVals = layers.map((colorId, index) => [customId, colorId, index + 1]);
+                    
+                    db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES ?', [layerVals], (layerErr) => {
+                        if (layerErr) return handleDbError(layerErr, "Insert mold layers failed");
+                        
+                        db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', 
+                            [cId, customId, quantity], (itemErr) => {
+                                if (itemErr) return handleDbError(itemErr, "Link mold to cart failed");
+                                res.json({ message: 'Added Mold' });
+                            }
+                        );
                     });
-            } else if (type === 'mold') {
-                db.query("INSERT INTO custom_candles (type, scent_id, mold_shape_id, total_price, preview_image) VALUES ('mold', ?, ?, ?, ?)",
-                    [scentId, moldShapeId, totalPrice, snapshot], (err, result) => {
-                        if (err) return res.status(500).json({ error: err.message });
-                        const customId = result.insertId;
-                        const layerVals = layers.map((colorId, index) => [customId, colorId, index + 1]);
-                        db.query('INSERT INTO custom_candle_layers (custom_candle_id, color_id, layer_index) VALUES ?', [layerVals], () => {
-                            db.query('INSERT INTO cart_items (cart_id, custom_candle_id, quantity) VALUES (?, ?, ?)', [cId, customId, quantity], () => res.json({ message: 'Added Mold' }));
-                        });
-                    });
+                });
             }
         };
 
-        if (!cartId) db.query('INSERT INTO carts (user_id) VALUES (?)', [userId], (err, reslt) => handleAddition(reslt.insertId));
-        else handleAddition(cartId);
+        // Create cart if user doesn't have one, otherwise proceed
+        if (!cartId) {
+            db.query('INSERT INTO carts (user_id) VALUES (?)', [userId], (err, reslt) => {
+                if (err) return handleDbError(err, "Cart creation failed");
+                handleAddition(reslt.insertId);
+            });
+        } else {
+            handleAddition(cartId);
+        }
     });
 });
 app.get('/cart/:userId', (req, res) => {
