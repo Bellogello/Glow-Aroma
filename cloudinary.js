@@ -1,54 +1,29 @@
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-const streamifier = require('streamifier');
+const streamifier = require('streamifier'); // ADD THIS
 
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key:    process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Image storage — for product images
 const imageStorage = new CloudinaryStorage({
-    cloudinary,
-    params: {
-        folder: 'glow-aroma/products',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-        transformation: [{ width: 800, height: 800, crop: 'limit', quality: 'auto' }],
-    },
+  cloudinary: cloudinary,
+  params: {
+    folder: 'glow-aroma/products',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+  },
 });
 
-// Model storage — for .glb 3D model files
-const modelStorage = new CloudinaryStorage({
-    cloudinary,
-    params: {
-        folder: 'glow-aroma/models',
-        allowed_formats: ['glb', 'gltf'],
-        resource_type: 'raw', // required for non-image files
-    },
-});
+const uploadImage = multer({ storage: imageStorage });
 
-// Thumbnail storage — for model preview images
-const thumbnailStorage = new CloudinaryStorage({
-    cloudinary,
-    params: {
-        folder: 'glow-aroma/thumbnails',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-        transformation: [{ width: 400, height: 400, crop: 'limit', quality: 'auto' }],
-    },
-});
-
-const uploadImage     = multer({ storage: imageStorage });
-const uploadModel     = multer({ storage: modelStorage });
-const uploadThumbnail = multer({ storage: thumbnailStorage });
-
-// Multi-file upload for model + thumbnail together
-const uploadModelWithThumbnail = multer({
-    storage: multer.memoryStorage(),
-}).fields([
-    { name: 'model',     maxCount: 1 },
-    { name: 'thumbnail', maxCount: 1 },
+// Use memory storage for models so we can stream the buffer
+const modelStorage = multer.memoryStorage();
+const uploadModelWithThumbnail = multer({ storage: modelStorage }).fields([
+    { name: 'model', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 }
 ]);
 
 const uploadToCloudinary = (fileBuffer, options) => {
@@ -57,11 +32,20 @@ const uploadToCloudinary = (fileBuffer, options) => {
       options,
       (error, result) => {
         if (result) resolve(result);
-        else reject(error);
+        else {
+          console.error("Cloudinary Error:", error);
+          reject(error);
+        }
       }
     );
+    // This is the magic part for large files
     streamifier.createReadStream(fileBuffer).pipe(cld_upload_stream);
   });
 };
 
-module.exports = { uploadImage, uploadModelWithThumbnail, uploadToCloudinary };
+module.exports = {
+  cloudinary,
+  uploadImage,
+  uploadModelWithThumbnail,
+  uploadToCloudinary
+};
