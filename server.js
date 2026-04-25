@@ -853,6 +853,10 @@ app.delete('/admin/inventory/mold-shapes/:id', async (req, res) => {
 // ==========================================
 // --- SERVER ACTIVATION ---
 // ==========================================
+
+// Define the PORT variable here
+const PORT = process.env.PORT || 8080;
+
 const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);
 });
