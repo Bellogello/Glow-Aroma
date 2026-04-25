@@ -1,6 +1,7 @@
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
+const streamifier = require('streamifier');
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -51,14 +52,18 @@ const uploadModelWithThumbnail = multer({
 ]);
 
 // Manual Cloudinary upload from buffer (used for multi-file)
-const uploadToCloudinary = (buffer, options) => {
-    return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-        });
-        stream.end(buffer);
-    });
+const uploadToCloudinary = (fileBuffer, options) => {
+  return new Promise((resolve, reject) => {
+    const cld_upload_stream = cloudinary.uploader.upload_stream(
+      options,
+      (error, result) => {
+        if (result) resolve(result);
+        else reject(error);
+      }
+    );
+    // This streams the 7MB file instead of trying to send it in one chunk
+    streamifier.createReadStream(fileBuffer).pipe(cld_upload_stream);
+  });
 };
 
 module.exports = {
