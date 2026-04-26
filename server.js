@@ -471,46 +471,50 @@ else if (type === 'cup') {
 
 app.get('/cart/:userId', (req, res) => {
     const { userId } = req.params;
-    const sql = `
-        SELECT 
-            ci.id AS cart_item_id, 
-            ci.quantity,
-            CASE 
-                WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.name 
-                ELSE CONCAT(
-                    -- Look up the color name based on the stored ID/HEX
-                    COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), 
-                    ' ', 
-                    COALESCE(cs.name, 'Cup'), 
-                    ' (', cc.cup_size, 'ml)'
-                )
-            END AS name,
-            CASE 
-                WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.price 
-                ELSE cc.total_price 
-            END AS price,
-            CASE 
-                WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.image_url 
-                ELSE cc.preview_image 
-            END AS image,
-            CASE 
-                WHEN ci.prebuilt_candle_id IS NOT NULL THEN FALSE 
-                ELSE TRUE 
-            END AS is_custom,
-            s.name AS scent,
-            GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', ') AS wax_colors,
-            pc.stock_quantity AS max_stock
-        FROM cart_items ci
-        LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
-        LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
-        LEFT JOIN scents s ON cc.scent_id = s.id
-        LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
-        LEFT JOIN colors cl ON ccl.color_id = cl.id
-        LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
-        JOIN carts ct ON ci.cart_id = ct.id
-        WHERE ct.user_id = ?
-        GROUP BY ci.id;
-    `;
+const sql = `
+    SELECT 
+        ci.id AS cart_item_id, 
+        ci.quantity,
+        CASE 
+            WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.name 
+            -- IF IT IS A CUP: [Color] [Shape] [Size]
+            WHEN cc.type = 'cup' THEN CONCAT(
+                COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), 
+                ' ', 
+                COALESCE(cs.name, 'Glass Jar'), 
+                ' (', cc.cup_size, 'ml)'
+            )
+            -- IF IT IS A MOLD: [Shape] Mold
+            ELSE CONCAT(COALESCE(ms.name, 'Custom'), ' Mold')
+        END AS name,
+        CASE 
+            WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.price 
+            ELSE cc.total_price 
+        END AS price,
+        CASE 
+            WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.image_url 
+            ELSE cc.preview_image 
+        END AS image,
+        CASE 
+            WHEN ci.prebuilt_candle_id IS NOT NULL THEN FALSE 
+            ELSE TRUE 
+        END AS is_custom,
+        s.name AS scent,
+        -- This part gets the wax colors for the "Details" line
+        GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', ') AS wax_colors,
+        pc.stock_quantity AS max_stock
+    FROM cart_items ci
+    LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
+    LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
+    LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
+    LEFT JOIN scents s ON cc.scent_id = s.id
+    LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
+    LEFT JOIN colors cl ON ccl.color_id = cl.id
+    LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
+    JOIN carts ct ON ci.cart_id = ct.id
+    WHERE ct.user_id = ?
+    GROUP BY ci.id;
+`;
 
     db.query(sql, [userId], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
