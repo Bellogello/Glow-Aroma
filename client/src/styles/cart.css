@@ -341,3 +341,40 @@ button:hover {
     max-height: 100%;
     object-fit: contain; /* This is the secret for mobile */
 }
+
+.cart-item-image-wrapper {
+    width: 100px;
+    height: 100px;
+    background-color: #fdf6f0; /* Matches 3D scene */
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.cart-item-image-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cart-item-image-inner img {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.high-res-snapshot {
+    object-fit: contain;
+    transform: scale(1.3); /* Increased scale slightly for the 3D renders */
+    image-rendering: -webkit-optimize-contrast;
+}
+.prebuilt-cart-img {
+    object-fit: cover; /* Covers the box without leaving white gaps */
+    transform: scale(1.0); /* Reset scale for regular photos */
+}
+@media (max-width: 768px) {
+    .cart-item-image-wrapper {
+        width: 120px; /* Slightly larger on mobile for visibility */
+        height: 120px;
+    }
+}

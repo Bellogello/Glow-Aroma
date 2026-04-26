@@ -106,28 +106,31 @@ const Cart = () => {
             {cartItems.map(item => (
               <div key={item.cart_item_id} className="cart-item">
 
-                <div className="cart-item-image-wrapper">
-                  <div className="cart-item-image-inner">
-                    {item.is_custom ? (
-                      item.image ? (
-                        <img
-                          src={item.image}
-                          alt="Custom candle preview"
-                          className="high-res-snapshot"
-                        />
-                      ) : (
-                        <div className="custom-candle-placeholder">🕯️</div>
-                      )
+              <div className="cart-item-image-wrapper">
+                <div className="cart-item-image-inner">
+                  {item.is_custom ? (
+                    item.image ? (
+                      <img
+                        src={item.image} // This is the Base64 string
+                        alt="Custom candle"
+                        className="high-res-snapshot"
+                      />
                     ) : (
-                      item.image && (
-                        <img
-                          src={item.image.startsWith('http') ? item.image : `${API_BASE_URL}${item.image}`}
-                          alt={item.name}
-                        />
-                      )
-                    )}
-                  </div>
+                      <div className="custom-candle-placeholder">🕯️</div>
+                    )
+                  ) : (
+                    item.image && (
+                      <img
+                        src={item.image.startsWith('data:') || item.image.startsWith('http') 
+                            ? item.image 
+                            : `${API_BASE_URL}${item.image}`}
+                        alt={item.name}
+                        className="prebuilt-cart-img"
+                      />
+                    )
+                  )}
                 </div>
+              </div>
 
                 <div className="cart-item-details">
                   <h3>{item.name}</h3>
