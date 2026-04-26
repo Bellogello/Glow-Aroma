@@ -10,7 +10,7 @@ import { useNotification } from '../components/NotificationContext';
 
 const Cart = () => {
   useTitle("Cart");
-  const { success, error } = useNotification();
+  const { success, error, warning } = useNotification();
   
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -106,14 +106,13 @@ const Cart = () => {
             {cartItems.map(item => (
               <div key={item.cart_item_id} className="cart-item">
 
-              <div className="cart-item-image-wrapper">
-                <div className="cart-item-image-inner">
+                <div className="cart-item-image">
                   {item.is_custom ? (
-                    item.image ? (
+                    item.image ? ( // Changed from item.snapshot to match standard naming
                       <img
-                        src={item.image} // This is the Base64 string
-                        alt="Custom candle"
-                        className="high-res-snapshot"
+                        src={item.image}
+                        alt="Custom candle preview"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', display: 'block' }}
                       />
                     ) : (
                       <div className="custom-candle-placeholder">🕯️</div>
@@ -121,24 +120,21 @@ const Cart = () => {
                   ) : (
                     item.image && (
                       <img
-                        src={item.image.startsWith('data:') || item.image.startsWith('http') 
-                            ? item.image 
-                            : `${API_BASE_URL}${item.image}`}
+                        src={item.image.startsWith('http') ? item.image : `${API_BASE_URL}${item.image}`}
                         alt={item.name}
-                        className="prebuilt-cart-img"
                       />
                     )
                   )}
                 </div>
-              </div>
 
                 <div className="cart-item-details">
+                  {/* Item Name (Now includes size ml from backend) */}
                   <h3>{item.name}</h3>
                   
                   {item.is_custom && (
                     <div className="custom-specs">
-                      <p><span>Wax:</span> {item.wax_colors || 'Standard'}</p>
-                      <p><span>Scent:</span> {item.scent || 'Unscented'}</p>
+                      <p><span>Details:</span> {item.color_info}</p>
+                      <p><span>Scent:</span> {item.scent}</p>
                     </div>
                   )}
                   <p className="cart-item-price">{Number(item.price).toFixed(2)} L.E.</p>
@@ -151,9 +147,13 @@ const Cart = () => {
                     <button
                       className="btn-qty"
                       onClick={() => handleQuantityChange(item.cart_item_id, 'increase')}
-                      disabled={!item.is_custom && item.quantity >= item.max_stock}
+                      disabled={item.quantity >= item.max_stock}
+                      style={{ opacity: item.quantity >= item.max_stock ? 0.4 : 1, cursor: item.quantity >= item.max_stock ? 'not-allowed' : 'pointer' }}
                     >+</button>
                   </div>
+                  {item.quantity >= item.max_stock && !item.is_custom && (
+                    <span className="stock-warning">Max Stock!</span>
+                  )}
                   <button className="btn-remove-text" onClick={() => handleRemove(item.cart_item_id)}>Remove</button>
                 </div>
 

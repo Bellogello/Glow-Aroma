@@ -470,35 +470,53 @@ else if (type === 'cup') {
 
 
 app.get('/cart/:userId', (req, res) => {
+    const { userId } = req.params;
     const sql = `
         SELECT 
             ci.id AS cart_item_id, 
-            ci.quantity, 
-            cc.type AS candle_type, 
-            cc.total_price AS custom_price, 
-            cc.preview_image AS snapshot,
-            cc.cup_size AS cup_size_val,
-            cs.name AS cup_shape_name, 
-            ms.name AS mold_shape_name, 
-            s.name AS scent_name,
-            -- Get the Cup Color Name by matching the RGBA string
-            (SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1) AS cup_color_name,
-            -- Get the Wax Color Names
+            ci.quantity,
+            CASE 
+                WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.name 
+                ELSE CONCAT(
+                    -- Look up the color name based on the stored ID/HEX
+                    COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), 
+                    ' ', 
+                    COALESCE(cs.name, 'Cup'), 
+                    ' (', cc.cup_size, 'ml)'
+                )
+            END AS name,
+            CASE 
+                WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.price 
+                ELSE cc.total_price 
+            END AS price,
+            CASE 
+                WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.image_url 
+                ELSE cc.preview_image 
+            END AS image,
+            CASE 
+                WHEN ci.prebuilt_candle_id IS NOT NULL THEN FALSE 
+                ELSE TRUE 
+            END AS is_custom,
+            s.name AS scent,
             GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', ') AS wax_colors,
-            pc.name AS prebuilt_name, 
-            pc.price AS prebuilt_price, 
-            pc.image_url AS prebuilt_image
+            pc.stock_quantity AS max_stock
         FROM cart_items ci
         LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
         LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
-        LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
         LEFT JOIN scents s ON cc.scent_id = s.id
         LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
         LEFT JOIN colors cl ON ccl.color_id = cl.id
         LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
         JOIN carts ct ON ci.cart_id = ct.id
-        WHERE ct.user_id = ? 
-        GROUP BY ci.id`;
+        WHERE ct.user_id = ?
+        GROUP BY ci.id;
+    `;
+
+    db.query(sql, [userId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
 
     db.query(sql, [req.params.userId], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
