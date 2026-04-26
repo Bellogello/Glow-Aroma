@@ -477,14 +477,12 @@ const sql = `
         ci.quantity,
         CASE 
             WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.name 
-            -- IF IT IS A CUP: [Color] [Shape] [Size]
             WHEN cc.type = 'cup' THEN CONCAT(
                 COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), 
                 ' ', 
                 COALESCE(cs.name, 'Glass Jar'), 
                 ' (', cc.cup_size, 'ml)'
             )
-            -- IF IT IS A MOLD: [Shape] Mold
             ELSE CONCAT(COALESCE(ms.name, 'Custom'), ' Mold')
         END AS name,
         CASE 
@@ -499,9 +497,9 @@ const sql = `
             WHEN ci.prebuilt_candle_id IS NOT NULL THEN FALSE 
             ELSE TRUE 
         END AS is_custom,
-        s.name AS scent,
-        -- This part gets the wax colors for the "Details" line
-        GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', ') AS wax_colors,
+        -- FIX FOR THE "0": Use COALESCE to ensure we get an empty string if NULL
+        COALESCE(s.name, '') AS scent,
+        COALESCE(GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', '), '') AS wax_colors,
         pc.stock_quantity AS max_stock
     FROM cart_items ci
     LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id

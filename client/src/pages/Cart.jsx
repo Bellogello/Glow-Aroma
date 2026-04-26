@@ -103,62 +103,37 @@ const Cart = () => {
         ) : (
           <div className="cart-list">
             <h1 className="cart-page-title">Shopping Cart</h1>
-            {cartItems.map(item => (
-              <div key={item.cart_item_id} className="cart-item">
+{cartItems.map(item => (
+  <div key={item.cart_item_id} className="cart-item">
+    
+    <div className="cart-item-image">
+      {item.is_custom ? (
+        <img src={item.image} alt="Custom candle" />
+      ) : (
+        <img src={item.image.startsWith('http') ? item.image : `${API_BASE_URL}${item.image}`} alt={item.name} />
+      )}
+    </div>
 
-                <div className="cart-item-image">
-                  {item.is_custom ? (
-                    item.image ? ( // Changed from item.snapshot to match standard naming
-                      <img
-                        src={item.image}
-                        alt="Custom candle preview"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', display: 'block' }}
-                      />
-                    ) : (
-                      <div className="custom-candle-placeholder">🕯️</div>
-                    )
-                  ) : (
-                    item.image && (
-                      <img
-                        src={item.image.startsWith('http') ? item.image : `${API_BASE_URL}${item.image}`}
-                        alt={item.name}
-                      />
-                    )
-                  )}
-                </div>
+    <div className="cart-item-details">
+      <h3>{item.name}</h3>
+      <div className="custom-specs">
+        {item.wax_colors && <p><span>Wax:</span> {item.wax_colors}</p>}
+        {item.scent && <p><span>Scent:</span> {item.scent}</p>}
+      </div>
+      <p className="cart-item-price">{Number(item.price).toFixed(2)} L.E.</p>
+    </div>
 
-                <div className="cart-item-details">
-                  {/* Item Name (Now includes size ml from backend) */}
-                  <h3>{item.name}</h3>
-                  
-                  {item.is_custom && (
-                    <div className="custom-specs">
-                      <p><span>Details:</span> {item.color_info}</p>
-                      <p><span>Scent:</span> {item.scent}</p>
-                    </div>
-                  )}
-                  <p className="cart-item-price">{Number(item.price).toFixed(2)} L.E.</p>
-                </div>
-
-                <div className="cart-item-actions">
-                  <div className="quantity-controls">
-                    <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'decrease')}>−</button>
-                    <span className="qty-amount">{item.quantity}</span>
-                    <button
-                      className="btn-qty"
-                      onClick={() => handleQuantityChange(item.cart_item_id, 'increase')}
-                      disabled={item.quantity >= item.max_stock}
-                      style={{ opacity: item.quantity >= item.max_stock ? 0.4 : 1, cursor: item.quantity >= item.max_stock ? 'not-allowed' : 'pointer' }}
-                    >+</button>
-                  </div>
-                  {item.quantity >= item.max_stock && !item.is_custom && (
-                    <span className="stock-warning">Max Stock!</span>
-                  )}
-                  <button className="btn-remove-text" onClick={() => handleRemove(item.cart_item_id)}>Remove</button>
-                </div>
-
-              </div>
-            ))}
+    {/* This will now naturally sit right after the details because of flex-grow: 0 */}
+    <div className="cart-item-actions">
+      <div className="quantity-controls">
+        <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'decrease')}>−</button>
+        <span className="qty-amount">{item.quantity}</span>
+        <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'increase')}>+</button>
+      </div>
+      <button className="btn-remove-text" onClick={() => handleRemove(item.cart_item_id)}>Remove</button>
+    </div>
+  </div>
+))}
 
             <div className="cart-summary">
               <h2>Total: {cartTotal.toFixed(2)} L.E.</h2>
