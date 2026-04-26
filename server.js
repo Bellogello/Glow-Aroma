@@ -912,21 +912,18 @@ app.put('/admin/inventory/scents/:id', async (req, res) => {
 });
 app.delete('/admin/inventory/scents/:id', async (req, res) => {
     try {
-        // Option A: Hard Delete (Will fail if used in cart)
-        // Option B: Safety Check
+        // Check if any custom candle is currently using this scent
         const [usage] = await db.promise().query('SELECT id FROM custom_candles WHERE scent_id = ?', [req.params.id]);
         
         if (usage.length > 0) {
-            // Instead of deleting, we just hide it from the store
+            // Soft delete: keep in DB for existing carts/orders, but hide from shop
             await db.promise().query('UPDATE scents SET is_available = FALSE WHERE id = ?', [req.params.id]);
-            return res.json({ message: 'Scent is active in carts. It has been hidden from the store instead of deleted.' });
+            return res.json({ message: 'Scent is in a cart/order. Hidden from store instead of deleted.' });
         }
 
         await db.promise().query('DELETE FROM scents WHERE id = ?', [req.params.id]);
         res.json({ message: 'Scent deleted.' });
-    } catch (e) {
-        res.status(500).json({ error: "Database error during deletion." });
-    }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ==========================================
@@ -950,8 +947,18 @@ app.put('/admin/inventory/colors/:id', async (req, res) => {
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/admin/inventory/colors/:id', async (req, res) => {
-    try { await db.promise().query('DELETE FROM colors WHERE id = ?', [req.params.id]); res.json({ message: 'Color deleted.' }); }
-    catch (e) { res.status(500).json({ error: 'Cannot delete — may be linked to existing orders.' }); }
+    try {
+        // Check layers (wax colors are stored in custom_candle_layers)
+        const [usage] = await db.promise().query('SELECT id FROM custom_candle_layers WHERE color_id = ? LIMIT 1', [req.params.id]);
+        
+        if (usage.length > 0) {
+            await db.promise().query('UPDATE colors SET is_available = FALSE WHERE id = ?', [req.params.id]);
+            return res.json({ message: 'Color is in a cart. Hidden from store instead.' });
+        }
+
+        await db.promise().query('DELETE FROM colors WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Color deleted.' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ==========================================
@@ -974,9 +981,18 @@ app.put('/admin/inventory/cup-colors/:id', async (req, res) => {
     try { await db.promise().query('UPDATE cup_colors SET name=?, hex_code=?, price_modifier=? WHERE id=?', [name, hex_code || null, parseFloat(price_modifier) || 0, req.params.id]); res.json({ message: 'Cup color updated.' }); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.delete('/admin/inventory/cup-colors/:id', async (req, res) => {
-    try { await db.promise().query('DELETE FROM cup_colors WHERE id = ?', [req.params.id]); res.json({ message: 'Cup color deleted.' }); }
-    catch (e) { res.status(500).json({ error: 'Cannot delete — may be linked to existing orders.' }); }
+app.delete('/admin/inventory/cup-shapes/:id', async (req, res) => {
+    try {
+        const [usage] = await db.promise().query('SELECT id FROM custom_candles WHERE cup_shape_id = ? LIMIT 1', [req.params.id]);
+        
+        if (usage.length > 0) {
+            await db.promise().query('UPDATE cup_shapes SET is_available = FALSE WHERE id = ?', [req.params.id]);
+            return res.json({ message: 'Cup setup is in a cart. Hidden from store instead.' });
+        }
+
+        await db.promise().query('DELETE FROM cup_shapes WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Cup setup deleted.' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ==========================================
@@ -1100,18 +1116,14 @@ app.put('/admin/inventory/mold-shapes/:id', (req, res) => {
 
 app.delete('/admin/inventory/mold-shapes/:id', async (req, res) => {
     try {
-        const [usage] = await db.promise().query('SELECT id FROM custom_candles WHERE mold_shape_id = ?', [req.params.id]);
-        
+        const [usage] = await db.promise().query('SELECT id FROM custom_candles WHERE mold_shape_id = ? LIMIT 1', [req.params.id]);
         if (usage.length > 0) {
             await db.promise().query('UPDATE mold_shapes SET is_available = FALSE WHERE id = ?', [req.params.id]);
             return res.json({ message: 'Mold is in a cart. Hidden from store instead.' });
         }
-
         await db.promise().query('DELETE FROM mold_shapes WHERE id = ?', [req.params.id]);
         res.json({ message: 'Mold deleted.' });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 

@@ -159,13 +159,18 @@ const openAdd = () => {
     finally { setSubmitting(false); }
   };
 
-  const handleDelete = async (c) => {
-    if (!window.confirm(`Delete "${c.name}"?`)) return;
-    try {
-      await fetch(`${API_BASE_URL}/admin/inventory/cup-shapes/${c.id}`, { method: 'DELETE' });
-      success('Deleted.'); fetchCups();
-    } catch { error('Delete failed.'); }
-  };
+const handleDelete = async (c) => {
+  if (!window.confirm(`Delete "${c.name}"?`)) return;
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/inventory/cup-shapes/${c.id}`, { method: 'DELETE' });
+    const data = await res.json();
+    
+    if (!res.ok) throw new Error(data.error || 'Delete failed');
+    
+    success(data.message || 'Deleted.'); 
+    fetchCups();
+  } catch (err) { error(err.message); }
+};
 
   return (
     <div className="inv-card">
