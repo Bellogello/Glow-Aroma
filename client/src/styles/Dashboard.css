@@ -314,3 +314,26 @@
 .align-left-table td:first-child {
   padding-left: 1.5rem !important;
 }
+
+/* High-Res Reference Image for Admin */
+.admin-order-snapshot {
+    width: 150px;
+    height: 150px;
+    object-fit: contain;
+    border: 2px solid #e0d5c5;
+    border-radius: 8px;
+    background: #fdf6f0;
+    /* Keeps the diamond facets sharp for the builder */
+    image-rendering: -webkit-optimize-contrast; 
+}
+
+.order-specs-list {
+    font-size: 0.9rem;
+    color: #5d4037;
+    margin-top: 5px;
+}
+
+.order-specs-list span {
+    font-weight: bold;
+    color: #8d6e63;
+}
