@@ -517,25 +517,6 @@ app.get('/cart/:userId', (req, res) => {
         res.json(results);
     });
 });
-
-    db.query(sql, [req.params.userId], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results.map(item => ({
-            cart_item_id: item.cart_item_id, 
-            quantity: item.quantity, 
-            is_custom: !!item.candle_type,
-            // UPDATED: Use the cup_size_val we just selected above
-            name: item.prebuilt_name || (item.candle_type === 'cup' 
-                ? `${item.cup_shape_name} (${item.cup_size_val || 'Standard'}ml)` 
-                : `${item.mold_shape_name} Mold`),
-            price: item.prebuilt_price || item.custom_price, 
-            image: item.prebuilt_image || item.snapshot,
-            max_stock: item.prebuilt_stock || 99, 
-            color_info: item.candle_type ? `Wax: ${item.wax_colors}` : 'Standard', 
-            scent: item.scent_name || 'Original'
-        })));
-    });
-});
 app.delete('/cart/remove/:cartItemId', (req, res) => {
     db.query('DELETE FROM cart_items WHERE id = ?', [req.params.cartItemId], (err) => {
         if (err) return res.status(500).json({ error: err.message });
