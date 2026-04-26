@@ -478,7 +478,10 @@ const sql = `
         CASE 
             WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.name 
             WHEN cc.type = 'cup' THEN CONCAT(
-                COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), 
+                COALESCE(
+                    (SELECT name FROM colors WHERE REPLACE(hex_code, ' ', '') = REPLACE(cc.cup_color_id, ' ', '') LIMIT 1), 
+                    'Custom'
+                ), 
                 ' ', 
                 COALESCE(cs.name, 'Glass Jar'), 
                 ' (', cc.cup_size, 'ml)'
@@ -497,7 +500,6 @@ const sql = `
             WHEN ci.prebuilt_candle_id IS NOT NULL THEN FALSE 
             ELSE TRUE 
         END AS is_custom,
-        -- FIX FOR THE "0": Use COALESCE to ensure we get an empty string if NULL
         COALESCE(s.name, '') AS scent,
         COALESCE(GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', '), '') AS wax_colors,
         pc.stock_quantity AS max_stock
