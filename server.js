@@ -479,12 +479,16 @@ const sql = `
         ci.quantity,
         CASE 
             WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.name 
-            WHEN cc.type = 'cup' THEN CONCAT(
-                COALESCE(cup_col.name, 'Custom'),
-                ' ',
-                COALESCE(cup_shape.name, 'Glass Jar'), 
-                ' (', cc.cup_size, 'ml)'
-            )
+WHEN cc.type = 'cup' THEN CONCAT(
+    COALESCE(
+        (SELECT name FROM cup_colors WHERE hex_code = cc.cup_color_id LIMIT 1),
+        cc.cup_color_id,
+        'Custom'
+    ),
+    ' ',
+    COALESCE(cup_shape.name, 'Glass Jar'), 
+    ' (', cc.cup_size, 'ml)'
+)
             ELSE CONCAT(COALESCE(ms.name, 'Custom'), ' Mold')
         END AS name,
         CASE 

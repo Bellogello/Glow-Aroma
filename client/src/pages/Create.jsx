@@ -76,7 +76,6 @@ const Create = () => {
     const scent = scents.find(s => String(s.id) === String(selectedScentId));
     if (scent) totalPrice += Number(scent.price_modifier || 0);
 
-    // Prepare payload-specific variables
     let finalCupSize = null;
 
     if (candleType === 'cup') {
@@ -87,10 +86,10 @@ const Create = () => {
       const colorObj = availableCupColors.find(c => c.hex_code === selectedCupColor);
       const waxObj = waxColors.find(c => String(c.id) === String(selectedCandleColor));
 
-      totalPrice += Number(activeCup.price_modifier || 0);
+      totalPrice += Number(activeCup?.price_modifier || 0);
       if (sizeObj) {
         totalPrice += Number(sizeObj.price_modifier || 0);
-        finalCupSize = sizeObj.ml; // This is what fixes the nullml issue
+        finalCupSize = sizeObj.ml;
       }
       if (colorObj) totalPrice += Number(colorObj.price_modifier || 0);
       if (waxObj) totalPrice += Number(waxObj.price_modifier || 0);
@@ -106,8 +105,10 @@ const Create = () => {
     const userId = localStorage.getItem("userId");
     if (!userId) return warning("Log in to add to cart!");
 
-    // Capture snapshot (Angle is handled inside CandlePreview3D useImperativeHandle)
     const snapshot = previewRef.current?.getSnapshot() || null;
+
+    // Find color name for display in cart
+    const colorObj = availableCupColors.find(c => c.hex_code === selectedCupColor);
 
     const payload = {
       type: candleType,
@@ -115,12 +116,13 @@ const Create = () => {
       quantity,
       scentId: selectedScentId,
       totalPrice: Number(totalPrice.toFixed(2)),
-      snapshot: snapshot,
+      snapshot,
       ...(candleType === 'cup' 
         ? { 
             cupShapeId: selectedCupShape, 
-            cupSize: finalCupSize, // Explicitly sending the ML value
-            cupColor: selectedCupColor, 
+            cupSize: finalCupSize,
+            cupColor: selectedCupColor,
+            cupColorName: colorObj?.name || '',
             candleColorId: selectedCandleColor 
           }
         : { moldShapeId: selectedMoldShape, layers: moldLayers }
@@ -134,7 +136,10 @@ const Create = () => {
         body: JSON.stringify(payload),
       });
       if (res.ok) success("Added to cart!");
-      else error("Failed to add.");
+      else {
+        const data = await res.json();
+        error(data.error || "Failed to add.");
+      }
     } catch (err) { error("Server error."); }
   };
 
@@ -160,8 +165,7 @@ const Create = () => {
             waxColor={waxColors.find(c => String(c.id) === String(selectedCandleColor))?.hex_code ?? '#ffffff'}
             layerColors={moldLayers.map(id => waxColors.find(c => String(c.id) === String(id))?.hex_code || '#ffffff')}
             cupSize={
-                // availableSizes[selectedCupSizeIdx]?.ml <= 200 ? 'small' : 
-                availableSizes[selectedCupSizeIdx]?.ml <= 400 ? 'medium' : 'large'
+              availableSizes[selectedCupSizeIdx]?.ml <= 400 ? 'medium' : 'large'
             }
           />
         </div>
