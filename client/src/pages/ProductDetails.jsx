@@ -31,23 +31,25 @@ const ProductDetails = () => {
   useTitle(product ? `${product.name} | Glow Aroma` : "Loading Product...");
 
   // 3. Socket.io Effect for Live Viewers
-  useEffect(() => {
-    if (id) {
-      // Tell server we joined this product's room
-      socket.emit('join_product', id);
+useEffect(() => {
+  if (!id) return;
 
-      // Listen for updates from server
-      socket.on('update_viewers', (count) => {
-        setViewers(count);
-      });
+  // Create a new socket connection for this product
+  const socket = io(API_BASE_URL);
 
-      // Cleanup on unmount or id change
-      return () => {
-        socket.emit('leave_product', id);
-        socket.off('update_viewers');
-      };
-    }
-  }, [id]);
+  socket.emit('join_product', id);
+
+  socket.on('update_viewers', (count) => {
+    setViewers(count);
+  });
+
+  // Cleanup — disconnect fully when leaving the page
+  return () => {
+    socket.emit('leave_product', id);
+    socket.off('update_viewers');
+    socket.disconnect(); // ← fully close the connection
+  };
+}, [id]);
 
   useEffect(() => {
     setLoading(true);
