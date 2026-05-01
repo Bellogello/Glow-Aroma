@@ -1192,30 +1192,27 @@ const io = new Server(server, {
 const viewersCount = {};
 
 io.on('connection', (socket) => {
-    socket.on('join_product_page', (productId) => {
+    socket.on('join_product', (productId) => {
         socket.join(productId);
-        
-        // Increment count
         viewersCount[productId] = (viewersCount[productId] || 0) + 1;
-        
-        // Broadcast new count to everyone in that "room"
         io.to(productId).emit('update_viewers', viewersCount[productId]);
     });
 
-    socket.on('leave_product_page', (productId) => {
+    socket.on('leave_product', (productId) => {
         socket.leave(productId);
-        
-        // Decrement count
         if (viewersCount[productId] > 0) {
             viewersCount[productId] -= 1;
         }
-        
         io.to(productId).emit('update_viewers', viewersCount[productId]);
     });
 
     socket.on('disconnect', () => {
-        // Optional: Implement logic to find which rooms the user was in 
-        // and decrement if they just closed the browser tab.
+        socket.rooms.forEach((room) => {
+            if (viewersCount[room]) {
+                viewersCount[room] = Math.max(0, viewersCount[room] - 1);
+                io.to(room).emit('update_viewers', viewersCount[room]);
+            }
+        });
     });
 });
 
