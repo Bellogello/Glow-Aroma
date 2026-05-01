@@ -159,3 +159,32 @@
   .detail-actions { flex-direction: column; }
   .btn-add-massive { width: 100%; }
 }
+.live-viewer-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff5f5;
+    color: #e53e3e;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    width: fit-content;
+    border: 1px solid #fed7d7;
+}
+
+.pulse-dot {
+    height: 8px;
+    width: 8px;
+    background-color: #e53e3e;
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(229, 62, 62, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 62, 62, 0); }
+}

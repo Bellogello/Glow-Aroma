@@ -7,6 +7,8 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const axios = require('axios');
+const http = require('http');
+const { Server } = require('socket.io');
 
 require('dotenv').config();
 
@@ -1178,7 +1180,47 @@ app.delete('/admin/inventory/mold-shapes/:id', async (req, res) => {
 // Define the PORT variable here
 const PORT = process.env.PORT || 8080;
 
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: ['https://glow-aroma.vercel.app', 'http://localhost:5173'],
+        methods: ["GET", "POST"]
+    }
+});
+
+// Logic to track viewers: { "product_1": 5, "product_2": 2 }
+const viewersCount = {};
+
+io.on('connection', (socket) => {
+    socket.on('join_product_page', (productId) => {
+        socket.join(productId);
+        
+        // Increment count
+        viewersCount[productId] = (viewersCount[productId] || 0) + 1;
+        
+        // Broadcast new count to everyone in that "room"
+        io.to(productId).emit('update_viewers', viewersCount[productId]);
+    });
+
+    socket.on('leave_product_page', (productId) => {
+        socket.leave(productId);
+        
+        // Decrement count
+        if (viewersCount[productId] > 0) {
+            viewersCount[productId] -= 1;
+        }
+        
+        io.to(productId).emit('update_viewers', viewersCount[productId]);
+    });
+
+    socket.on('disconnect', () => {
+        // Optional: Implement logic to find which rooms the user was in 
+        // and decrement if they just closed the browser tab.
+    });
+});
+
+// IMPORTANT: Change app.listen to server.listen
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);
 });
 

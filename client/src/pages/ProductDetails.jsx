@@ -6,15 +6,17 @@ import useTitle from '../components/useTitles';
 import FallbackCandle from '../assets/candle.png';
 import '../styles/ProductDetails.css';
 import { API_BASE_URL } from '../config';
-
-// 1. Import the notification hook
 import { useNotification } from '../components/NotificationContext';
+
+// 1. Import Socket.io client
+import { io } from 'socket.io-client';
+
+// Initialize socket outside the component to prevent multiple connections on re-renders
+const socket = io(API_BASE_URL);
 
 const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
-  // 2. Initialize the hook
   const { success, error, warning } = useNotification();
   
   const [product, setProduct] = useState(null);
@@ -23,7 +25,29 @@ const ProductDetails = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [inCartQuantity, setInCartQuantity] = useState(0);
 
+  // 2. State for live viewers
+  const [viewers, setViewers] = useState(1);
+
   useTitle(product ? `${product.name} | Glow Aroma` : "Loading Product...");
+
+  // 3. Socket.io Effect for Live Viewers
+  useEffect(() => {
+    if (id) {
+      // Tell server we joined this product's room
+      socket.emit('join_product', id);
+
+      // Listen for updates from server
+      socket.on('update_viewers', (count) => {
+        setViewers(count);
+      });
+
+      // Cleanup on unmount or id change
+      return () => {
+        socket.emit('leave_product', id);
+        socket.off('update_viewers');
+      };
+    }
+  }, [id]);
 
   useEffect(() => {
     setLoading(true);
@@ -65,7 +89,6 @@ const ProductDetails = () => {
   const handleAddToCart = async () => {
     const userId = localStorage.getItem("userId");
     if (!userId) {
-      // 3a. Replaced alert
       warning("Please log in to add items to your cart!");
       return;
     }
@@ -88,16 +111,13 @@ const ProductDetails = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // 3b. Replaced alert and kept navigation
         success(`${quantity}x ${product.name} added to your cart! 🛒`);
         navigate('/cart'); 
       } else {
-        // 3c. Replaced alert
         error("Wait: " + data.error); 
       }
     } catch (err) {
       console.error("Failed to add to cart:", err);
-      // Added network error fallback
       error("Server connection failed. Try again.");
     } finally {
       setIsAdding(false);
@@ -127,6 +147,14 @@ const ProductDetails = () => {
           </div>
 
           <div className="product-info-section">
+            {/* 4. Live Viewer Badge */}
+            {viewers > 1 && (
+              <div className="live-viewer-badge">
+                <span className="pulse-dot"></span>
+                {viewers} people are viewing this right now
+              </div>
+            )}
+
             <h1 className="detail-title">{product.name}</h1>
             <p className="detail-price">{Number(product.price).toFixed(2)} L.E.</p>
             
