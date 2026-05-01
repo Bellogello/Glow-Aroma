@@ -116,10 +116,10 @@ const Cart = () => {
 
     <div className="cart-item-details">
       <h3>{item.name}</h3>
-      <div className="custom-specs">
-        {item.wax_colors && <p><span>Wax:</span> {item.wax_colors}</p>}
-        {item.scent && <p><span>Scent:</span> {item.scent}</p>}
-      </div>
+        <div className="custom-specs">
+          {item.wax_colors && <p><span>Wax:</span> {item.wax_colors}</p>}
+          {item.scent && <p><span>Scent:</span> {item.scent}</p>}
+        </div>
       <p className="cart-item-price">{Number(item.price).toFixed(2)} L.E.</p>
     </div>
 

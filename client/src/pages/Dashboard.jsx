@@ -527,7 +527,11 @@ const Dashboard = () => {
                             {item.item_type !== 'prebuilt' && <span className="badge bg-secondary ms-2" style={{ fontSize: '0.65rem' }}>Custom</span>}
                           </div>
                           {item.details && item.details !== 'Standard Pre-built' && (
-                            <div className="text-muted mt-1" style={{ fontSize: '0.85rem', marginLeft: '1.5rem' }}>{item.details}</div>
+                            <div className="text-muted mt-1" style={{ fontSize: '0.85rem', marginLeft: '1.5rem' }}>
+                              {item.details.split(', ').map((detail, i) => (
+                                <div key={i}>{detail}</div>
+                              ))}
+                            </div>
                           )}
                         </div>
                         <span className="text-muted fw-semibold">{(Number(item.unit_price) * item.quantity).toFixed(2)} L.E.</span>

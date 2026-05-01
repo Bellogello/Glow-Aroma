@@ -480,11 +480,8 @@ const sql = `
         CASE 
             WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.name 
             WHEN cc.type = 'cup' THEN CONCAT(
-                COALESCE(
-                    (SELECT name FROM colors WHERE REPLACE(hex_code, ' ', '') = REPLACE(cc.cup_color_id, ' ', '') LIMIT 1), 
-                    'Custom'
-                ), 
-                ' ', 
+                COALESCE(cup_col.name, 'Custom'),
+                ' ',
                 COALESCE(cs.name, 'Glass Jar'), 
                 ' (', cc.cup_size, 'ml)'
             )
@@ -507,7 +504,7 @@ const sql = `
         pc.stock_quantity AS max_stock
     FROM cart_items ci
     LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
-    LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
+    LEFT JOIN cup_colors cup_col ON cc.cup_color_id = cup_col.id
     LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
     LEFT JOIN scents s ON cc.scent_id = s.id
     LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
