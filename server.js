@@ -607,6 +607,12 @@ app.get('/admin/orders', (req, res) => {
         }
     );
 });
+app.get('/admin/orders/:id/items', (req, res) => {
+    db.query('SELECT * FROM order_items WHERE order_id = ?', [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
 app.get('/admin/orders/:orderId', (req, res) => {
     const { orderId } = req.params;
     const sql = `
