@@ -34,20 +34,24 @@ const ProductDetails = () => {
 useEffect(() => {
   if (!id) return;
 
-  // Create a new socket connection for this product
+  console.log('--- Effect running for product id:', id);
+
   const socket = io(API_BASE_URL);
 
-  socket.emit('join_product', id);
+  socket.on('connect', () => {
+    console.log('Socket connected, emitting join_product:', id);
+    socket.emit('join_product', id);
+  });
 
   socket.on('update_viewers', (count) => {
+    console.log('update_viewers received:', count);
     setViewers(count);
   });
 
-  // Cleanup — disconnect fully when leaving the page
   return () => {
+    console.log('--- Cleanup for product id:', id);
     socket.emit('leave_product', id);
-    socket.off('update_viewers');
-    socket.disconnect(); // ← fully close the connection
+    socket.disconnect();
   };
 }, [id]);
 
