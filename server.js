@@ -482,7 +482,7 @@ const sql = `
             WHEN cc.type = 'cup' THEN CONCAT(
                 COALESCE(cup_col.name, 'Custom'),
                 ' ',
-                COALESCE(cs.name, 'Glass Jar'), 
+                COALESCE(cup_shape.name, 'Glass Jar'), 
                 ' (', cc.cup_size, 'ml)'
             )
             ELSE CONCAT(COALESCE(ms.name, 'Custom'), ' Mold')
@@ -505,6 +505,7 @@ const sql = `
     FROM cart_items ci
     LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
     LEFT JOIN cup_colors cup_col ON cc.cup_color_id = cup_col.id
+    LEFT JOIN cup_shapes cup_shape ON cc.cup_shape_id = cup_shape.id
     LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
     LEFT JOIN scents s ON cc.scent_id = s.id
     LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
