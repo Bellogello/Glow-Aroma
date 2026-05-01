@@ -81,11 +81,10 @@ const ProductCard = ({ product }) => {
             <p className="price">{Number(product.price).toFixed(2)} L.E.</p>
             
             <button 
-              className={`add-btn ${isOutOfStock ? 'disabled-btn' : ''}`} 
-              onClick={handleAddToCart}
-              disabled={isAdding || isOutOfStock}
+              className={`add-btn`}
+              Link to={`/product/${product.id}`}
             >
-              {isOutOfStock ? "Out of Stock" : (isAdding ? "Adding..." : "Add to Cart")}
+              {("View Product")}
             </button>
         </div>
       </Link>

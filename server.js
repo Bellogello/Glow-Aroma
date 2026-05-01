@@ -754,38 +754,82 @@ app.delete('/admin/delete-account', (req, res) => {
 // ==========================================
 // --- CHECKOUT ---
 // ==========================================
-app.post('/checkout', (req, res) => {
+app.post('/checkout', async (req, res) => {
     const { userId, total, items, couponCode } = req.body;
     const numericTotal = parseFloat(total) || 0;
-    db.query('SELECT id FROM carts WHERE user_id = ?', [userId], (err, cartResults) => {
-        if (err || cartResults.length === 0) return res.status(400).json({ error: 'Empty Cart' });
+
+    try {
+        // 1. Get Cart ID
+        const [cartResults] = await db.promise().query('SELECT id FROM carts WHERE user_id = ?', [userId]);
+        if (cartResults.length === 0) return res.status(400).json({ error: 'Empty Cart' });
         const cartId = cartResults[0].id;
-        db.query('INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', [userId, numericTotal], (err, result) => {
-            if (err) return res.status(500).json({ error: 'Order Creation Failed: ' + err.message });
-            const orderId = result.insertId;
-            if (!items || items.length === 0) return res.status(400).json({ error: 'No items received from frontend' });
-            const values = items.map(i => {
-                let exactItemType = 'prebuilt';
-                if (i.is_custom) exactItemType = (i.name && i.name.toLowerCase().includes('mold')) ? 'mold' : 'cup';
-                return [orderId, exactItemType, i.name || 'Candle', parseFloat(i.price) || 0, parseInt(i.quantity, 10) || 1, i.details || i.color_info || 'Standard Pre-built'];
-            });
-            db.query('INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity, details) VALUES ?', [values], (itemErr) => {
-                if (itemErr) {
-                    console.error("DB REJECTED ITEMS INSERT:", itemErr.message);
-                    return res.status(500).json({ error: 'DB Error on Items: ' + itemErr.message });
-                }
-                db.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId], () => {
-                    if (couponCode) {
-                        db.query('UPDATE discount_codes SET times_used = times_used + 1 WHERE code = ?',
-                            [couponCode.toUpperCase()],
-                            (err) => { if (err) console.error('Failed to increment coupon usage:', err.message); }
-                        );
-                    }
-                    res.status(201).json({ message: 'Order placed successfully', orderId });
-                });
-            });
+
+        // 2. Create the Order
+        const [orderResult] = await db.promise().query(
+            'INSERT INTO orders (user_id, total, status_id) VALUES (?, ?, 1)', 
+            [userId, numericTotal]
+        );
+        const orderId = orderResult.insertId;
+
+        if (!items || items.length === 0) return res.status(400).json({ error: 'No items received' });
+
+        // 3. Prepare Order Items and Stock Updates
+        const orderItemValues = [];
+        const stockUpdatePromises = [];
+
+        items.forEach(i => {
+            // Determine type for order_items table
+            let exactItemType = 'prebuilt';
+            if (i.is_custom) {
+                exactItemType = (i.name && i.name.toLowerCase().includes('mold')) ? 'mold' : 'cup';
+            } else {
+                // If it's a prebuilt candle, push an UPDATE promise to decrease stock
+                // Ensure your frontend sends 'prebuilt_candle_id' in the item object
+                const pId = i.prebuilt_candle_id || i.id; 
+                stockUpdatePromises.push(
+                    db.promise().query(
+                        'UPDATE prebuilt_candles SET stock_quantity = stock_quantity - ? WHERE id = ?',
+                        [parseInt(i.quantity), pId]
+                    )
+                );
+            }
+
+            orderItemValues.push([
+                orderId, 
+                exactItemType, 
+                i.name || 'Candle', 
+                parseFloat(i.price) || 0, 
+                parseInt(i.quantity, 10) || 1, 
+                i.details || i.color_info || 'Standard Pre-built'
+            ]);
         });
-    });
+
+        // 4. Execute all DB operations
+        // Insert items into the order
+        await db.promise().query(
+            'INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity, details) VALUES ?', 
+            [orderItemValues]
+        );
+
+        // Run all stock updates in parallel
+        await Promise.all(stockUpdatePromises);
+
+        // 5. Cleanup: Delete cart and update coupon
+        await db.promise().query('DELETE FROM cart_items WHERE cart_id = ?', [cartId]);
+
+        if (couponCode) {
+            await db.promise().query(
+                'UPDATE discount_codes SET times_used = times_used + 1 WHERE code = ?',
+                [couponCode.toUpperCase()]
+            );
+        }
+
+        res.status(201).json({ message: 'Order placed and stock updated successfully', orderId });
+
+    } catch (err) {
+        console.error("CHECKOUT ERROR:", err.message);
+        res.status(500).json({ error: 'Checkout failed: ' + err.message });
+    }
 });
 
 // ==========================================

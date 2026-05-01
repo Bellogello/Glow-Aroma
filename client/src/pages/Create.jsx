@@ -160,7 +160,7 @@ const Create = () => {
             waxColor={waxColors.find(c => String(c.id) === String(selectedCandleColor))?.hex_code ?? '#ffffff'}
             layerColors={moldLayers.map(id => waxColors.find(c => String(c.id) === String(id))?.hex_code || '#ffffff')}
             cupSize={
-                availableSizes[selectedCupSizeIdx]?.ml <= 200 ? 'small' : 
+                // availableSizes[selectedCupSizeIdx]?.ml <= 200 ? 'small' : 
                 availableSizes[selectedCupSizeIdx]?.ml <= 400 ? 'medium' : 'large'
             }
           />
