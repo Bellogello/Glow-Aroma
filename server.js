@@ -1190,19 +1190,19 @@ const io = new Server(server, {
 
 // Logic to track viewers: { "product_1": 5, "product_2": 2 }
 const viewersCount = {};
+const socketRooms = {};
+
 
 io.on('connection', (socket) => {
-    console.log('Socket connected:', socket.id);
-    
     socket.on('join_product', (productId) => {
-        console.log('join_product received:', productId, 'type:', typeof productId);
+        socketRooms[socket.id] = productId;
         socket.join(productId);
         viewersCount[productId] = (viewersCount[productId] || 0) + 1;
-        console.log('viewersCount now:', viewersCount);
         io.to(productId).emit('update_viewers', viewersCount[productId]);
     });
 
     socket.on('leave_product', (productId) => {
+        delete socketRooms[socket.id];
         socket.leave(productId);
         if (viewersCount[productId] > 0) {
             viewersCount[productId] -= 1;
@@ -1211,12 +1211,14 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        socket.rooms.forEach((room) => {
-            if (viewersCount[room]) {
-                viewersCount[room] = Math.max(0, viewersCount[room] - 1);
-                io.to(room).emit('update_viewers', viewersCount[room]);
+        const productId = socketRooms[socket.id];
+        if (productId) {
+            delete socketRooms[socket.id];
+            if (viewersCount[productId] > 0) {
+                viewersCount[productId] -= 1;
             }
-        });
+            io.to(productId).emit('update_viewers', viewersCount[productId]);
+        }
     });
 });
 
