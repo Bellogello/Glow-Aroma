@@ -1192,9 +1192,13 @@ const io = new Server(server, {
 const viewersCount = {};
 
 io.on('connection', (socket) => {
+    console.log('Socket connected:', socket.id);
+    
     socket.on('join_product', (productId) => {
+        console.log('join_product received:', productId, 'type:', typeof productId);
         socket.join(productId);
         viewersCount[productId] = (viewersCount[productId] || 0) + 1;
+        console.log('viewersCount now:', viewersCount);
         io.to(productId).emit('update_viewers', viewersCount[productId]);
     });
 
