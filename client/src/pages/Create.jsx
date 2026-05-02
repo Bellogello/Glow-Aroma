@@ -79,8 +79,8 @@ const Create = () => {
     let finalCupSize = null;
 
     if (candleType === 'cup') {
-      if (selectedCupShape === "default" || selectedCupSizeIdx === "default" || selectedCupColor === "default") {
-        return warning("Please complete your selections!");
+      if (selectedCupShape === "default" || selectedCupSizeIdx === "default" || selectedCupColor === "default" || selectedCandleColor === "default") {
+        return warning("Please complete all selections — cup shape, size, color and wax color are required!");
       }
       const sizeObj = availableSizes[selectedCupSizeIdx];
       const colorObj = availableCupColors.find(c => c.hex_code === selectedCupColor);

@@ -479,16 +479,26 @@ const sql = `
         ci.quantity,
         CASE 
             WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.name 
-WHEN cc.type = 'cup' THEN CONCAT(
-    COALESCE(
-        (SELECT name FROM cup_colors WHERE hex_code = cc.cup_color_id LIMIT 1),
-        cc.cup_color_id,
-        'Custom'
-    ),
-    ' ',
-    COALESCE(cup_shape.name, 'Glass Jar'), 
-    ' (', cc.cup_size, 'ml)'
-)
+            WHEN cc.type = 'cup' THEN CONCAT(
+                COALESCE(
+                    (
+                        SELECT JSON_UNQUOTE(JSON_EXTRACT(color_entry, '$.name'))
+                        FROM JSON_TABLE(
+                            cup_shape.colors,
+                            '$[*]' COLUMNS (
+                                color_entry JSON PATH '$'
+                            )
+                        ) AS jt
+                        WHERE JSON_UNQUOTE(JSON_EXTRACT(color_entry, '$.hex_code')) = cc.cup_color_id
+                        LIMIT 1
+                    ),
+                    cc.cup_color_id,
+                    'Custom'
+                ),
+                ' ',
+                COALESCE(cup_shape.name, 'Glass Jar'), 
+                ' (', cc.cup_size, 'ml)'
+            )
             ELSE CONCAT(COALESCE(ms.name, 'Custom'), ' Mold')
         END AS name,
         CASE 
@@ -508,7 +518,6 @@ WHEN cc.type = 'cup' THEN CONCAT(
         pc.stock_quantity AS max_stock
     FROM cart_items ci
     LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
-    LEFT JOIN cup_colors cup_col ON cc.cup_color_id = cup_col.id
     LEFT JOIN cup_shapes cup_shape ON cc.cup_shape_id = cup_shape.id
     LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
     LEFT JOIN scents s ON cc.scent_id = s.id
