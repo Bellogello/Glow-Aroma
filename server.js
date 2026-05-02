@@ -530,6 +530,7 @@ const sql = `
 `;
 
     db.query(sql, [userId], (err, results) => {
+        console.error('CART QUERY ERROR:', err.message);
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
