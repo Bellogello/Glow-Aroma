@@ -544,6 +544,7 @@ db.query(sql, [userId], (err, results) => {
 
     res.json(formattedCart);
 });
+});
 app.delete('/cart/remove/:cartItemId', (req, res) => {
     db.query('DELETE FROM cart_items WHERE id = ?', [req.params.cartItemId], (err) => {
         if (err) return res.status(500).json({ error: err.message });
