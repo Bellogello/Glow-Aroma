@@ -480,27 +480,13 @@ const sql = `
         CASE 
             WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.name 
             WHEN cc.type = 'cup' THEN CONCAT(
-                COALESCE(
-                    (
-                        SELECT JSON_UNQUOTE(JSON_EXTRACT(color_entry, '$.name'))
-                        FROM JSON_TABLE(
-                            cup_shape.colors,
-                            '$[*]' COLUMNS (
-                                color_entry JSON PATH '$'
-                            )
-                        ) AS jt
-                        WHERE JSON_UNQUOTE(JSON_EXTRACT(color_entry, '$.hex_code')) = cc.cup_color_id
-                        LIMIT 1
-                    ),
-                    cc.cup_color_id,
-                    'Custom'
-                ),
-                ' ',
                 COALESCE(cup_shape.name, 'Glass Jar'), 
                 ' (', cc.cup_size, 'ml)'
             )
             ELSE CONCAT(COALESCE(ms.name, 'Custom'), ' Mold')
         END AS name,
+        cc.cup_color_id AS cup_color_hex,
+        cup_shape.colors AS cup_shape_colors,
         CASE 
             WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.price 
             ELSE cc.total_price 
@@ -529,11 +515,34 @@ const sql = `
     GROUP BY ci.id;
 `;
 
-    db.query(sql, [userId], (err, results) => {
+db.query(sql, [userId], (err, results) => {
+    if (err) {
         console.error('CART QUERY ERROR:', err.message);
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
+        return res.status(500).json({ error: err.message });
+    }
+
+    const formattedCart = results.map(item => {
+        // Resolve cup color name from the JSON colors array
+        let cupColorName = '';
+        if (item.cup_color_hex && item.cup_shape_colors) {
+            try {
+                const colors = typeof item.cup_shape_colors === 'string'
+                    ? JSON.parse(item.cup_shape_colors)
+                    : item.cup_shape_colors;
+                const match = colors.find(c => c.hex_code === item.cup_color_hex);
+                if (match) cupColorName = match.name;
+            } catch (e) {}
+        }
+
+        // Prepend color name to cup candle name
+        if (item.is_custom && cupColorName && !item.name?.toLowerCase().includes('mold')) {
+            item.name = `${cupColorName} ${item.name}`;
+        }
+
+        return item;
     });
+
+    res.json(formattedCart);
 });
 app.delete('/cart/remove/:cartItemId', (req, res) => {
     db.query('DELETE FROM cart_items WHERE id = ?', [req.params.cartItemId], (err) => {
