@@ -23,6 +23,7 @@ import OrderSuccess from './pages/OrderSuccess';
 import Inventory from './pages/Inventory';
 
 const stripePromise = loadStripe('pk_test_51TLsHTFTbNVdlFGS8I4gWECo2WMYrPt9uci7WvSBet1AUBUJbVYNdCXlML8mmgPfJquqtZCsx8PBA15Ifv3zoqZd00IMWU0jTR');
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 
 function App() {
 
@@ -40,8 +41,11 @@ function App() {
         <Route path="/Create" element={<Create />} />  
         <Route path="/Sign-in" element={<SignIn />} />
         <Route path="/Sign-up" element={<Signup />} />
-        <Route path="/Dashboard" element={<Dashboard />} />
-        <Route path="/product/:id" element={<ProductDetails />} />
+        <Route path="/dashboard" element={
+          <Suspense fallback={<div>Loading...</div>}>
+            <Dashboard />
+          </Suspense>
+        } />        <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/order-success" element={<OrderSuccess />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/checkout" element={<Elements stripe={stripePromise}><Checkout /></Elements>} />

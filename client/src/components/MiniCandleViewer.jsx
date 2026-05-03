@@ -21,7 +21,7 @@ function Model({ url, layers, waxColor, cupColor, flatShading }) {
         // Clone material to prevent bleeding across different previews
         child.material = child.material.clone();
         
-        // ✨ APPLY FLAT SHADING HERE ✨
+        // APPLY FLAT SHADING
         child.material.flatShading = !!flatShading;
 
         const name = child.name.toLowerCase();
@@ -29,15 +29,10 @@ function Model({ url, layers, waxColor, cupColor, flatShading }) {
         // 1. Safeguard Wick
         if (name.includes('wick')) return;
 
-        // 2. Glass/Cup settings
-        const isGlass = 
-          name.includes('glass') || 
-          name.includes('cup') || 
-          name.includes('jar') || 
-          child.material.transparent === true || 
-          child.material.transmission > 0;
+        // 2. STRICT Glass/Cup Detection (Only by explicit name)
+        const isStrictlyGlass = name.includes('glass') || name.includes('cup') || name.includes('jar') || name.includes('cylinder_0');
 
-        if (isGlass) {
+        if (isStrictlyGlass) {
           child.material.transparent = true;
           child.material.opacity = 0.45;
           child.material.roughness = 0.05;
@@ -45,21 +40,28 @@ function Model({ url, layers, waxColor, cupColor, flatShading }) {
           child.material.color.set(cupColor && cupColor !== 'default' ? cupColor : '#ffffff');
         } 
         
-        // 3. Mold Layers
+        // 3. Mold Layers (Layer1, Layer2...)
         else if (child.name.match(/Layer(\d+)/i)) {
           const layerMatch = child.name.match(/Layer(\d+)/i);
           const index = parseInt(layerMatch[1]) - 1;
+          
+          // Ensure it's opaque and has the correct color
+          child.material.transparent = false;
+          child.material.opacity = 1.0;
           child.material.color.set(activeLayers[index] || primaryColor);
           child.material.roughness = 0.2;
         } 
         
-        // 4. CATCH-ALL (Wax)
+        // 4. CATCH-ALL (Wax Fill inside Cups, or single-color molds)
         else {
+          // Ensure it's opaque and has the correct color
+          child.material.transparent = false;
+          child.material.opacity = 1.0;
           child.material.color.set(primaryColor);
           child.material.roughness = 0.2;
         }
 
-        // Force Three.js to recompile the shader with the flatShading flag
+        // Force Three.js to recompile the shader
         child.material.needsUpdate = true;
       }
     });
@@ -101,7 +103,7 @@ const MiniCandleViewer = ({ modelUrl, modelUrls, waxColor, layers, cupColor, fla
             layers={layers} 
             waxColor={waxColor} 
             cupColor={cupColor} 
-            flatShading={flatShading} // Pass it down to the Model
+            flatShading={flatShading}
           />
           <ContactShadows position={[0, 0, 0]} opacity={0.3} scale={10} blur={2.5} far={1.5} />
         </Suspense>
