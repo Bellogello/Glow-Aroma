@@ -289,15 +289,18 @@ const handleToggleShowcase = async (e, design) => {
   try {
     const toggledState = design.is_active ? 0 : 1;
     
-    // Change the URL and Method here
+    // Switch to the specific /toggle endpoint using PATCH
     const res = await fetch(`${API_BASE_URL}/admin/showcase/${design.id}/toggle`, {
-      method: 'PATCH', // This tells the backend to ONLY update what we send
+      method: 'PATCH', 
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_active: toggledState }) // Only send the status
+      body: JSON.stringify({ is_active: toggledState }) 
     });
 
     if (res.ok) {
-      setShowcaseDesigns(prev => prev.map(d => d.id === design.id ? { ...d, is_active: toggledState } : d));
+      // Update local state so the UI reflects the change immediately
+      setShowcaseDesigns(prev => prev.map(d => 
+        d.id === design.id ? { ...d, is_active: toggledState } : d
+      ));
       success(toggledState === 1 ? "Design enabled." : "Design disabled.");
     } else {
       error("Failed to toggle design.");
