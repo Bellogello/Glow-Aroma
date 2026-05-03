@@ -28,6 +28,9 @@ const Dashboard = () => {
   
   // Replaced models with heroImages
   const [heroImages, setHeroImages] = useState([]);
+  const [showcaseDesigns, setShowcaseDesigns] = useState([]);
+  const [showEditShowcaseDialog, setShowEditShowcaseDialog] = useState(false);
+  const [editShowcaseForm, setEditShowcaseForm] = useState({ id: '', name: '', hex_color: '', is_active: 1 });
 
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('All');
@@ -73,33 +76,44 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [navigate]);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const [prodRes, orderRes, staffRes, discountRes, msgRes, heroRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/products`),
-        fetch(`${API_BASE_URL}/admin/orders`),
-        fetch(`${API_BASE_URL}/admin/staff`),
-        fetch(`${API_BASE_URL}/admin/discount-codes`),
-        fetch(`${API_BASE_URL}/admin/messages`),
-        fetch(`${API_BASE_URL}/admin/hero-images`),
-            ]);
-      const [prodData, orderData, staffData, discountData, msgData, heroData] = await Promise.all([
-        prodRes.json(), orderRes.json(), staffRes.json(), discountRes.json(), msgRes.json(), heroRes.json(),
-      ]);
-      setProducts(Array.isArray(prodData) ? prodData : []);
-      setOrders(Array.isArray(orderData) ? orderData : []);
-      setStaff(Array.isArray(staffData) ? staffData : []);
-      setDiscountCodes(Array.isArray(discountData) ? discountData : []);
-      setMessages(Array.isArray(msgData) ? msgData : []);
-      setHeroImages(Array.isArray(heroData) ? heroData : []);
-    } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
-      error("Failed to sync dashboard data.");
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchDashboardData = async () => {
+  setLoading(true);
+  try {
+    const [prodRes, orderRes, staffRes, discountRes, msgRes, heroRes, showcaseRes] = await Promise.all([
+      fetch(`${API_BASE_URL}/products`),
+      fetch(`${API_BASE_URL}/admin/orders`),
+      fetch(`${API_BASE_URL}/admin/staff`),
+      fetch(`${API_BASE_URL}/admin/discount-codes`),
+      fetch(`${API_BASE_URL}/admin/messages`),
+      fetch(`${API_BASE_URL}/admin/hero-images`),
+      fetch(`${API_BASE_URL}/showcase`), // 7th endpoint
+    ]);
+
+    // Parse ALL 7 responses
+    const [prodData, orderData, staffData, discountData, msgData, heroData, showcaseData] = await Promise.all([
+      prodRes.json(), 
+      orderRes.json(), 
+      staffRes.json(), 
+      discountRes.json(), 
+      msgRes.json(), 
+      heroRes.json(),
+      showcaseRes.json(), // Don't miss this one
+    ]);
+
+    setProducts(Array.isArray(prodData) ? prodData : []);
+    setOrders(Array.isArray(orderData) ? orderData : []);
+    setStaff(Array.isArray(staffData) ? staffData : []);
+    setDiscountCodes(Array.isArray(discountData) ? discountData : []);
+    setMessages(Array.isArray(msgData) ? msgData : []);
+    setHeroImages(Array.isArray(heroData) ? heroData : []);
+    setShowcaseDesigns(Array.isArray(showcaseData) ? showcaseData : []); // Update your state
+  } catch (err) {
+    console.error('Failed to fetch dashboard data:', err);
+    error("Failed to sync dashboard data.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // --- STATS CALCULATIONS ---
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
@@ -231,6 +245,7 @@ const Dashboard = () => {
     }
   };
 
+
   const handleDeleteHeroImage = async (id) => {
     if (!window.confirm('Remove this image from the homepage slideshow?')) return;
     try {
@@ -275,6 +290,28 @@ const Dashboard = () => {
       error("Failed to save new order.");
     }
   };
+  const handleOpenEditShowcase = (design) => {
+  setEditShowcaseForm(design);
+  setShowEditShowcaseDialog(true);
+};
+
+const handleUpdateShowcase = async (e) => {
+  e.preventDefault();
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/showcase/${editShowcaseForm.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editShowcaseForm)
+    });
+    if (res.ok) {
+      setShowcaseDesigns(prev => prev.map(d => d.id === editShowcaseForm.id ? editShowcaseForm : d));
+      setShowEditShowcaseDialog(false);
+      success("Showcase design updated!");
+    }
+  } catch (err) {
+    error("Failed to update design.");
+  }
+};
 
   // --- ORDERS ---
   const handleOpenOrderDialog = async (order) => {
@@ -365,7 +402,7 @@ const Dashboard = () => {
     { id: 'overview', label: '📊 Overview' },
     { id: 'orders', label: '📦 Orders' },
     { id: 'products', label: '🕯️ Products' },
-    { id: 'hero', label: '🖼️ Hero Images' }, // Replaced 'models' with 'hero'
+    { id: 'store_settings', label: '🎨 Store Settings' },
     ...(userRole === '3' ? [{ id: 'promos', label: '🎟️ Promos' }] : []),
     { id: 'messages', label: '💬 Messages' },
     ...(userRole === '3' ? [{ id: 'staff', label: '👥 Staff' }] : []),
@@ -613,63 +650,81 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* ===== HERO IMAGES TAB ===== */}
-          {activeTab === 'hero' && (
-            <div className="dashboard-card">
-              <div className="card-header-flex">
-                <h2>🖼️ Homepage Slideshow Images</h2>
-                <button className="custom-pill-btn-small" onClick={() => { setHeroImageFile(null); resetDialogState(); setShowAddHeroDialog(true); }}>
-                  + Add Image
-                </button>
-              </div>
-              {loading ? <p className="text-muted">Loading images...</p> : (
-                <div className="table-scroll-wrapper">
-                  <Table responsive className="custom-table borderless align-left-table mb-0">
-                    <thead><tr><th>Order</th><th>Preview</th><th>Status</th><th>Actions</th></tr></thead>
-                    <tbody>
-                      {heroImages.length === 0
-                        ? <tr><td colSpan="4" className="text-center text-muted py-4">No hero images uploaded yet. The homepage will be blank until you add one!</td></tr>
-                        : heroImages.map((img, index) => (
-                          <tr key={img.id} className="table-row-hover">
-                            <td style={{ width: '80px' }}>
-                              <div className="d-flex flex-column gap-1 align-items-center" style={{ width: 'fit-content' }}>
-                                <button className="btn-action" style={{ padding: '2px 8px' }} disabled={index === 0} onClick={() => handleMoveHeroImage(index, -1)}>▲</button>
-                                <button className="btn-action" style={{ padding: '2px 8px' }} disabled={index === heroImages.length - 1} onClick={() => handleMoveHeroImage(index, 1)}>▼</button>
-                              </div>
-                            </td>
-                            <td>
-                              <img 
-                                src={img.image_url.startsWith('http') ? img.image_url : `${API_BASE_URL}${img.image_url}`} 
-                                alt="hero slide" 
-                                style={{ width: '120px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e0dcd3', opacity: img.is_active ? 1 : 0.4 }} 
-                              />
-                            </td>
-                            <td>
-                              <Badge bg={img.is_active ? 'success' : 'secondary'} className="custom-badge">
-                                {img.is_active ? 'Active' : 'Hidden'}
-                              </Badge>
-                            </td>
-                            <td>
-                              <div className="d-flex gap-2">
-                                <button 
-                                  className={img.is_active ? 'btn-action-danger' : 'btn-action'} 
-                                  style={{ width: '70px' }}
-                                  onClick={() => handleToggleHeroImage(img.id, img.is_active)}
-                                >
-                                  {img.is_active ? 'Hide' : 'Show'}
-                                </button>
-                                <button className="btn-action-danger" onClick={() => handleDeleteHeroImage(img.id)}>Delete</button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </Table>
-                </div>
-              )}
-            </div>
-          )}
+{/* ===== STORE SETTINGS TAB ===== */}
+{activeTab === 'store_settings' && (
+  <div className="d-flex flex-column gap-4">
+    
+    {/* --- SECTION 1: HOMEPAGE SLIDESHOW --- */}
+    <div className="dashboard-card">
+      <div className="card-header-flex">
+        <h2>🖼️ Homepage Slideshow</h2>
+        <button className="custom-pill-btn-small" onClick={() => setShowAddHeroDialog(true)}>
+          + Add Slide
+        </button>
+      </div>
+      <div className="table-scroll-wrapper">
+        <Table responsive className="custom-table borderless mb-0">
+          <thead><tr><th>Order</th><th>Preview</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {heroImages.map((img, index) => (
+              <tr key={img.id} className="table-row-hover">
+                <td>
+                   <div className="d-flex flex-column gap-1">
+                      <button className="btn-action" disabled={index === 0} onClick={() => handleMoveHeroImage(index, -1)}>▲</button>
+                      <button className="btn-action" disabled={index === heroImages.length - 1} onClick={() => handleMoveHeroImage(index, 1)}>▼</button>
+                   </div>
+                </td>
+                <td><img src={img.image_url} alt="hero" style={{ width: '100px', borderRadius: '8px' }} /></td>
+                <td><Badge bg={img.is_active ? 'success' : 'secondary'}>{img.is_active ? 'Active' : 'Hidden'}</Badge></td>
+                <td>
+                  <button className="btn-action me-2" onClick={() => handleToggleHeroImage(img.id, img.is_active)}>
+                    {img.is_active ? 'Hide' : 'Show'}
+                  </button>
+                  <button className="btn-action-danger" onClick={() => handleDeleteHeroImage(img.id)}>Delete</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
+    </div>
 
+    {/* --- SECTION 2: 3D SHOWCASE DESIGNS --- */}
+    <div className="dashboard-card">
+      <div className="card-header-flex">
+        <h2>✨ 3D Builder Showcase</h2>
+        <p className="text-muted small">These models cycle through the "Create Your Own" card in your shop.</p>
+      </div>
+      <div className="table-scroll-wrapper">
+        <Table responsive className="custom-table borderless mb-0">
+          <thead><tr><th>Design Name</th><th>Wax Color</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {showcaseDesigns.length === 0 ? (
+              <tr><td colSpan="4" className="text-center py-4 text-muted">No designs saved yet.</td></tr>
+            ) : (
+              showcaseDesigns.map(design => (
+                <tr key={design.id} className="table-row-hover">
+                  <td><strong>{design.name}</strong></td>
+                  <td>
+                    <div style={{ 
+                      width: '24px', height: '24px', backgroundColor: design.hex_color, 
+                      borderRadius: '50%', border: '1px solid #ddd' 
+                    }}></div>
+                  </td>
+                  <td><Badge bg={design.is_active ? 'success' : 'secondary'}>{design.is_active ? 'Visible' : 'Hidden'}</Badge></td>
+                  <td>
+                    <button className="btn-action me-2" onClick={() => handleOpenEditShowcase(design)}>Edit</button>
+                    <button className="btn-action-danger" onClick={() => handleDeleteShowcase(design.id)}>Remove</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </Table>
+      </div>
+    </div>
+  </div>
+)}
           {/* ===== PROMOS TAB ===== */}
           {activeTab === 'promos' && userRole === '3' && (
             <div className="dashboard-card">
@@ -1069,7 +1124,49 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-
+  {showEditShowcaseDialog && (
+  <div className="dialog-overlay">
+    <div className="dialog-box">
+      <div className="dialog-header">
+        <h3>Edit Showcase Design</h3>
+        <button className="close-btn" onClick={() => setShowEditShowcaseDialog(false)}>&times;</button>
+      </div>
+      <Form onSubmit={handleUpdateShowcase}>
+        <Form.Group className="mb-3">
+          <Form.Label>Design Name</Form.Label>
+          <Form.Control 
+            type="text" 
+            className="custom-input" 
+            value={editShowcaseForm.name} 
+            onChange={e => setEditShowcaseForm({...editShowcaseForm, name: e.target.value})} 
+            required 
+          />
+        </Form.Group>
+        <Form.Group className="mb-3">
+          <Form.Label>Wax Color (Hex)</Form.Label>
+          <div className="d-flex gap-2">
+            <Form.Control 
+              type="color" 
+              className="form-control-color" 
+              value={editShowcaseForm.hex_color} 
+              onChange={e => setEditShowcaseForm({...editShowcaseForm, hex_color: e.target.value})} 
+            />
+            <Form.Control 
+              type="text" 
+              className="custom-input" 
+              value={editShowcaseForm.hex_color} 
+              onChange={e => setEditShowcaseForm({...editShowcaseForm, hex_color: e.target.value})} 
+            />
+          </div>
+        </Form.Group>
+        <div className="dialog-footer">
+          <button type="button" className="btn btn-cancel" onClick={() => setShowEditShowcaseDialog(false)}>Cancel</button>
+          <button type="submit" className="btn btn-gold-solid">Update Design</button>
+        </div>
+      </Form>
+    </div>
+  </div>
+)}
       {/* VIEW MESSAGE DIALOG */}
       {showViewMessageDialog && selectedMessage && (
         <div className="dialog-overlay">

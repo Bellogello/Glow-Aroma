@@ -171,7 +171,25 @@ app.get('/products/:id', (req, res) => {
         res.json(results[0]);
     });
 });
+// GET featured custom designs for the product grid
+app.get('/featured-designs', (req, res) => {
+    const sql = `
+        SELECT 
+            cc.*, 
+            s.name AS scent_name, 
+            cs.name AS shape_name,
+            'custom_featured' AS type_flag -- Helps the frontend identify these
+        FROM custom_candles cc
+        LEFT JOIN scents s ON cc.scent_id = s.id
+        LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
+        WHERE cc.is_featured = 1
+        ORDER BY cc.id DESC`;
 
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
 // Admin product management — now uses Cloudinary for images
 app.post('/admin/products', uploadImage.single('image'), (req, res) => {
     const { name, price, stock_quantity, description } = req.body;
@@ -845,6 +863,41 @@ app.delete('/admin/delete-account', (req, res) => {
             });
         }
     });
+});
+
+app.post('/admin/showcase', (req, res) => {
+    const { name, model_url, hex_color } = req.body;
+    const sql = 'INSERT INTO showcase_designs (name, model_url, hex_color) VALUES (?, ?, ?)';
+    
+    db.query(sql, [name, model_url, hex_color], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Design added to Showcase!', id: result.insertId });
+    });
+});
+
+// Route for the Product Card to fetch these designs
+app.get('/showcase', (req, res) => {
+    db.query('SELECT * FROM showcase_designs WHERE is_active = 1', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+app.delete('/admin/showcase/:id', (req, res) => {
+    db.query('DELETE FROM showcase_designs WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Design removed from showcase.' });
+    });
+});
+app.put('/admin/showcase/:id', (req, res) => {
+    const { name, hex_color, is_active } = req.body;
+    db.query(
+        'UPDATE showcase_designs SET name = ?, hex_color = ?, is_active = ? WHERE id = ?',
+        [name, hex_color, is_active, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Design updated successfully' });
+        }
+    );
 });
 
 // ==========================================

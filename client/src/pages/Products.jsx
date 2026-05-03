@@ -3,7 +3,8 @@ import Navbar from '../components/Navbar';
 import { Link } from 'react-router-dom'; 
 import '../styles/products.css'; 
 import ProductCard from '../components/ProductCard';
-import CreateYourOwn from '../components/CreateYourOwn';
+// Make sure to import the NEW card component we talked about!
+import CreateYourOwnCard from '../components/CreateYourOwn.jsx'; 
 import '../styles/CreateYourOwn.css';
 import Footer from '../components/Footer';
 import useTitle from '../components/useTitles';
@@ -14,8 +15,6 @@ const Products = () => {
   
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // --- NEW STATE FOR SEARCH AND FILTER ---
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
 
@@ -36,32 +35,27 @@ const Products = () => {
       });
   }, []);
 
-  // --- NEW FILTERING LOGIC ---
-  // This automatically updates the list instantly whenever the user types or clicks a filter
   const filteredProducts = products.filter((product) => {
-    // 1. Check if the product name matches the search box
     const matchesSearch = product.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = activeFilter === 'All' || 
+      (product.description && product.description.toLowerCase().includes(activeFilter.toLowerCase())) ||
+      (product.name && product.name.toLowerCase().includes(activeFilter.toLowerCase()));
     
-    // 2. Check if the product category matches the selected button
-    // NOTE: Make sure 'product.category' matches your actual database column name! 
-    // It might be 'product.type', 'product.material', etc.
-const matchesFilter = activeFilter === 'All' || 
-  (product.description && product.description.toLowerCase().includes(activeFilter.toLowerCase())) ||
-  (product.name && product.name.toLowerCase().includes(activeFilter.toLowerCase()));
     return matchesSearch && matchesFilter;
   });
 
   return (
     <div className="products-container">
       <Navbar />
-      <h1>Our Candles</h1>
-      
-      <div className='AllProducts'>
-        <div>
-          <CreateYourOwn />
-        </div>
 
-        {/* --- NEW SEARCH & FILTER SECTION --- */}
+      {/* Notice we completely removed the "custom-candle-hero" section from here! */}
+
+      <div className='AllProducts'>
+        
+        <h2 className="catalog-title" style={{ textAlign: 'center', marginBottom: '20px', color: '#4a3728' }}>
+          Shop Our Collection
+        </h2>
+
         <div className="search-filter-section">
           <input 
             type="text" 
@@ -72,7 +66,6 @@ const matchesFilter = activeFilter === 'All' ||
           />
           
           <div className="filter-buttons">
-            {/* The categories here should match the categories in your database */}
             {['All', 'Jar', 'Glass', 'Tin'].map((category) => (
               <button 
                 key={category}
@@ -84,16 +77,21 @@ const matchesFilter = activeFilter === 'All' ||
             ))}
           </div>
         </div>
-        {/* ---------------------------------- */}
 
         {loading ? (
-          <h2 style={{ textAlign: 'center' }}>Loading candles...</h2>
+          <h2 style={{ textAlign: 'center', margin: '40px 0' }}>Loading candles...</h2>
         ) : (
           <div className="product-list">
             
-            {/* Notice we changed this from 'products' to 'filteredProducts' */}
+            {/* --- 1. THE CUSTOM CANDLE CARD GOES HERE FIRST --- */}
+            {/* It only shows up when they are viewing "All" and haven't typed a search */}
+            {activeFilter === 'All' && searchQuery === '' && (
+              <CreateYourOwnCard />
+            )}
+
+            {/* --- 2. THE REST OF THE PREBUILT PRODUCTS FOLLOW --- */}
             {filteredProducts.length === 0 ? (
-              <p style={{ textAlign: 'center', gridColumn: '1 / -1' }}>
+              <p style={{ textAlign: 'center', gridColumn: '1 / -1', padding: '40px 0' }}>
                 No products found matching your search.
               </p>
             ) : (
@@ -104,15 +102,13 @@ const matchesFilter = activeFilter === 'All' ||
                 />
               ))
             )}
-
+            
           </div>
         )}
       </div>
       <Footer />
     </div>
-    
   );
-  
 };
 
 export default Products;
