@@ -709,7 +709,7 @@ app.get('/admin/orders/:orderId', (req, res) => {
         SELECT 
             oi.id AS order_item_id, 
             oi.quantity, 
-            oi.unit_price,
+            oi.price_at_time AS unit_price, /* THIS FIXES THE PRICE CRASH */
             CASE 
                 WHEN pc.id IS NOT NULL THEN 'prebuilt'
                 ELSE 'custom'
@@ -719,7 +719,7 @@ app.get('/admin/orders/:orderId', (req, res) => {
                 WHEN pc.id IS NOT NULL THEN pc.name 
                 WHEN cc.type = 'cup' THEN CONCAT(COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), ' ', COALESCE(cs.name, 'Cup'), ' (', cc.cup_size, 'ml)')
                 WHEN cc.type = 'mold' THEN CONCAT(COALESCE(ms.name, 'Custom'), ' Mold')
-                ELSE oi.item_name
+                ELSE 'Candle' /* FALLBACK IF ITEM NAME IS MISSING */
             END AS item_name,
             cc.preview_image AS snapshot,
             s.name AS scent_name,
@@ -737,7 +737,8 @@ app.get('/admin/orders/:orderId', (req, res) => {
 
     db.query(sql, [orderId], (err, results) => {
         if (err) {
-            console.error("ORDER DETAILS SQL ERROR:", err.message);
+            // This ensures the real error shows up in your Railway logs
+            console.error("ORDER DETAILS SQL ERROR:", err.message); 
             return res.status(500).json({ error: err.message });
         }
         res.json(results);
