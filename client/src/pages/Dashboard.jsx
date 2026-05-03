@@ -82,8 +82,8 @@ const Dashboard = () => {
         fetch(`${API_BASE_URL}/admin/staff`),
         fetch(`${API_BASE_URL}/admin/discount-codes`),
         fetch(`${API_BASE_URL}/admin/messages`),
-        fetch(`${API_BASE_URL}/hero-images`), // Fetching Hero Images instead of Models
-      ]);
+        fetch(`${API_BASE_URL}/admin/hero-images`),
+            ]);
       const [prodData, orderData, staffData, discountData, msgData, heroData] = await Promise.all([
         prodRes.json(), orderRes.json(), staffRes.json(), discountRes.json(), msgRes.json(), heroRes.json(),
       ]);
