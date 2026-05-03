@@ -296,10 +296,10 @@ const Dashboard = () => {
         is_active: toggledState 
       };
       
-      const res = await fetch(`${API_BASE_URL}/admin/showcase/${design.id}`, {
-        method: 'PUT',
+      const res = await fetch(`${API_BASE_URL}/admin/showcase/${design.id}/toggle`, {
+        method: 'PATCH', // Changed from PUT
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedDesign)
+        body: JSON.stringify({ is_active: toggledState }) // Only send the status
       });
 
       if (res.ok) {
@@ -758,7 +758,8 @@ const Dashboard = () => {
                                 borderRadius: '50%', 
                                 border: '1px solid #ddd' 
                               }}></div>
-                            </td>                            <td><Badge bg={design.is_active ? 'success' : 'secondary'}>{design.is_active ? 'Visible' : 'Hidden'}</Badge></td>
+                            </td>
+                            <td><Badge bg={design.is_active ? 'success' : 'secondary'}>{design.is_active ? 'Visible' : 'Hidden'}</Badge></td>
                             <td>
                               <div className="d-flex gap-2">
                                 <button 
