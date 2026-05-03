@@ -707,14 +707,15 @@ app.get('/admin/orders/:orderId', async (req, res) => {
     const { orderId } = req.params;
     
     try {
-        // We use EXACTLY the string you said worked, literally copy-pasted.
+        // 1. The exact query, but using 'unit_price' instead of 'price_at_time'
         const sql = `
             SELECT 
                 oi.id AS order_item_id, 
                 oi.quantity, 
-                oi.price_at_time,
+                oi.unit_price, /* Updated to match your database */
                 CASE 
                     WHEN pc.id IS NOT NULL THEN pc.name 
+                    WHEN cc.mold_shape_id IS NOT NULL THEN 'Custom Mold'
                     ELSE CONCAT(
                         COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), 
                         ' ', 
@@ -739,11 +740,11 @@ app.get('/admin/orders/:orderId', async (req, res) => {
         // Wait for the query to finish safely
         const [results] = await db.promise().query(sql, [orderId]);
         
-        // Format the results safely in JS so the React Dashboard doesn't break
+        // 2. Format the results safely in JS so the React Dashboard doesn't break
         const formatted = results.map(row => ({
             order_item_id: row.order_item_id,
             quantity: row.quantity,
-            unit_price: row.price_at_time || 0, // Bridges old DB schema to new UI
+            unit_price: row.unit_price || 0, // Using the correct column
             item_type: row.prebuilt_id ? 'prebuilt' : 'custom',
             item_name: row.item_name,
             snapshot: row.snapshot,
@@ -758,7 +759,6 @@ app.get('/admin/orders/:orderId', async (req, res) => {
         console.error("SQL CRASH:", err.message);
         
         // If it STILL crashes, we send the EXACT MySQL error text back to your browser!
-        // You will see this error message in the React UI alert box or the Network tab.
         res.status(500).json({ 
             error: "MySQL Error: " + err.message
         });
