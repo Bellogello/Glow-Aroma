@@ -176,36 +176,61 @@
 
 /* --- RESPONSIVE MOBILE FIX --- */
 /* Stacks the horizontal layout perfectly on small screens */
+/* --- REFINED HORIZONTAL MOBILE VIEW --- */
 @media (max-width: 768px) {
   .custom-candle-card.horizontal-layout {
-    height: auto;
-    flex-direction: column;
+    height: 220px; /* Thinner profile for a sleeker look */
+    max-width: 100%;
+    margin: 0 auto;
+    border-radius: 20px;
   }
+
   .custom-card-content {
-    flex-direction: column-reverse; /* Puts 3D model on top, text on bottom */
+    flex-direction: row !important; 
+    align-items: stretch;
   }
-  .custom-card-3d-container {
-    height: 320px;
-    border-left: none;
-    border-bottom: 1px solid rgba(200, 169, 126, 0.1);
-  }
-  .custom-card-3d-container::before {
-    width: 100%;
-    height: 60px;
-    bottom: 0;
-    top: auto;
-    left: 0;
-    background: linear-gradient(to top, #ffffff, transparent); /* Blends downward on mobile */
-  }
+
+  /* --- TEXT SECTION --- */
   .custom-card-info {
-    padding: 2.5rem 1.5rem;
-    align-items: center;
-    text-align: center;
+    flex: 1.4; /* Give text more priority in the thin layout */
+    padding: 1rem; 
+    justify-content: center;
   }
+
+  .featured-badge {
+    font-size: 0.55rem;
+    padding: 3px 8px;
+    margin-bottom: 0.4rem;
+  }
+
   .custom-card-info h2 {
-    font-size: 1.8rem;
+    font-size: 1.1rem; /* Slightly smaller to match thinner height */
+    margin-bottom: 0.3rem;
   }
-  .custom-card-content.fade-out {
-    transform: translateY(10px); /* Vertical slide out for mobile */
+
+  .card-subtitle {
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+    -webkit-line-clamp: 2; /* Keeps text to 2 lines max */
+  }
+
+  /* --- 3D CANVAS AREA (Smaller Candle) --- */
+  .custom-card-3d-container {
+    flex: 0.7; /* Narrower container makes the candle smaller */
+    height: 100%;
+    padding: 15px; /* Inset padding forces the 3D model to shrink */
+    background: radial-gradient(circle at center, #fdfbf7 0%, #f9f6f1 100%);
+  }
+
+  .custom-card-3d-container::before {
+    width: 30px;
+    background: linear-gradient(to right, #ffffff, transparent);
+  }
+
+  /* --- COMPACT BUTTON --- */
+  .pulsing-cta-btn {
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    box-shadow: 0 3px 10px rgba(74, 55, 40, 0.2);
   }
 }
