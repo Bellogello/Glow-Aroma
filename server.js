@@ -706,8 +706,6 @@ app.get('/admin/orders/:id/items', (req, res) => {
 app.get('/admin/orders/:orderId', (req, res) => {
     const { orderId } = req.params;
     
-    // We are querying ONLY the columns that actually exist in your table.
-    // No JOINS. No missing IDs. No crashing.
     const sql = `
         SELECT 
             id AS order_item_id, 
@@ -720,12 +718,8 @@ app.get('/admin/orders/:orderId', (req, res) => {
         WHERE order_id = ?`;
 
     db.query(sql, [orderId], (err, results) => {
-        if (err) {
-            console.error("SQL CRASH:", err.message);
-            return res.status(500).json({ error: err.message });
-        }
+        if (err) return res.status(500).json({ error: err.message });
         
-        // We ensure the frontend gets a clean object so the Dashboard doesn't break
         const formatted = results.map(row => ({
             order_item_id: row.order_item_id,
             quantity: row.quantity,
@@ -733,8 +727,8 @@ app.get('/admin/orders/:orderId', (req, res) => {
             item_type: row.item_type || 'custom',
             item_name: row.item_name || 'Candle',
             details: row.details || 'Standard',
-            snapshot: null,    // We can't fetch the 3D image without the IDs
-            scent_name: null,  // Scent and layers are combined inside the 'details' text
+            snapshot: null,
+            scent_name: null,
             wax_layers: null 
         }));
 
@@ -885,8 +879,6 @@ app.post('/checkout', async (req, res) => {
             if (i.is_custom) {
                 exactItemType = (i.name && i.name.toLowerCase().includes('mold')) ? 'mold' : 'cup';
             } else {
-                // If it's a prebuilt candle, push an UPDATE promise to decrease stock
-                // Ensure your frontend sends 'prebuilt_candle_id' in the item object
                 const pId = i.prebuilt_candle_id || i.id; 
                 stockUpdatePromises.push(
                     db.promise().query(
@@ -896,24 +888,41 @@ app.post('/checkout', async (req, res) => {
                 );
             }
 
+            // --- THE FIX: CATCH THE SCENT AND WAX COLORS ---
+            let finalDetails = 'Standard Pre-built';
+            
+            if (i.is_custom) {
+                let parts = [];
+                // Grab the exact variables the cart uses
+                if (i.wax_colors) parts.push(`Wax: ${i.wax_colors}`);
+                if (i.scent) parts.push(`Scent: ${i.scent}`);
+                
+                // Combine them into a clean string for the database
+                if (parts.length > 0) {
+                    finalDetails = parts.join(' • ');
+                } else {
+                    finalDetails = 'Customized';
+                }
+            } else if (i.details) {
+                finalDetails = i.details;
+            }
+
             orderItemValues.push([
                 orderId, 
                 exactItemType, 
                 i.name || 'Candle', 
                 parseFloat(i.price) || 0, 
                 parseInt(i.quantity, 10) || 1, 
-                i.details || i.color_info || 'Standard Pre-built'
+                finalDetails // <-- Saving the actual ingredients!
             ]);
         });
 
         // 4. Execute all DB operations
-        // Insert items into the order
         await db.promise().query(
             'INSERT INTO order_items (order_id, item_type, item_name, unit_price, quantity, details) VALUES ?', 
             [orderItemValues]
         );
 
-        // Run all stock updates in parallel
         await Promise.all(stockUpdatePromises);
 
         // 5. Cleanup: Delete cart and update coupon
@@ -926,7 +935,7 @@ app.post('/checkout', async (req, res) => {
             );
         }
 
-        res.status(201).json({ message: 'Order placed and stock updated successfully', orderId });
+        res.status(201).json({ message: 'Order placed successfully', orderId });
 
     } catch (err) {
         console.error("CHECKOUT ERROR:", err.message);
