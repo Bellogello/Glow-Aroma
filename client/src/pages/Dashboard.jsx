@@ -242,6 +242,39 @@ const Dashboard = () => {
       error(err.message);
     }
   };
+  const handleToggleHeroImage = async (id, currentStatus) => {
+    try {
+      await fetch(`${API_BASE_URL}/admin/hero-images/${id}/toggle`, { method: 'PATCH' });
+      setHeroImages(prev => prev.map(img => img.id === id ? { ...img, is_active: !currentStatus } : img));
+      success(currentStatus ? 'Image hidden from homepage.' : 'Image added to homepage!');
+    } catch (err) {
+      error("Failed to toggle image status.");
+    }
+  };
+
+  const handleMoveHeroImage = async (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= heroImages.length) return;
+    
+    // Swap locally for instant UI update
+    const newOrder = [...heroImages];
+    const temp = newOrder[index];
+    newOrder[index] = newOrder[newIndex];
+    newOrder[newIndex] = temp;
+    setHeroImages(newOrder);
+
+    // Save to backend
+    try {
+      const orderedIds = newOrder.map(img => img.id);
+      await fetch(`${API_BASE_URL}/admin/hero-images/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedIds })
+      });
+    } catch (err) {
+      error("Failed to save new order.");
+    }
+  };
 
   // --- ORDERS ---
   const handleOpenOrderDialog = async (order) => {
@@ -580,7 +613,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* ===== HERO IMAGES TAB (Replaces 3D Models) ===== */}
+          {/* ===== HERO IMAGES TAB ===== */}
           {activeTab === 'hero' && (
             <div className="dashboard-card">
               <div className="card-header-flex">
@@ -592,22 +625,41 @@ const Dashboard = () => {
               {loading ? <p className="text-muted">Loading images...</p> : (
                 <div className="table-scroll-wrapper">
                   <Table responsive className="custom-table borderless align-left-table mb-0">
-                    <thead><tr><th>Preview</th><th>ID</th><th>Action</th></tr></thead>
+                    <thead><tr><th>Order</th><th>Preview</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
                       {heroImages.length === 0
-                        ? <tr><td colSpan="3" className="text-center text-muted py-4">No hero images uploaded yet. The homepage will be blank until you add one!</td></tr>
-                        : heroImages.map(img => (
+                        ? <tr><td colSpan="4" className="text-center text-muted py-4">No hero images uploaded yet. The homepage will be blank until you add one!</td></tr>
+                        : heroImages.map((img, index) => (
                           <tr key={img.id} className="table-row-hover">
+                            <td style={{ width: '80px' }}>
+                              <div className="d-flex flex-column gap-1 align-items-center" style={{ width: 'fit-content' }}>
+                                <button className="btn-action" style={{ padding: '2px 8px' }} disabled={index === 0} onClick={() => handleMoveHeroImage(index, -1)}>▲</button>
+                                <button className="btn-action" style={{ padding: '2px 8px' }} disabled={index === heroImages.length - 1} onClick={() => handleMoveHeroImage(index, 1)}>▼</button>
+                              </div>
+                            </td>
                             <td>
                               <img 
                                 src={img.image_url.startsWith('http') ? img.image_url : `${API_BASE_URL}${img.image_url}`} 
                                 alt="hero slide" 
-                                style={{ width: '120px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e0dcd3' }} 
+                                style={{ width: '120px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e0dcd3', opacity: img.is_active ? 1 : 0.4 }} 
                               />
                             </td>
-                            <td><strong>#{img.id}</strong></td>
                             <td>
-                              <button className="btn-action-danger" onClick={() => handleDeleteHeroImage(img.id)}>Delete</button>
+                              <Badge bg={img.is_active ? 'success' : 'secondary'} className="custom-badge">
+                                {img.is_active ? 'Active' : 'Hidden'}
+                              </Badge>
+                            </td>
+                            <td>
+                              <div className="d-flex gap-2">
+                                <button 
+                                  className={img.is_active ? 'btn-action-danger' : 'btn-action'} 
+                                  style={{ width: '70px' }}
+                                  onClick={() => handleToggleHeroImage(img.id, img.is_active)}
+                                >
+                                  {img.is_active ? 'Hide' : 'Show'}
+                                </button>
+                                <button className="btn-action-danger" onClick={() => handleDeleteHeroImage(img.id)}>Delete</button>
+                              </div>
                             </td>
                           </tr>
                         ))}

@@ -625,28 +625,60 @@ app.post('/messages', (req, res) => {
 // --- HERO IMAGES (HOMEPAGE SLIDESHOW) ---
 // ==========================================
 
-// 1. Fetch images for the homepage (Public)
+// 1. Fetch images for the homepage (Public - ONLY ACTIVE images, sorted)
 app.get('/hero-images', (req, res) => {
-    db.query('SELECT * FROM hero_images ORDER BY created_at ASC', (err, results) => {
+    db.query('SELECT * FROM hero_images WHERE is_active = TRUE ORDER BY display_order ASC, id ASC', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
 });
 
-// 2. Upload a new hero image (Admin) - Uses your existing uploadImage middleware
-app.post('/admin/hero-images', uploadImage.single('image'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'Image file is required' });
-    
-    // Cloudinary automatically returns the secure, hosted URL in req.file.path
-    const imageUrl = req.file.path; 
-    
-    db.query('INSERT INTO hero_images (image_url) VALUES (?)', [imageUrl], (err, result) => {
+// 2. Fetch all images for Dashboard (Admin - ALL images, sorted)
+app.get('/admin/hero-images', (req, res) => {
+    db.query('SELECT * FROM hero_images ORDER BY display_order ASC, id ASC', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ newImage: { id: result.insertId, image_url: imageUrl } });
+        res.json(results);
     });
 });
 
-// 3. Delete a hero image (Admin)
+// 3. Upload a new hero image
+app.post('/admin/hero-images', uploadImage.single('image'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'Image file is required' });
+    const imageUrl = req.file.path; 
+    
+    // Put new images at the end of the line
+    db.query('SELECT MAX(display_order) as maxOrder FROM hero_images', (err, rows) => {
+        const nextOrder = (rows[0]?.maxOrder || 0) + 1;
+        db.query('INSERT INTO hero_images (image_url, display_order, is_active) VALUES (?, ?, TRUE)', [imageUrl, nextOrder], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(201).json({ newImage: { id: result.insertId, image_url: imageUrl, display_order: nextOrder, is_active: 1 } });
+        });
+    });
+});
+
+// 4. Toggle Visibility (Hide/Show)
+app.patch('/admin/hero-images/:id/toggle', (req, res) => {
+    db.query('UPDATE hero_images SET is_active = NOT is_active WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Visibility toggled' });
+    });
+});
+
+// 5. Reorder Images
+app.put('/admin/hero-images/reorder', async (req, res) => {
+    const { orderedIds } = req.body; // Array of IDs in their new order
+    try {
+        const promises = orderedIds.map((id, index) => {
+            return db.promise().query('UPDATE hero_images SET display_order = ? WHERE id = ?', [index + 1, id]);
+        });
+        await Promise.all(promises);
+        res.json({ message: 'Order saved successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 6. Delete a hero image
 app.delete('/admin/hero-images/:id', (req, res) => {
     db.query('DELETE FROM hero_images WHERE id = ?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
