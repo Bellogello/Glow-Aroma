@@ -283,7 +283,7 @@ const Dashboard = () => {
     setSelectedOrderItems([]);
     setShowOrderDialog(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/orders/${order.id}/items`);
+      const res = await fetch(`${API_BASE_URL}/admin/orders/${order.id}`);
       const data = await res.json();
       setSelectedOrderItems(Array.isArray(data) ? data : []);
     } catch { error("Could not load order items."); }
@@ -819,7 +819,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* ORDER DIALOG */}
+{/* ORDER DIALOG */}
       {showOrderDialog && selectedOrder && (
         <div className="dialog-overlay">
           <div className="dialog-box">
@@ -839,23 +839,47 @@ const Dashboard = () => {
                   <Badge bg={getStatusBg(selectedOrder.status_id)} className="custom-badge fs-6">{getStatusLabel(selectedOrder.status_id)}</Badge>
                 </div>
               </div>
+
+              {/* --- UPDATED ORDER ITEMS SECTION --- */}
               <div className="mb-4 p-3 rounded" style={{ backgroundColor: '#fdfbf7', border: '1px solid #e0dcd3' }}>
                 <h6 className="fw-bold mb-3" style={{ color: '#4a3728' }}>Order Items</h6>
                 {selectedOrderItems.length === 0 ? <p className="text-muted small mb-0">No items found.</p> : (
-                  <ul className="list-unstyled mb-0" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  <ul className="list-unstyled mb-0" style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '5px' }}>
                     {selectedOrderItems.map(item => (
-                      <li key={item.id} className="d-flex justify-content-between mb-3 pb-3 border-bottom">
-                        <div>
-                          <div><span className="fw-bold text-dark">{item.quantity}x</span> {item.item_name}
-                            {item.item_type !== 'prebuilt' && <span className="badge bg-secondary ms-2" style={{ fontSize: '0.65rem' }}>Custom</span>}
-                          </div>
-                          {item.details && item.details !== 'Standard Pre-built' && (
-                            <div className="text-muted mt-1" style={{ fontSize: '0.85rem', marginLeft: '1.5rem' }}>
-                              {item.details.split(', ').map((detail, i) => (
-                                <div key={i}>{detail}</div>
-                              ))}
-                            </div>
+                      <li key={item.order_item_id || item.id} className="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                        <div className="d-flex gap-3">
+                          
+                          {/* Render Custom 3D Snapshot Thumbnail */}
+                          {item.snapshot && (
+                            <img 
+                              src={item.snapshot} 
+                              alt="candle preview" 
+                              style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e0dcd3', backgroundColor: '#fdfbf7' }} 
+                            />
                           )}
+                          
+                          <div>
+                            <div>
+                              <span className="fw-bold text-dark">{item.quantity}x</span> {item.item_name}
+                              {item.item_type !== 'prebuilt' && <span className="badge bg-secondary ms-2" style={{ fontSize: '0.65rem' }}>Custom</span>}
+                            </div>
+
+                            {/* Render Deep Custom Details */}
+                            {item.item_type !== 'prebuilt' ? (
+                              <div className="text-muted mt-1" style={{ fontSize: '0.85rem' }}>
+                                {item.scent_name && <div style={{ marginBottom: '2px' }}><span className="fw-semibold" style={{ color: '#8c7e70' }}>Scent:</span> {item.scent_name}</div>}
+                                {item.wax_layers && <div style={{ marginBottom: '2px' }}><span className="fw-semibold" style={{ color: '#8c7e70' }}>Layers:</span> {item.wax_layers}</div>}
+                                {item.details && item.details !== 'Standard Pre-built' && <div><span className="fw-semibold" style={{ color: '#8c7e70' }}>Notes:</span> {item.details}</div>}
+                              </div>
+                            ) : (
+                              /* Render Prebuilt Details if any exist */
+                              item.details && item.details !== 'Standard Pre-built' && (
+                                <div className="text-muted mt-1" style={{ fontSize: '0.85rem' }}>
+                                  <span className="fw-semibold" style={{ color: '#8c7e70' }}>Notes:</span> {item.details}
+                                </div>
+                              )
+                            )}
+                          </div>
                         </div>
                         <span className="text-muted fw-semibold">{(Number(item.unit_price) * item.quantity).toFixed(2)} L.E.</span>
                       </li>
@@ -863,6 +887,8 @@ const Dashboard = () => {
                   </ul>
                 )}
               </div>
+              {/* --- END UPDATED ORDER ITEMS SECTION --- */}
+
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold">Update Status</Form.Label>
                 <Form.Select className="custom-input form-select" value={newStatusId} onChange={e => setNewStatusId(e.target.value)} required>
@@ -879,7 +905,7 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-
+      
       {/* EDIT PRODUCT DIALOG */}
       {showEditProductDialog && (
         <div className="dialog-overlay">

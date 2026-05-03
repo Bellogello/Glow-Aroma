@@ -709,15 +709,14 @@ app.get('/admin/orders/:orderId', (req, res) => {
         SELECT 
             oi.id AS order_item_id, 
             oi.quantity, 
-            oi.price_at_time,
+            oi.unit_price,
+            oi.item_type,
+            oi.details,
             CASE 
                 WHEN pc.id IS NOT NULL THEN pc.name 
-                ELSE CONCAT(
-                    COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), 
-                    ' ', 
-                    COALESCE(cs.name, 'Cup'), 
-                    ' (', cc.cup_size, 'ml)'
-                )
+                WHEN cc.type = 'cup' THEN CONCAT(COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), ' ', COALESCE(cs.name, 'Cup'), ' (', cc.cup_size, 'ml)')
+                WHEN cc.type = 'mold' THEN CONCAT(COALESCE(ms.name, 'Custom'), ' Mold')
+                ELSE oi.item_name
             END AS item_name,
             cc.preview_image AS snapshot,
             s.name AS scent_name,
@@ -725,6 +724,7 @@ app.get('/admin/orders/:orderId', (req, res) => {
         FROM order_items oi
         LEFT JOIN custom_candles cc ON oi.custom_candle_id = cc.id
         LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
+        LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
         LEFT JOIN scents s ON cc.scent_id = s.id
         LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
         LEFT JOIN colors cl ON ccl.color_id = cl.id
