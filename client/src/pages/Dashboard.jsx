@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Table, Badge, Form, Alert, Spinner } from 'react-bootstrap';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import Navbar from '../components/Navbar';
 import '../styles/Dashboard.css';
 import useTitle from '../components/useTitles';
@@ -16,6 +17,7 @@ const Dashboard = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
@@ -92,20 +94,38 @@ const Dashboard = () => {
     }
   };
 
+  // --- STATS CALCULATIONS ---
+  const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const processingOrders = orders.filter(o => o.status_id === 1).length;
+  const lowStockProducts = products.filter(p => p.stock_quantity <= 5).length;
+  const unreadMessages = messages.length;
+
+  // --- CHART DATA ---
+  const revenueByDay = orders.reduce((acc, order) => {
+    const date = new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const existing = acc.find(d => d.date === date);
+    if (existing) existing.revenue += Number(order.total || 0);
+    else acc.push({ date, revenue: Number(order.total || 0) });
+    return acc;
+  }, []).slice(-7);
+
+  const ordersByStatus = [
+    { name: 'Processing', count: orders.filter(o => o.status_id === 1).length, fill: '#f59e0b' },
+    { name: 'Shipped', count: orders.filter(o => o.status_id === 2).length, fill: '#3b82f6' },
+    { name: 'Delivered', count: orders.filter(o => o.status_id === 3).length, fill: '#10b981' },
+  ];
+
   const resetDialogState = () => { setDialogError(''); setDialogSuccess(''); setSubmitting(false); };
   const getStatusLabel = (s) => s === 1 ? 'Processing' : s === 2 ? 'Shipped' : 'Delivered';
   const getStatusBg = (s) => s === 1 ? 'warning' : s === 2 ? 'info' : 'success';
 
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.customer_name?.toLowerCase().includes(orderSearch.toLowerCase()) ||
-                          order.id.toString().includes(orderSearch);
+    const matchesSearch = order.customer_name?.toLowerCase().includes(orderSearch.toLowerCase()) || order.id.toString().includes(orderSearch);
     const matchesStatus = orderStatusFilter === 'All' || order.status_id.toString() === orderStatusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const filteredProducts = products.filter(p =>
-    p.name?.toLowerCase().includes(productSearch.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => p.name?.toLowerCase().includes(productSearch.toLowerCase()));
 
   // --- STAFF ---
   const handleOpenAddStaff = () => { setStaffForm({ name: '', email: '', phone: '', password: '', role_id: '2' }); resetDialogState(); setShowAddStaffDialog(true); };
@@ -208,7 +228,6 @@ const Dashboard = () => {
     } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
 
-  // --- DISCOUNT ---
   const handleOpenDeleteAccount = () => { setDeletePassword(''); resetDialogState(); setShowDeleteAccountDialog(true); };
   const handleDeleteAccount = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError('');
@@ -267,32 +286,139 @@ const Dashboard = () => {
 
   if (!isAuthorized) return null;
 
+  const tabs = [
+    { id: 'overview', label: '📊 Overview' },
+    { id: 'orders', label: '📦 Orders' },
+    { id: 'products', label: '🕯️ Products' },
+    { id: 'models', label: '🧊 3D Models' },
+    ...(userRole === '3' ? [{ id: 'promos', label: '🎟️ Promos' }] : []),
+    { id: 'messages', label: '💬 Messages' },
+    ...(userRole === '3' ? [{ id: 'staff', label: '👥 Staff' }] : []),
+    { id: 'settings', label: '⚙️ Settings' },
+  ];
+
   return (
     <>
       <div className="home-container dashboard-bg">
         <Navbar />
         <div className="dashboard-container">
 
-          {/* 1. ORDERS */}
-          <div className="dashboard-card">
-            <div className="card-header-flex"><h2>Recent Orders</h2></div>
-            <div className="dashboard-controls-row mb-4">
-              <Form.Control type="text" placeholder="Search by Order ID or Customer..." className="custom-input flex-grow-1" value={orderSearch} onChange={e => setOrderSearch(e.target.value)} />
-              <Form.Select className="custom-input w-auto" value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)}>
-                <option value="All">All Statuses</option>
-                <option value="1">Processing</option>
-                <option value="2">Shipped</option>
-                <option value="3">Delivered</option>
-              </Form.Select>
-            </div>
-            {loading ? <p className="text-muted">Loading orders...</p> : (
-              <div className="table-scroll-wrapper">
-                <Table responsive className="custom-table borderless align-left-table mb-0">
-                  <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
-                  <tbody>
-                    {filteredOrders.length === 0
-                      ? <tr><td colSpan="6" className="text-center text-muted py-4">No matching orders.</td></tr>
-                      : filteredOrders.map(order => (
+          {/* TAB NAV */}
+          <div className="dash-tab-nav">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                className={`dash-tab ${activeTab === tab.id ? 'dash-tab--active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label}
+                {tab.id === 'messages' && unreadMessages > 0 && (
+                  <span className="dash-tab-badge">{unreadMessages}</span>
+                )}
+                {tab.id === 'orders' && processingOrders > 0 && (
+                  <span className="dash-tab-badge dash-tab-badge--amber">{processingOrders}</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* ===== OVERVIEW TAB ===== */}
+          {activeTab === 'overview' && (
+            <>
+              {/* STAT CARDS */}
+              <div className="stats-grid">
+                <div className="stat-card stat-card--revenue">
+                  <div className="stat-card__icon">💰</div>
+                  <div className="stat-card__body">
+                    <p className="stat-card__label">Total Revenue</p>
+                    <h2 className="stat-card__value">{totalRevenue.toFixed(0)} <span>L.E.</span></h2>
+                    <p className="stat-card__sub">{orders.length} orders total</p>
+                  </div>
+                </div>
+                <div className="stat-card stat-card--orders">
+                  <div className="stat-card__icon">📦</div>
+                  <div className="stat-card__body">
+                    <p className="stat-card__label">Processing</p>
+                    <h2 className="stat-card__value">{processingOrders}</h2>
+                    <p className="stat-card__sub">orders need attention</p>
+                  </div>
+                </div>
+                <div className="stat-card stat-card--products">
+                  <div className="stat-card__icon">🕯️</div>
+                  <div className="stat-card__body">
+                    <p className="stat-card__label">Products</p>
+                    <h2 className="stat-card__value">{products.length}</h2>
+                    <p className="stat-card__sub">{lowStockProducts > 0 ? <span className="text-warning">{lowStockProducts} low stock</span> : 'all stocked'}</p>
+                  </div>
+                </div>
+                <div className="stat-card stat-card--messages">
+                  <div className="stat-card__icon">💬</div>
+                  <div className="stat-card__body">
+                    <p className="stat-card__label">Messages</p>
+                    <h2 className="stat-card__value">{unreadMessages}</h2>
+                    <p className="stat-card__sub">customer messages</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* CHARTS ROW */}
+              <div className="charts-grid">
+                <div className="dashboard-card">
+                  <div className="card-header-flex">
+                    <h2>Revenue (Last 7 Days)</h2>
+                  </div>
+                  {revenueByDay.length === 0 ? (
+                    <p className="text-muted text-center py-4">No revenue data yet.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <AreaChart data={revenueByDay}>
+                        <defs>
+                          <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#4a3728" stopOpacity={0.15}/>
+                            <stop offset="95%" stopColor="#4a3728" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0ebe1" />
+                        <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#8c7e70' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 12, fill: '#8c7e70' }} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e0dcd3', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+                        <Area type="monotone" dataKey="revenue" stroke="#4a3728" strokeWidth={2.5} fill="url(#revenueGrad)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+
+                <div className="dashboard-card">
+                  <div className="card-header-flex">
+                    <h2>Orders by Status</h2>
+                  </div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={ordersByStatus} barSize={40}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0ebe1" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#8c7e70' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 12, fill: '#8c7e70' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e0dcd3' }} />
+                      <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                        {ordersByStatus.map((entry, index) => (
+                          <rect key={index} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* RECENT ORDERS MINI */}
+              <div className="dashboard-card">
+                <div className="card-header-flex">
+                  <h2>Recent Orders</h2>
+                  <button className="custom-pill-btn-small" onClick={() => setActiveTab('orders')}>View All</button>
+                </div>
+                <div className="table-scroll-wrapper">
+                  <Table responsive className="custom-table borderless align-left-table mb-0">
+                    <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody>
+                      {orders.slice(0, 5).map(order => (
                         <tr key={order.id} className="table-row-hover">
                           <td><strong>#{order.id}</strong></td>
                           <td>{order.customer_name}</td>
@@ -302,88 +428,151 @@ const Dashboard = () => {
                           <td><button className="btn-action" onClick={() => handleOpenOrderDialog(order)}>View</button></td>
                         </tr>
                       ))}
-                  </tbody>
-                </Table>
+                    </tbody>
+                  </Table>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* 2. PRODUCTS */}
-          <div className="dashboard-card">
-            <div className="card-header-flex">
-              <h2>Products Inventory</h2>
-              <div className="d-flex gap-2">
-                <Link to="/inventory" className="custom-pill-btn-small" style={{ textDecoration: 'none' }}>🧊 Manage Options</Link>
-                <button className="custom-pill-btn-small" onClick={handleOpenAddProduct}>+ Add Product</button>
-              </div>
-            </div>
-            <div className="dashboard-controls-row mb-4">
-              <Form.Control type="text" placeholder="Search products..." className="custom-input" value={productSearch} onChange={e => setProductSearch(e.target.value)} />
-            </div>
-            {loading ? <p className="text-muted">Loading inventory...</p> : (
-              <div className="table-scroll-wrapper">
-                <Table responsive className="custom-table borderless align-left-table mb-0">
-                  <thead><tr><th>ID</th><th>Product Name</th><th>Stock</th><th>Price</th><th>Action</th></tr></thead>
-                  <tbody>
-                    {filteredProducts.length === 0
-                      ? <tr><td colSpan="5" className="text-center text-muted py-4">No matching products.</td></tr>
-                      : filteredProducts.map(product => (
-                        <tr key={product.id} className="table-row-hover">
-                          <td>{product.id}</td>
-                          <td>
-                            {product.image_url && (
-                              <img src={product.image_url.startsWith('http') ? product.image_url : `${API_BASE_URL}${product.image_url}`}
-                                alt={product.name} style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: 4, marginRight: 10 }} />
-                            )}
-                            <strong>{product.name}</strong>
-                          </td>
-                          <td><span className={product.stock_quantity === 0 ? 'text-danger fw-bold' : ''}>{product.stock_quantity} units</span></td>
-                          <td>{Number(product.price).toFixed(2)} L.E.</td>
-                          <td><button className="btn-action" onClick={() => handleOpenEditProduct(product)}>Edit</button></td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </Table>
-              </div>
-            )}
-          </div>
+              {/* LOW STOCK ALERT */}
+              {lowStockProducts > 0 && (
+                <div className="dashboard-card low-stock-card">
+                  <div className="card-header-flex">
+                    <h2>⚠️ Low Stock Alert</h2>
+                    <button className="custom-pill-btn-small" onClick={() => setActiveTab('products')}>Manage Products</button>
+                  </div>
+                  <div className="table-scroll-wrapper">
+                    <Table responsive className="custom-table borderless align-left-table mb-0">
+                      <thead><tr><th>Product</th><th>Stock</th><th>Action</th></tr></thead>
+                      <tbody>
+                        {products.filter(p => p.stock_quantity <= 5).map(p => (
+                          <tr key={p.id} className="table-row-hover">
+                            <td><strong>{p.name}</strong></td>
+                            <td><span className={p.stock_quantity === 0 ? 'badge bg-danger' : 'badge bg-warning text-dark'}>{p.stock_quantity === 0 ? 'Out of Stock' : `${p.stock_quantity} left`}</span></td>
+                            <td><button className="btn-action" onClick={() => { handleOpenEditProduct(p); }}>Edit</button></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
 
-          {/* 3. 3D MODELS — quick overview, full management in /inventory */}
-          <div className="dashboard-card">
-            <div className="card-header-flex">
-              <h2>🧊 3D Models</h2>
-              <Link to="/inventory" className="custom-pill-btn-small" style={{ textDecoration: 'none' }}
-                onClick={() => localStorage.setItem('inv_tab', 'models')}>
-                Manage Models
-              </Link>
-            </div>
-            {loading ? <p className="text-muted">Loading models...</p> : (
-              <div className="table-scroll-wrapper">
-                <Table responsive className="custom-table borderless align-left-table mb-0">
-                  <thead><tr><th>Name</th><th>Type</th><th>Layers</th><th>Flat Shading</th><th>Status</th></tr></thead>
-                  <tbody>
-                    {models.length === 0
-                      ? <tr><td colSpan="5" className="text-center text-muted py-4">No models uploaded yet. <Link to="/inventory">Upload one →</Link></td></tr>
-                      : models.map(m => (
-                        <tr key={m.id} className="table-row-hover">
-                          <td>
-                            {m.thumbnail_url && <img src={m.thumbnail_url} alt={m.name} style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', marginRight: 8 }} />}
-                            <strong>{m.name}</strong>
-                          </td>
-                          <td><Badge bg={m.type === 'cup' ? 'primary' : 'warning'} className="custom-badge">{m.type}</Badge></td>
-                          <td>{m.layers || 1}</td>
-                          <td>{m.flat_shading ? '✓ On' : '— Off'}</td>
-                          <td><Badge bg={m.is_available ? 'success' : 'secondary'} className="custom-badge">{m.is_available ? 'Active' : 'Hidden'}</Badge></td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </Table>
+          {/* ===== ORDERS TAB ===== */}
+          {activeTab === 'orders' && (
+            <div className="dashboard-card">
+              <div className="card-header-flex"><h2>All Orders</h2></div>
+              <div className="dashboard-controls-row mb-4">
+                <Form.Control type="text" placeholder="Search by Order ID or Customer..." className="custom-input flex-grow-1" value={orderSearch} onChange={e => setOrderSearch(e.target.value)} />
+                <Form.Select className="custom-input w-auto" value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)}>
+                  <option value="All">All Statuses</option>
+                  <option value="1">Processing</option>
+                  <option value="2">Shipped</option>
+                  <option value="3">Delivered</option>
+                </Form.Select>
               </div>
-            )}
-          </div>
+              {loading ? <p className="text-muted">Loading orders...</p> : (
+                <div className="table-scroll-wrapper">
+                  <Table responsive className="custom-table borderless align-left-table mb-0">
+                    <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody>
+                      {filteredOrders.length === 0
+                        ? <tr><td colSpan="6" className="text-center text-muted py-4">No matching orders.</td></tr>
+                        : filteredOrders.map(order => (
+                          <tr key={order.id} className="table-row-hover">
+                            <td><strong>#{order.id}</strong></td>
+                            <td>{order.customer_name}</td>
+                            <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                            <td>{Number(order.total).toFixed(2)} L.E.</td>
+                            <td><Badge bg={getStatusBg(order.status_id)} className="custom-badge">{getStatusLabel(order.status_id)}</Badge></td>
+                            <td><button className="btn-action" onClick={() => handleOpenOrderDialog(order)}>View</button></td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* 4. PROMO CODES — Super Admin only */}
-          {userRole === '3' && (
+          {/* ===== PRODUCTS TAB ===== */}
+          {activeTab === 'products' && (
+            <div className="dashboard-card">
+              <div className="card-header-flex">
+                <h2>Products Inventory</h2>
+                <div className="d-flex gap-2">
+                  <Link to="/inventory" className="custom-pill-btn-small" style={{ textDecoration: 'none' }}>🧊 Manage Options</Link>
+                  <button className="custom-pill-btn-small" onClick={handleOpenAddProduct}>+ Add Product</button>
+                </div>
+              </div>
+              <div className="dashboard-controls-row mb-4">
+                <Form.Control type="text" placeholder="Search products..." className="custom-input" value={productSearch} onChange={e => setProductSearch(e.target.value)} />
+              </div>
+              {loading ? <p className="text-muted">Loading inventory...</p> : (
+                <div className="table-scroll-wrapper">
+                  <Table responsive className="custom-table borderless align-left-table mb-0">
+                    <thead><tr><th>ID</th><th>Product Name</th><th>Stock</th><th>Price</th><th>Action</th></tr></thead>
+                    <tbody>
+                      {filteredProducts.length === 0
+                        ? <tr><td colSpan="5" className="text-center text-muted py-4">No matching products.</td></tr>
+                        : filteredProducts.map(product => (
+                          <tr key={product.id} className="table-row-hover">
+                            <td>{product.id}</td>
+                            <td>
+                              {product.image_url && (
+                                <img src={product.image_url.startsWith('http') ? product.image_url : `${API_BASE_URL}${product.image_url}`}
+                                  alt={product.name} style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: 4, marginRight: 10 }} />
+                              )}
+                              <strong>{product.name}</strong>
+                            </td>
+                            <td><span className={product.stock_quantity === 0 ? 'text-danger fw-bold' : product.stock_quantity <= 5 ? 'text-warning fw-bold' : ''}>{product.stock_quantity} units</span></td>
+                            <td>{Number(product.price).toFixed(2)} L.E.</td>
+                            <td><button className="btn-action" onClick={() => handleOpenEditProduct(product)}>Edit</button></td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ===== 3D MODELS TAB ===== */}
+          {activeTab === 'models' && (
+            <div className="dashboard-card">
+              <div className="card-header-flex">
+                <h2>🧊 3D Models</h2>
+                <Link to="/inventory" className="custom-pill-btn-small" style={{ textDecoration: 'none' }} onClick={() => localStorage.setItem('inv_tab', 'models')}>Manage Models</Link>
+              </div>
+              {loading ? <p className="text-muted">Loading models...</p> : (
+                <div className="table-scroll-wrapper">
+                  <Table responsive className="custom-table borderless align-left-table mb-0">
+                    <thead><tr><th>Name</th><th>Type</th><th>Layers</th><th>Flat Shading</th><th>Status</th></tr></thead>
+                    <tbody>
+                      {models.length === 0
+                        ? <tr><td colSpan="5" className="text-center text-muted py-4">No models uploaded yet. <Link to="/inventory">Upload one →</Link></td></tr>
+                        : models.map(m => (
+                          <tr key={m.id} className="table-row-hover">
+                            <td>
+                              {m.thumbnail_url && <img src={m.thumbnail_url} alt={m.name} style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', marginRight: 8 }} />}
+                              <strong>{m.name}</strong>
+                            </td>
+                            <td><Badge bg={m.type === 'cup' ? 'primary' : 'warning'} className="custom-badge">{m.type}</Badge></td>
+                            <td>{m.layers || 1}</td>
+                            <td>{m.flat_shading ? '✓ On' : '— Off'}</td>
+                            <td><Badge bg={m.is_available ? 'success' : 'secondary'} className="custom-badge">{m.is_available ? 'Active' : 'Hidden'}</Badge></td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ===== PROMOS TAB ===== */}
+          {activeTab === 'promos' && userRole === '3' && (
             <div className="dashboard-card">
               <div className="card-header-flex">
                 <h2>Promo Codes</h2>
@@ -419,40 +608,45 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* 5. MESSAGES */}
-          <div className="dashboard-card">
-            <div className="card-header-flex"><h2>Customer Messages</h2></div>
-            {loading ? <p className="text-muted">Loading messages...</p> : (
-              <div className="table-scroll-wrapper">
-                <Table responsive className="custom-table borderless align-left-table mb-0">
-                  <thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Phone</th><th>Action</th></tr></thead>
-                  <tbody>
-                    {messages.length === 0
-                      ? <tr><td colSpan="5" className="text-center text-muted py-4">No messages.</td></tr>
-                      : messages.map(msg => (
-                        <tr key={msg.id} className="table-row-hover">
-                          <td>{new Date(msg.created_at).toLocaleDateString()}</td>
-                          <td><strong>{msg.name}</strong></td>
-                          <td><a href={`mailto:${msg.email}`} className="text-decoration-none">{msg.email}</a></td>
-                          <td>{msg.phone ? <a href={`tel:${msg.phone}`} className="text-decoration-none text-muted">{msg.phone}</a> : <span className="text-muted">—</span>}</td>
-                          <td><button className="btn-action" onClick={() => { setSelectedMessage(msg); setShowViewMessageDialog(true); }}>Read</button></td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </Table>
-              </div>
-            )}
-          </div>
+          {/* ===== MESSAGES TAB ===== */}
+          {activeTab === 'messages' && (
+            <div className="dashboard-card">
+              <div className="card-header-flex"><h2>Customer Messages</h2></div>
+              {loading ? <p className="text-muted">Loading messages...</p> : (
+                <div className="table-scroll-wrapper">
+                  <Table responsive className="custom-table borderless align-left-table mb-0">
+                    <thead>
+                      <tr><th>Date</th><th>Name</th><th>Email</th><th>Order Ref</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                      {messages.length === 0
+                        ? <tr><td colSpan="5" className="text-center text-muted py-4">No messages.</td></tr>
+                        : messages.map(msg => (
+                          <tr key={msg.id} className="table-row-hover">
+                            <td>{new Date(msg.created_at).toLocaleDateString()}</td>
+                            <td><strong>{msg.name}</strong></td>
+                            <td><a href={`mailto:${msg.email}`} className="text-decoration-none" style={{ color: '#c8a97e' }}>{msg.email}</a></td>
+                            
+                            {/* NEW: Show Order ID Badge if it exists */}
+                            <td>
+                              {msg.order_id 
+                                ? <Badge bg="info" className="custom-badge">#{msg.order_id}</Badge> 
+                                : <span className="text-muted">—</span>
+                              }
+                            </td>
 
-          {/* 6. ACCOUNT SETTINGS */}
-          <div className="dashboard-card">
-            <h2>Account Settings</h2>
-            <p className="text-muted mt-3">Manage your personal admin profile and security.</p>
-            <div style={{ padding: '2rem 0', color: '#a89f91' }}>Profile management features coming soon...</div>
-          </div>
+                            <td><button className="btn-action" onClick={() => { setSelectedMessage(msg); setShowViewMessageDialog(true); }}>Read</button></td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* 7. STAFF — Super Admin only */}
-          {userRole === '3' && (
+          {/* ===== STAFF TAB ===== */}
+          {activeTab === 'staff' && userRole === '3' && (
             <div className="dashboard-card">
               <div className="card-header-flex">
                 <h2>Staff Management</h2>
@@ -479,18 +673,21 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* 8. DELETE ACCOUNT */}
-          <div className="dashboard-card">
-            <div className="card-header-flex"><h2 className="text-danger">Delete Account</h2></div>
-            <p className="text-muted">Account deletion is permanent.</p>
-            <div className="danger-zone-card mt-4">
-              <div className="danger-text">
-                <h5>Danger Zone</h5>
-                <p>Permanently delete your admin account. This cannot be undone.</p>
+          {/* ===== SETTINGS TAB ===== */}
+          {activeTab === 'settings' && (
+            <div className="dashboard-card">
+              <h2>Account Settings</h2>
+              <p className="text-muted mt-3">Manage your personal admin profile and security.</p>
+              <div style={{ padding: '2rem 0', color: '#a89f91' }}>Profile management features coming soon...</div>
+              <div className="danger-zone-card mt-4">
+                <div className="danger-text">
+                  <h5>Danger Zone</h5>
+                  <p>Permanently delete your admin account. This cannot be undone.</p>
+                </div>
+                <button className="btn-danger-pill" onClick={handleOpenDeleteAccount}>Delete My Account</button>
               </div>
-              <button className="btn-danger-pill" onClick={handleOpenDeleteAccount}>Delete My Account</button>
             </div>
-          </div>
+          )}
 
         </div>
         <Footer />
@@ -609,29 +806,49 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* ADD PRODUCT DIALOG */}
-      {showAddProductDialog && (
-        <div className="dialog-overlay">
-          <div className="dialog-box">
-            <div className="dialog-header"><h3>Add New Product</h3><button className="close-btn" onClick={() => setShowAddProductDialog(false)}>&times;</button></div>
-            <Form onSubmit={handleAddProduct}>
-              {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-              {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Name</Form.Label><Form.Control type="text" className="custom-input" value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} required /></Form.Group>
-              <div className="d-flex gap-3 mb-3">
-                <Form.Group className="flex-fill"><Form.Label className="fw-semibold">Price (L.E.)</Form.Label><Form.Control type="number" className="custom-input" min="0" step="0.01" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} required /></Form.Group>
-                <Form.Group className="flex-fill"><Form.Label className="fw-semibold">Stock</Form.Label><Form.Control type="number" className="custom-input" min="0" value={productForm.stock_quantity} onChange={e => setProductForm({ ...productForm, stock_quantity: e.target.value })} required /></Form.Group>
-              </div>
-              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Description</Form.Label><Form.Control as="textarea" className="custom-input" rows={2} value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} /></Form.Group>
-              <Form.Group className="mb-4"><Form.Label className="fw-semibold">Image</Form.Label><Form.Control type="file" accept="image/*" className="custom-input" onChange={e => setProductForm({ ...productForm, image: e.target.files[0] })} /></Form.Group>
-              <div className="dialog-footer">
-                <button type="button" className="btn btn-cancel" onClick={() => setShowAddProductDialog(false)}>Cancel</button>
-                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Add Product'}</button>
-              </div>
-            </Form>
+{/* ADD PRODUCT DIALOG */}
+{showAddProductDialog && (
+  <div className="dialog-overlay">
+    <div className="dialog-box">
+      <div className="dialog-header"><h3>Add New Product</h3><button className="close-btn" onClick={() => setShowAddProductDialog(false)}>&times;</button></div>
+      <Form onSubmit={handleAddProduct}>
+        <div className="dialog-body-scroll">
+          {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
+          
+          <Form.Group className="mb-3">
+            <label className="form-label-enhanced">Product Name</label>
+            <Form.Control type="text" className="custom-input" value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} required />
+          </Form.Group>
+          
+          <div className="dialog-grid-2">
+            <Form.Group>
+              <label className="form-label-enhanced">Price (L.E.)</label>
+              <Form.Control type="number" className="custom-input" min="0" step="0.01" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} required />
+            </Form.Group>
+            <Form.Group>
+              <label className="form-label-enhanced">Initial Stock</label>
+              <Form.Control type="number" className="custom-input" min="0" value={productForm.stock_quantity} onChange={e => setProductForm({ ...productForm, stock_quantity: e.target.value })} required />
+            </Form.Group>
           </div>
+          
+          <Form.Group className="mb-3">
+            <label className="form-label-enhanced">Description</label>
+            <Form.Control as="textarea" className="custom-input" rows={3} value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} />
+          </Form.Group>
+          
+          <Form.Group className="mb-2">
+            <label className="form-label-enhanced">Product Image</label>
+            <Form.Control type="file" accept="image/*" className="custom-input" onChange={e => setProductForm({ ...productForm, image: e.target.files[0] })} />
+          </Form.Group>
         </div>
-      )}
+        <div className="dialog-footer">
+          <button type="button" className="btn btn-cancel" onClick={() => setShowAddProductDialog(false)}>Cancel</button>
+          <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save Product'}</button>
+        </div>
+      </Form>
+    </div>
+  </div>
+)}
 
       {/* DELETE ACCOUNT DIALOG */}
       {showDeleteAccountDialog && (
@@ -651,60 +868,121 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* PROMO CODE DIALOG */}
-      {showAddDiscountDialog && (
-        <div className="dialog-overlay">
-          <div className="dialog-box">
-            <div className="dialog-header"><h3>Create Promo Code</h3><button className="close-btn" onClick={() => setShowAddDiscountDialog(false)}>&times;</button></div>
-            <Form onSubmit={handleAddDiscountCode}>
-              {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-              {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Code</Form.Label>
-                <div className="d-flex gap-2">
-                  <Form.Control type="text" className="custom-input" value={discountForm.code} onChange={e => setDiscountForm({ ...discountForm, code: e.target.value.toUpperCase() })} required />
-                  <button type="button" className="btn-action" onClick={generateRandomCode}>Random</button>
-                </div>
-              </Form.Group>
-              <div className="row">
-                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Type</Form.Label><Form.Select className="custom-input form-select" value={discountForm.discount_type} onChange={e => setDiscountForm({ ...discountForm, discount_type: e.target.value })}><option value="percentage">Percentage (%)</option><option value="fixed">Fixed (L.E.)</option></Form.Select></div>
-                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Value</Form.Label><Form.Control type="number" className="custom-input" min="0" value={discountForm.discount_value} onChange={e => setDiscountForm({ ...discountForm, discount_value: e.target.value })} required /></div>
-              </div>
-              <div className="row">
-                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Min Order <span className="text-muted">(opt)</span></Form.Label><Form.Control type="number" className="custom-input" min="0" value={discountForm.min_order_amount} onChange={e => setDiscountForm({ ...discountForm, min_order_amount: e.target.value })} /></div>
-                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Max Order <span className="text-muted">(opt)</span></Form.Label><Form.Control type="number" className="custom-input" min="0" value={discountForm.max_order_amount} onChange={e => setDiscountForm({ ...discountForm, max_order_amount: e.target.value })} /></div>
-              </div>
-              <div className="row">
-                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Max Uses <span className="text-muted">(opt)</span></Form.Label><Form.Control type="number" className="custom-input" min="1" value={discountForm.max_uses} onChange={e => setDiscountForm({ ...discountForm, max_uses: e.target.value })} /></div>
-                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Expiry <span className="text-muted">(opt)</span></Form.Label><Form.Control type="date" className="custom-input" value={discountForm.expires_at} onChange={e => setDiscountForm({ ...discountForm, expires_at: e.target.value })} /></div>
-              </div>
-              <div className="dialog-footer">
-                <button type="button" className="btn btn-cancel" onClick={() => setShowAddDiscountDialog(false)}>Cancel</button>
-                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Create'}</button>
-              </div>
-            </Form>
-          </div>
-        </div>
-      )}
+{/* PROMO CODE DIALOG */}
+{showAddDiscountDialog && (
+  <div className="dialog-overlay">
+    <div className="dialog-box">
+      <div className="dialog-header"><h3>Create Promo Code</h3><button className="close-btn" onClick={() => setShowAddDiscountDialog(false)}>&times;</button></div>
+      <Form onSubmit={handleAddDiscountCode}>
+        <div className="dialog-body-scroll">
+          {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
+          
+          <Form.Group className="mb-3">
+            <label className="form-label-enhanced">Promo Code</label>
+            <div className="input-group-flush">
+              <Form.Control type="text" className="custom-input" value={discountForm.code} onChange={e => setDiscountForm({ ...discountForm, code: e.target.value.toUpperCase() })} required />
+              <button type="button" className="btn-action" onClick={generateRandomCode}>Generate</button>
+            </div>
+          </Form.Group>
 
-      {/* VIEW MESSAGE DIALOG */}
-      {showViewMessageDialog && selectedMessage && (
-        <div className="dialog-overlay">
-          <div className="dialog-box">
-            <div className="dialog-header"><h3>Message from {selectedMessage.name}</h3><button className="close-btn" onClick={() => setShowViewMessageDialog(false)}>&times;</button></div>
-            <div className="p-2 mb-3">
-              <p className="mb-1"><strong>Email:</strong> <a href={`mailto:${selectedMessage.email}`}>{selectedMessage.email}</a></p>
-              <p className="mb-1"><strong>Phone:</strong> {selectedMessage.phone ? <a href={`tel:${selectedMessage.phone}`}>{selectedMessage.phone}</a> : <span className="text-muted">—</span>}</p>
-              <p className="mb-3 text-muted" style={{ fontSize: '0.85rem' }}><strong>Received:</strong> {new Date(selectedMessage.created_at).toLocaleString()}</p>
-              <div className="p-3 bg-light rounded" style={{ whiteSpace: 'pre-wrap', border: '1px solid #e0dcd3' }}>{selectedMessage.message}</div>
-            </div>
-            <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
-              <button className="btn-action-danger" onClick={() => handleDeleteMessage(selectedMessage.id)}>Delete</button>
-              <button className="btn btn-cancel" onClick={() => setShowViewMessageDialog(false)}>Close</button>
-            </div>
+          <div className="dialog-grid-2">
+            <Form.Group>
+              <label className="form-label-enhanced">Discount Type</label>
+              <Form.Select className="custom-input form-select" value={discountForm.discount_type} onChange={e => setDiscountForm({ ...discountForm, discount_type: e.target.value })}>
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed Amount (L.E.)</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group>
+              <label className="form-label-enhanced">Value</label>
+              <Form.Control type="number" className="custom-input" min="0" value={discountForm.discount_value} onChange={e => setDiscountForm({ ...discountForm, discount_value: e.target.value })} required />
+            </Form.Group>
+          </div>
+
+          <div className="dialog-grid-2">
+            <Form.Group>
+              <label className="form-label-enhanced">Min Order (Opt)</label>
+              <Form.Control type="number" className="custom-input" min="0" placeholder="0.00" value={discountForm.min_order_amount} onChange={e => setDiscountForm({ ...discountForm, min_order_amount: e.target.value })} />
+            </Form.Group>
+            <Form.Group>
+              <label className="form-label-enhanced">Max Order (Opt)</label>
+              <Form.Control type="number" className="custom-input" min="0" placeholder="No limit" value={discountForm.max_order_amount} onChange={e => setDiscountForm({ ...discountForm, max_order_amount: e.target.value })} />
+            </Form.Group>
+          </div>
+
+          <div className="dialog-grid-2">
+            <Form.Group>
+              <label className="form-label-enhanced">Usage Limit (Opt)</label>
+              <Form.Control type="number" className="custom-input" min="1" placeholder="Unlimited" value={discountForm.max_uses} onChange={e => setDiscountForm({ ...discountForm, max_uses: e.target.value })} />
+            </Form.Group>
+            <Form.Group>
+              <label className="form-label-enhanced">Expiry Date (Opt)</label>
+              <Form.Control type="date" className="custom-input" value={discountForm.expires_at} onChange={e => setDiscountForm({ ...discountForm, expires_at: e.target.value })} />
+            </Form.Group>
           </div>
         </div>
-      )}
+        <div className="dialog-footer">
+          <button type="button" className="btn btn-cancel" onClick={() => setShowAddDiscountDialog(false)}>Cancel</button>
+          <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Create Code'}</button>
+        </div>
+      </Form>
+    </div>
+  </div>
+)}
+
+{/* VIEW MESSAGE DIALOG */}
+{showViewMessageDialog && selectedMessage && (
+  <div className="dialog-overlay">
+    <div className="dialog-box">
+      <div className="dialog-header">
+        <h3>Inbox</h3>
+        <button className="close-btn" onClick={() => setShowViewMessageDialog(false)}>&times;</button>
+      </div>
+      
+      <div className="message-read-header">
+        <p><strong>From:</strong> {selectedMessage.name}</p>
+        <p><strong>Email:</strong> <a href={`mailto:${selectedMessage.email}`} className="text-decoration-none" style={{ color: '#c8a97e' }}>{selectedMessage.email}</a></p>
+        <p><strong>Phone:</strong> {selectedMessage.phone ? <a href={`tel:${selectedMessage.phone}`} className="text-decoration-none text-muted">{selectedMessage.phone}</a> : <span className="text-muted">Not provided</span>}</p>
+        <p className="text-muted mt-2" style={{ fontSize: '0.8rem' }}>Received: {new Date(selectedMessage.created_at).toLocaleString()}</p>
+        
+        {/* NEW: Attached Order UI Block */}
+        {selectedMessage.order_id && (
+          <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#ffffff', borderRadius: '0.5rem', border: '1px solid #c8a97e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <span style={{ fontSize: '0.8rem', color: '#8c7e70', textTransform: 'uppercase', fontWeight: 'bold', display: 'block' }}>Regarding Order</span>
+              <strong style={{ fontSize: '1.1rem', color: '#2d241c' }}>#{selectedMessage.order_id}</strong>
+            </div>
+            <button 
+              className="custom-pill-btn-small" 
+              style={{ margin: 0 }}
+              onClick={() => {
+                // Find the order in our dashboard state
+                const linkedOrder = orders.find(o => o.id === selectedMessage.order_id);
+                if (linkedOrder) {
+                  setShowViewMessageDialog(false); // Close message
+                  handleOpenOrderDialog(linkedOrder); // Open order details!
+                } else {
+                  error("Order details not found in current memory. It may be too old.");
+                }
+              }}
+            >
+              View Order Details →
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="message-content-box">
+        {selectedMessage.message}
+      </div>
+
+      <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
+        <button className="btn-action-danger" onClick={() => handleDeleteMessage(selectedMessage.id)}>Delete Message</button>
+        <button className="btn btn-cancel" onClick={() => setShowViewMessageDialog(false)}>Close</button>
+      </div>
+    </div>
+  </div>
+)}
     </>
   );
 };

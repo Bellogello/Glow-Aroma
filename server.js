@@ -607,10 +607,13 @@ app.delete('/addresses/:id', (req, res) => {
 // --- CONTACT MESSAGES ---
 // ==========================================
 app.post('/messages', (req, res) => {
-    const { name, email, phone, message } = req.body;
+    const { name, email, phone, message, orderId } = req.body;
+    
     if (!name || !email || !message) return res.status(400).json({ error: 'Name, email, and message are required.' });
-    db.query('INSERT INTO contact_messages (name, email, phone, message) VALUES (?, ?, ?, ?)',
-        [name, email, phone || null, message],
+    
+    // Updated SQL query to include order_id
+    db.query('INSERT INTO contact_messages (name, email, phone, message, order_id) VALUES (?, ?, ?, ?, ?)',
+        [name, email, phone || null, message, orderId || null],
         (err) => {
             if (err) return res.status(500).json({ error: 'Failed to send message.' });
             res.status(201).json({ message: 'Message sent successfully!' });
