@@ -866,12 +866,13 @@ app.delete('/admin/delete-account', (req, res) => {
 });
 
 app.post('/admin/showcase', (req, res) => {
-    const { name, model_url, hex_color } = req.body;
-    const sql = 'INSERT INTO showcase_designs (name, model_url, hex_color) VALUES (?, ?, ?)';
+    const { name, model_url, type, layers } = req.body;
+    const layersJson = JSON.stringify(layers); // Save array as string
     
-    db.query(sql, [name, model_url, hex_color], (err, result) => {
+    const sql = 'INSERT INTO showcase_designs (name, model_url, type, layers_json) VALUES (?, ?, ?, ?)';
+    db.query(sql, [name, model_url, type, layersJson], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Design added to Showcase!', id: result.insertId });
+        res.json({ message: 'Success', id: result.insertId });
     });
 });
 
@@ -896,6 +897,17 @@ app.put('/admin/showcase/:id', (req, res) => {
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ message: 'Design updated successfully' });
+        }
+    );
+});
+app.patch('/admin/showcase/:id/toggle', (req, res) => {
+    const { is_active } = req.body;
+    db.query(
+        'UPDATE showcase_designs SET is_active = ? WHERE id = ?',
+        [is_active, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Design status toggled successfully' });
         }
     );
 });

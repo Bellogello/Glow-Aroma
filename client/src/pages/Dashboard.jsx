@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Table, Badge, Form, Alert, Spinner } from 'react-bootstrap';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import Navbar from '../components/Navbar';
 import '../styles/Dashboard.css';
+import '../styles/create.css'; // INJECTED CREATOR CSS HERE
 import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
 import { API_BASE_URL } from '../config';
 import { useNotification } from '../components/NotificationContext';
+// IMPORT THE PREVIEW COMPONENT
+import CandlePreview3D from '../components/CandlePreview3D';
 
 const Dashboard = () => {
   useTitle("Dashboard");
@@ -25,17 +28,14 @@ const Dashboard = () => {
   const [discountCodes, setDiscountCodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState([]);
-  
-  // Replaced models with heroImages
   const [heroImages, setHeroImages] = useState([]);
   const [showcaseDesigns, setShowcaseDesigns] = useState([]);
-  const [showEditShowcaseDialog, setShowEditShowcaseDialog] = useState(false);
-  const [editShowcaseForm, setEditShowcaseForm] = useState({ id: '', name: '', hex_color: '', is_active: 1 });
 
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('All');
   const [productSearch, setProductSearch] = useState('');
 
+  // Dialog Controls
   const [showAddStaffDialog, setShowAddStaffDialog] = useState(false);
   const [showAddProductDialog, setShowAddProductDialog] = useState(false);
   const [showEditProductDialog, setShowEditProductDialog] = useState(false);
@@ -43,9 +43,27 @@ const Dashboard = () => {
   const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
   const [showAddDiscountDialog, setShowAddDiscountDialog] = useState(false);
   const [showViewMessageDialog, setShowViewMessageDialog] = useState(false);
-  
-  // New Dialog for Hero Images
   const [showAddHeroDialog, setShowAddHeroDialog] = useState(false);
+  const [showEditShowcaseDialog, setShowEditShowcaseDialog] = useState(false);
+  const [showAddShowcaseDialog, setShowAddShowcaseDialog] = useState(false);
+
+  // Asset States for the Design Studio
+  const [availableCups, setAvailableCups] = useState([]);
+  const [availableMolds, setAvailableMolds] = useState([]);
+  const [availableColors, setAvailableColors] = useState([]);
+  const [dbModels, setDbModels] = useState([]);
+
+  // CONSOLIDATED STUDIO STATE
+  const [editShowcaseForm, setEditShowcaseForm] = useState({
+    name: '',
+    type: 'cup',
+    cupShape: 'default',
+    cupColor: 'default',
+    waxColor: 'default',
+    moldShape: 'default',
+    model_url: '',
+    layers: [],
+  });
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedOrderItems, setSelectedOrderItems] = useState([]);
@@ -57,7 +75,6 @@ const Dashboard = () => {
   const [newStatusId, setNewStatusId] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
   const [heroImageFile, setHeroImageFile] = useState(null);
-
   const [discountForm, setDiscountForm] = useState({
     code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_order_amount: '', max_uses: '', expires_at: '',
   });
@@ -76,46 +93,38 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [navigate]);
 
-const fetchDashboardData = async () => {
-  setLoading(true);
-  try {
-    const [prodRes, orderRes, staffRes, discountRes, msgRes, heroRes, showcaseRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/products`),
-      fetch(`${API_BASE_URL}/admin/orders`),
-      fetch(`${API_BASE_URL}/admin/staff`),
-      fetch(`${API_BASE_URL}/admin/discount-codes`),
-      fetch(`${API_BASE_URL}/admin/messages`),
-      fetch(`${API_BASE_URL}/admin/hero-images`),
-      fetch(`${API_BASE_URL}/showcase`), // 7th endpoint
-    ]);
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      const [prodRes, orderRes, showcaseRes, heroRes, msgRes, staffRes, discRes, cupRes, moldRes, colorRes, modelRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/products`),
+        fetch(`${API_BASE_URL}/admin/orders`),
+        fetch(`${API_BASE_URL}/showcase`),
+        fetch(`${API_BASE_URL}/admin/hero-images`),
+        fetch(`${API_BASE_URL}/admin/messages`),
+        fetch(`${API_BASE_URL}/admin/staff`),
+        fetch(`${API_BASE_URL}/admin/discount-codes`),
+        fetch(`${API_BASE_URL}/admin/inventory/cup-shapes`),
+        fetch(`${API_BASE_URL}/mold-shapes`),
+        fetch(`${API_BASE_URL}/colors`),
+        fetch(`${API_BASE_URL}/admin/models`),
+      ]);
 
-    // Parse ALL 7 responses
-    const [prodData, orderData, staffData, discountData, msgData, heroData, showcaseData] = await Promise.all([
-      prodRes.json(), 
-      orderRes.json(), 
-      staffRes.json(), 
-      discountRes.json(), 
-      msgRes.json(), 
-      heroRes.json(),
-      showcaseRes.json(), // Don't miss this one
-    ]);
+      const data = await Promise.all([
+        prodRes.json(), orderRes.json(), showcaseRes.json(), heroRes.json(), 
+        msgRes.json(), staffRes.json(), discRes.json(), cupRes.json(), 
+        moldRes.json(), colorRes.json(), modelRes.json()
+      ]);
 
-    setProducts(Array.isArray(prodData) ? prodData : []);
-    setOrders(Array.isArray(orderData) ? orderData : []);
-    setStaff(Array.isArray(staffData) ? staffData : []);
-    setDiscountCodes(Array.isArray(discountData) ? discountData : []);
-    setMessages(Array.isArray(msgData) ? msgData : []);
-    setHeroImages(Array.isArray(heroData) ? heroData : []);
-    setShowcaseDesigns(Array.isArray(showcaseData) ? showcaseData : []); // Update your state
-  } catch (err) {
-    console.error('Failed to fetch dashboard data:', err);
-    error("Failed to sync dashboard data.");
-  } finally {
-    setLoading(false);
-  }
-};
+      setProducts(data[0]); setOrders(data[1]); setShowcaseDesigns(data[2]);
+      setHeroImages(data[3]); setMessages(data[4]); setStaff(data[5]); setDiscountCodes(data[6]);
+      setAvailableCups(data[7]); setAvailableMolds(data[8]); setAvailableColors(data[9]);
+      setDbModels(data[10]);
+    } catch (err) { console.error("Sync Error:", err); error("Failed to sync dashboard data."); }
+    finally { setLoading(false); }
+  };
 
-  // --- STATS CALCULATIONS ---
+  // --- STATS ---
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
   const processingOrders = orders.filter(o => o.status_id === 1).length;
   const lowStockProducts = products.filter(p => p.stock_quantity <= 5).length;
@@ -148,7 +157,7 @@ const fetchDashboardData = async () => {
 
   const filteredProducts = products.filter(p => p.name?.toLowerCase().includes(productSearch.toLowerCase()));
 
-  // --- STAFF ---
+  // --- STAFF HANDLERS ---
   const handleOpenAddStaff = () => { setStaffForm({ name: '', email: '', phone: '', password: '', role_id: '2' }); resetDialogState(); setShowAddStaffDialog(true); };
   const handleAddStaff = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
@@ -172,7 +181,7 @@ const fetchDashboardData = async () => {
     } catch (err) { error(err.message); }
   };
 
-  // --- PRODUCTS ---
+  // --- PRODUCT HANDLERS ---
   const handleOpenAddProduct = () => { setProductForm({ name: '', price: '', stock_quantity: '', description: '', image: null }); resetDialogState(); setShowAddProductDialog(true); };
   const handleAddProduct = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
@@ -192,6 +201,7 @@ const fetchDashboardData = async () => {
     } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
   const handleOpenEditProduct = (product) => { setEditProductForm({ ...product, image: null }); resetDialogState(); setShowEditProductDialog(true); };
+
   const handleUpdateProduct = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError(''); setDialogSuccess('');
     const formData = new FormData();
@@ -227,10 +237,8 @@ const fetchDashboardData = async () => {
     e.preventDefault();
     if (!heroImageFile) return setDialogError('Please select an image file.');
     setSubmitting(true); setDialogError(''); setDialogSuccess('');
-    
     const formData = new FormData();
     formData.append('image', heroImageFile);
-    
     try {
       const res = await fetch(`${API_BASE_URL}/admin/hero-images`, { method: 'POST', body: formData });
       const data = await res.json();
@@ -238,14 +246,8 @@ const fetchDashboardData = async () => {
       setDialogSuccess('Image added to slideshow!');
       setHeroImages(prev => [...prev, data.newImage]);
       setTimeout(() => { setShowAddHeroDialog(false); setHeroImageFile(null); }, 1500);
-    } catch (err) {
-      setDialogError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+    } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
-
-
   const handleDeleteHeroImage = async (id) => {
     if (!window.confirm('Remove this image from the homepage slideshow?')) return;
     try {
@@ -253,32 +255,23 @@ const fetchDashboardData = async () => {
       if (!res.ok) throw new Error('Failed to delete image');
       setHeroImages(prev => prev.filter(img => img.id !== id));
       success('Image removed from slideshow.');
-    } catch (err) {
-      error(err.message);
-    }
+    } catch (err) { error(err.message); }
   };
   const handleToggleHeroImage = async (id, currentStatus) => {
     try {
       await fetch(`${API_BASE_URL}/admin/hero-images/${id}/toggle`, { method: 'PATCH' });
       setHeroImages(prev => prev.map(img => img.id === id ? { ...img, is_active: !currentStatus } : img));
       success(currentStatus ? 'Image hidden from homepage.' : 'Image added to homepage!');
-    } catch (err) {
-      error("Failed to toggle image status.");
-    }
+    } catch (err) { error("Failed to toggle image status."); }
   };
-
   const handleMoveHeroImage = async (index, direction) => {
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= heroImages.length) return;
-    
-    // Swap locally for instant UI update
     const newOrder = [...heroImages];
     const temp = newOrder[index];
     newOrder[index] = newOrder[newIndex];
     newOrder[newIndex] = temp;
     setHeroImages(newOrder);
-
-    // Save to backend
     try {
       const orderedIds = newOrder.map(img => img.id);
       await fetch(`${API_BASE_URL}/admin/hero-images/reorder`, {
@@ -286,41 +279,107 @@ const fetchDashboardData = async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderedIds })
       });
-    } catch (err) {
-      error("Failed to save new order.");
+    } catch (err) { error("Failed to save new order."); }
+  };
+
+  // --- SHOWCASE HANDLERS ---
+  const handleOpenEditShowcase = (design) => { setEditShowcaseForm(design); resetDialogState(); setShowEditShowcaseDialog(true); };
+  
+  const handleUpdateShowcase = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/showcase/${editShowcaseForm.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editShowcaseForm)
+      });
+      if (res.ok) {
+        setShowcaseDesigns(prev => prev.map(d => d.id === editShowcaseForm.id ? editShowcaseForm : d));
+        setShowEditShowcaseDialog(false);
+        success("Showcase design updated!");
+      }
+    } catch (err) { error("Failed to update design."); }
+  };
+
+const handleToggleShowcase = async (design) => {
+    try {
+      const toggledState = design.is_active ? 0 : 1;
+      const updatedDesign = { ...design, is_active: toggledState };
+      
+      // Changed from PUT to PATCH and added '/toggle' to the URL
+      const res = await fetch(`${API_BASE_URL}/admin/showcase/${design.id}/toggle`, {
+        method: 'PATCH', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: toggledState }) // Only send what's needed
+      });
+
+      if (res.ok) {
+        setShowcaseDesigns(prev => prev.map(d => d.id === design.id ? updatedDesign : d));
+        success(design.is_active ? "Design disabled." : "Design enabled.");
+      } else {
+        error("Failed to toggle design.");
+      }
+    } catch (err) { 
+      error("Failed to toggle design."); 
     }
   };
-  const handleOpenEditShowcase = (design) => {
-  setEditShowcaseForm(design);
-  setShowEditShowcaseDialog(true);
-};
 
-const handleUpdateShowcase = async (e) => {
-  e.preventDefault();
-  try {
-    const res = await fetch(`${API_BASE_URL}/admin/showcase/${editShowcaseForm.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editShowcaseForm)
-    });
-    if (res.ok) {
-      setShowcaseDesigns(prev => prev.map(d => d.id === editShowcaseForm.id ? editShowcaseForm : d));
-      setShowEditShowcaseDialog(false);
-      success("Showcase design updated!");
-    }
-  } catch (err) {
-    error("Failed to update design.");
-  }
-};
+  const handleCreateShowcase = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    
+    // Find the selected vessel to auto-generate the name
+    const cup = availableCups.find(s => String(s.id) === String(editShowcaseForm.cupShape));
+    const mold = availableMolds.find(s => String(s.id) === String(editShowcaseForm.moldShape));
+    const activeVessel = editShowcaseForm.type === 'cup' ? cup : mold;
+      
+    const activeWax = availableColors.find(c => String(c.id) === String(editShowcaseForm.waxColor));
+    const layerColors = editShowcaseForm.layers.map(id => availableColors.find(c => String(c.id) === String(id))?.hex_code || '#ffffff');
 
-  // --- ORDERS ---
+    // Auto-Generate name based on vessel selection
+    const autoGeneratedName = activeVessel ? `Featured ${activeVessel.name}` : 'Custom Design';
+
+    const payload = {
+      name: autoGeneratedName,
+      model_url: activeVessel?.model_url,
+      hex_color: editShowcaseForm.type === 'cup' ? activeWax?.hex_code : layerColors[0],
+      layers_json: JSON.stringify(layerColors),
+      type: editShowcaseForm.type,
+      cup_color: editShowcaseForm.cupColor
+    };
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/showcase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        success("Design Pushed to Storefront!");
+        setShowAddShowcaseDialog(false);
+        fetchDashboardData();
+      }
+    } catch (err) { error("Failed to save."); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleDeleteShowcase = async (id) => {
+    if (!window.confirm('Remove this showcase design?')) return;
+    try {
+      await fetch(`${API_BASE_URL}/admin/showcase/${id}`, { method: 'DELETE' });
+      setShowcaseDesigns(prev => prev.filter(d => d.id !== id));
+      success("Design removed.");
+    } catch (err) { error("Failed to delete."); }
+  };
+
+  // --- ORDERS HANDLERS ---
   const handleOpenOrderDialog = async (order) => {
     setSelectedOrder(order);
     setNewStatusId(order.status_id.toString());
     setSelectedOrderItems([]);
     setShowOrderDialog(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/orders/${order.id}`);
+      const res = await fetch(`${API_BASE_URL}/admin/orders/${order.id}/items`);
       const data = await res.json();
       setSelectedOrderItems(Array.isArray(data) ? data : []);
     } catch { error("Could not load order items."); }
@@ -340,6 +399,7 @@ const handleUpdateShowcase = async (e) => {
     } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
 
+  // --- DELETE ACCOUNT HANDLERS ---
   const handleOpenDeleteAccount = () => { setDeletePassword(''); resetDialogState(); setShowDeleteAccountDialog(true); };
   const handleDeleteAccount = async (e) => {
     e.preventDefault(); setSubmitting(true); setDialogError('');
@@ -352,6 +412,8 @@ const handleUpdateShowcase = async (e) => {
       navigate('/');
     } catch (err) { setDialogError(err.message); } finally { setSubmitting(false); }
   };
+
+  // --- DISCOUNT HANDLERS ---
   const handleOpenAddDiscount = () => { setDiscountForm({ code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_order_amount: '', max_uses: '', expires_at: '' }); resetDialogState(); setShowAddDiscountDialog(true); };
   const generateRandomCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -387,6 +449,8 @@ const handleUpdateShowcase = async (e) => {
       success("Code deleted.");
     } catch { error("Failed to delete."); }
   };
+
+  // --- MESSAGE HANDLERS ---
   const handleDeleteMessage = async (id) => {
     if (!window.confirm('Delete this message?')) return;
     try {
@@ -437,7 +501,6 @@ const handleUpdateShowcase = async (e) => {
           {/* ===== OVERVIEW TAB ===== */}
           {activeTab === 'overview' && (
             <>
-              {/* STAT CARDS */}
               <div className="stats-grid">
                 <div className="stat-card stat-card--revenue">
                   <div className="stat-card__icon">💰</div>
@@ -473,12 +536,9 @@ const handleUpdateShowcase = async (e) => {
                 </div>
               </div>
 
-              {/* CHARTS ROW */}
               <div className="charts-grid">
                 <div className="dashboard-card">
-                  <div className="card-header-flex">
-                    <h2>Revenue (Last 7 Days)</h2>
-                  </div>
+                  <div className="card-header-flex"><h2>Revenue (Last 7 Days)</h2></div>
                   {revenueByDay.length === 0 ? (
                     <p className="text-muted text-center py-4">No revenue data yet.</p>
                   ) : (
@@ -499,11 +559,8 @@ const handleUpdateShowcase = async (e) => {
                     </ResponsiveContainer>
                   )}
                 </div>
-
                 <div className="dashboard-card">
-                  <div className="card-header-flex">
-                    <h2>Orders by Status</h2>
-                  </div>
+                  <div className="card-header-flex"><h2>Orders by Status</h2></div>
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={ordersByStatus} barSize={40}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0ebe1" vertical={false} />
@@ -512,7 +569,7 @@ const handleUpdateShowcase = async (e) => {
                       <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e0dcd3' }} />
                       <Bar dataKey="count" radius={[8, 8, 0, 0]}>
                         {ordersByStatus.map((entry, index) => (
-                          <rect key={index} fill={entry.fill} />
+                          <Cell key={index} fill={entry.fill} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -520,7 +577,6 @@ const handleUpdateShowcase = async (e) => {
                 </div>
               </div>
 
-              {/* RECENT ORDERS MINI */}
               <div className="dashboard-card">
                 <div className="card-header-flex">
                   <h2>Recent Orders</h2>
@@ -532,9 +588,7 @@ const handleUpdateShowcase = async (e) => {
                     <tbody>
                       {orders.slice(0, 5).map(order => (
                         <tr key={order.id} className="table-row-hover">
-                          <td><strong>#{order.id}</strong></td>
-                          <td>{order.customer_name}</td>
-                          <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                          <td><strong>#{order.id}</strong></td><td>{order.customer_name}</td><td>{new Date(order.created_at).toLocaleDateString()}</td>
                           <td>{Number(order.total).toFixed(2)} L.E.</td>
                           <td><Badge bg={getStatusBg(order.status_id)} className="custom-badge">{getStatusLabel(order.status_id)}</Badge></td>
                           <td><button className="btn-action" onClick={() => handleOpenOrderDialog(order)}>View</button></td>
@@ -545,7 +599,6 @@ const handleUpdateShowcase = async (e) => {
                 </div>
               </div>
 
-              {/* LOW STOCK ALERT */}
               {lowStockProducts > 0 && (
                 <div className="dashboard-card low-stock-card">
                   <div className="card-header-flex">
@@ -560,7 +613,7 @@ const handleUpdateShowcase = async (e) => {
                           <tr key={p.id} className="table-row-hover">
                             <td><strong>{p.name}</strong></td>
                             <td><span className={p.stock_quantity === 0 ? 'badge bg-danger' : 'badge bg-warning text-dark'}>{p.stock_quantity === 0 ? 'Out of Stock' : `${p.stock_quantity} left`}</span></td>
-                            <td><button className="btn-action" onClick={() => { handleOpenEditProduct(p); }}>Edit</button></td>
+                            <td><button className="btn-action" onClick={() => handleOpenEditProduct(p)}>Edit</button></td>
                           </tr>
                         ))}
                       </tbody>
@@ -584,27 +637,23 @@ const handleUpdateShowcase = async (e) => {
                   <option value="3">Delivered</option>
                 </Form.Select>
               </div>
-              {loading ? <p className="text-muted">Loading orders...</p> : (
-                <div className="table-scroll-wrapper">
-                  <Table responsive className="custom-table borderless align-left-table mb-0">
-                    <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
-                    <tbody>
-                      {filteredOrders.length === 0
-                        ? <tr><td colSpan="6" className="text-center text-muted py-4">No matching orders.</td></tr>
-                        : filteredOrders.map(order => (
-                          <tr key={order.id} className="table-row-hover">
-                            <td><strong>#{order.id}</strong></td>
-                            <td>{order.customer_name}</td>
-                            <td>{new Date(order.created_at).toLocaleDateString()}</td>
-                            <td>{Number(order.total).toFixed(2)} L.E.</td>
-                            <td><Badge bg={getStatusBg(order.status_id)} className="custom-badge">{getStatusLabel(order.status_id)}</Badge></td>
-                            <td><button className="btn-action" onClick={() => handleOpenOrderDialog(order)}>View</button></td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </Table>
-                </div>
-              )}
+              <div className="table-scroll-wrapper">
+                <Table responsive className="custom-table borderless align-left-table mb-0">
+                  <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+                  <tbody>
+                    {filteredOrders.length === 0
+                      ? <tr><td colSpan="6" className="text-center text-muted py-4">No matching orders.</td></tr>
+                      : filteredOrders.map(order => (
+                        <tr key={order.id} className="table-row-hover">
+                          <td><strong>#{order.id}</strong></td><td>{order.customer_name}</td><td>{new Date(order.created_at).toLocaleDateString()}</td>
+                          <td>{Number(order.total).toFixed(2)} L.E.</td>
+                          <td><Badge bg={getStatusBg(order.status_id)} className="custom-badge">{getStatusLabel(order.status_id)}</Badge></td>
+                          <td><button className="btn-action" onClick={() => handleOpenOrderDialog(order)}>View</button></td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </Table>
+              </div>
             </div>
           )}
 
@@ -621,110 +670,110 @@ const handleUpdateShowcase = async (e) => {
               <div className="dashboard-controls-row mb-4">
                 <Form.Control type="text" placeholder="Search products..." className="custom-input" value={productSearch} onChange={e => setProductSearch(e.target.value)} />
               </div>
-              {loading ? <p className="text-muted">Loading inventory...</p> : (
+              <div className="table-scroll-wrapper">
+                <Table responsive className="custom-table borderless align-left-table mb-0">
+                  <thead><tr><th>ID</th><th>Product Name</th><th>Stock</th><th>Price</th><th>Action</th></tr></thead>
+                  <tbody>
+                    {filteredProducts.length === 0
+                      ? <tr><td colSpan="5" className="text-center text-muted py-4">No matching products.</td></tr>
+                      : filteredProducts.map(product => (
+                        <tr key={product.id} className="table-row-hover">
+                          <td>{product.id}</td>
+                          <td>
+                            {product.image_url && (
+                              <img src={product.image_url.startsWith('http') ? product.image_url : `${API_BASE_URL}${product.image_url}`}
+                                alt={product.name} style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: 4, marginRight: 10 }} />
+                            )}
+                            <strong>{product.name}</strong>
+                          </td>
+                          <td><span className={product.stock_quantity === 0 ? 'text-danger fw-bold' : product.stock_quantity <= 5 ? 'text-warning fw-bold' : ''}>{product.stock_quantity} units</span></td>
+                          <td>{Number(product.price).toFixed(2)} L.E.</td>
+                          <td><button className="btn-action" onClick={() => handleOpenEditProduct(product)}>Edit</button></td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {/* ===== STORE SETTINGS TAB ===== */}
+          {activeTab === 'store_settings' && (
+            <div className="d-flex flex-column gap-4">
+              <div className="dashboard-card">
+                <div className="card-header-flex">
+                  <h2>🖼️ Homepage Slideshow</h2>
+                  <button className="custom-pill-btn-small" onClick={() => { resetDialogState(); setShowAddHeroDialog(true); }}>+ Add Slide</button>
+                </div>
                 <div className="table-scroll-wrapper">
-                  <Table responsive className="custom-table borderless align-left-table mb-0">
-                    <thead><tr><th>ID</th><th>Product Name</th><th>Stock</th><th>Price</th><th>Action</th></tr></thead>
+                  <Table responsive className="custom-table borderless mb-0">
+                    <thead><tr><th>Order</th><th>Preview</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
-                      {filteredProducts.length === 0
-                        ? <tr><td colSpan="5" className="text-center text-muted py-4">No matching products.</td></tr>
-                        : filteredProducts.map(product => (
-                          <tr key={product.id} className="table-row-hover">
-                            <td>{product.id}</td>
+                      {heroImages.length === 0
+                        ? <tr><td colSpan="4" className="text-center py-4 text-muted">No images uploaded yet.</td></tr>
+                        : heroImages.map((img, index) => (
+                          <tr key={img.id} className="table-row-hover">
                             <td>
-                              {product.image_url && (
-                                <img src={product.image_url.startsWith('http') ? product.image_url : `${API_BASE_URL}${product.image_url}`}
-                                  alt={product.name} style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: 4, marginRight: 10 }} />
-                              )}
-                              <strong>{product.name}</strong>
+                              <div className="d-flex flex-column gap-1">
+                                <button className="btn-action" disabled={index === 0} onClick={() => handleMoveHeroImage(index, -1)}>▲</button>
+                                <button className="btn-action" disabled={index === heroImages.length - 1} onClick={() => handleMoveHeroImage(index, 1)}>▼</button>
+                              </div>
                             </td>
-                            <td><span className={product.stock_quantity === 0 ? 'text-danger fw-bold' : product.stock_quantity <= 5 ? 'text-warning fw-bold' : ''}>{product.stock_quantity} units</span></td>
-                            <td>{Number(product.price).toFixed(2)} L.E.</td>
-                            <td><button className="btn-action" onClick={() => handleOpenEditProduct(product)}>Edit</button></td>
+                            <td><img src={img.image_url} alt="hero" style={{ width: '100px', borderRadius: '8px' }} /></td>
+                            <td><Badge bg={img.is_active ? 'success' : 'secondary'}>{img.is_active ? 'Active' : 'Hidden'}</Badge></td>
+                            <td>
+                              <button className="btn-action me-2" onClick={() => handleToggleHeroImage(img.id, img.is_active)}>{img.is_active ? 'Hide' : 'Show'}</button>
+                              <button className="btn-action-danger" onClick={() => handleDeleteHeroImage(img.id)}>Delete</button>
+                            </td>
                           </tr>
                         ))}
                     </tbody>
                   </Table>
                 </div>
-              )}
+              </div>
+
+              <div className="dashboard-card">
+                <div className="card-header-flex">
+                  <div>
+                    <h2>✨ 3D Builder Showcase</h2>
+                    <p className="text-muted small mb-0">These models cycle through the "Create Your Own" card in your shop.</p>
+                  </div>
+                  <button className="custom-pill-btn-small" onClick={() => { 
+                    setEditShowcaseForm({ name: '', type: 'cup', cupShape: 'default', cupColor: 'default', waxColor: 'default', moldShape: 'default', model_url: '', layers: [] }); 
+                    resetDialogState(); setShowAddShowcaseDialog(true); 
+                  }}>+ New Design</button>
+                </div>
+                <div className="table-scroll-wrapper">
+                  <Table responsive className="custom-table borderless mb-0">
+                    <thead><tr><th>Design Name</th><th>Wax Color</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {showcaseDesigns.length === 0
+                        ? <tr><td colSpan="4" className="text-center py-4 text-muted">No designs saved yet.</td></tr>
+                        : showcaseDesigns.map(design => (
+                          <tr key={design.id} className="table-row-hover">
+                            <td><strong>{design.name}</strong></td>
+                            <td><div style={{ width: '24px', height: '24px', backgroundColor: design.hex_color, borderRadius: '50%', border: '1px solid #ddd' }}></div></td>
+                            <td><Badge bg={design.is_active ? 'success' : 'secondary'}>{design.is_active ? 'Visible' : 'Hidden'}</Badge></td>
+                            <td>
+                              <div className="d-flex gap-2">
+                                <button 
+                                  className={design.is_active ? 'btn-action-danger' : 'btn-action'} 
+                                  onClick={() => handleToggleShowcase(design)}
+                                >
+                                  {design.is_active ? 'Disable' : 'Enable'}
+                                </button>
+                                <button className="btn-action-danger" onClick={() => handleDeleteShowcase(design.id)}>Remove</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </Table>
+                </div>
+              </div>
             </div>
           )}
 
-{/* ===== STORE SETTINGS TAB ===== */}
-{activeTab === 'store_settings' && (
-  <div className="d-flex flex-column gap-4">
-    
-    {/* --- SECTION 1: HOMEPAGE SLIDESHOW --- */}
-    <div className="dashboard-card">
-      <div className="card-header-flex">
-        <h2>🖼️ Homepage Slideshow</h2>
-        <button className="custom-pill-btn-small" onClick={() => setShowAddHeroDialog(true)}>
-          + Add Slide
-        </button>
-      </div>
-      <div className="table-scroll-wrapper">
-        <Table responsive className="custom-table borderless mb-0">
-          <thead><tr><th>Order</th><th>Preview</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>
-            {heroImages.map((img, index) => (
-              <tr key={img.id} className="table-row-hover">
-                <td>
-                   <div className="d-flex flex-column gap-1">
-                      <button className="btn-action" disabled={index === 0} onClick={() => handleMoveHeroImage(index, -1)}>▲</button>
-                      <button className="btn-action" disabled={index === heroImages.length - 1} onClick={() => handleMoveHeroImage(index, 1)}>▼</button>
-                   </div>
-                </td>
-                <td><img src={img.image_url} alt="hero" style={{ width: '100px', borderRadius: '8px' }} /></td>
-                <td><Badge bg={img.is_active ? 'success' : 'secondary'}>{img.is_active ? 'Active' : 'Hidden'}</Badge></td>
-                <td>
-                  <button className="btn-action me-2" onClick={() => handleToggleHeroImage(img.id, img.is_active)}>
-                    {img.is_active ? 'Hide' : 'Show'}
-                  </button>
-                  <button className="btn-action-danger" onClick={() => handleDeleteHeroImage(img.id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </div>
-    </div>
-
-    {/* --- SECTION 2: 3D SHOWCASE DESIGNS --- */}
-    <div className="dashboard-card">
-      <div className="card-header-flex">
-        <h2>✨ 3D Builder Showcase</h2>
-        <p className="text-muted small">These models cycle through the "Create Your Own" card in your shop.</p>
-      </div>
-      <div className="table-scroll-wrapper">
-        <Table responsive className="custom-table borderless mb-0">
-          <thead><tr><th>Design Name</th><th>Wax Color</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>
-            {showcaseDesigns.length === 0 ? (
-              <tr><td colSpan="4" className="text-center py-4 text-muted">No designs saved yet.</td></tr>
-            ) : (
-              showcaseDesigns.map(design => (
-                <tr key={design.id} className="table-row-hover">
-                  <td><strong>{design.name}</strong></td>
-                  <td>
-                    <div style={{ 
-                      width: '24px', height: '24px', backgroundColor: design.hex_color, 
-                      borderRadius: '50%', border: '1px solid #ddd' 
-                    }}></div>
-                  </td>
-                  <td><Badge bg={design.is_active ? 'success' : 'secondary'}>{design.is_active ? 'Visible' : 'Hidden'}</Badge></td>
-                  <td>
-                    <button className="btn-action me-2" onClick={() => handleOpenEditShowcase(design)}>Edit</button>
-                    <button className="btn-action-danger" onClick={() => handleDeleteShowcase(design.id)}>Remove</button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </Table>
-      </div>
-    </div>
-  </div>
-)}
           {/* ===== PROMOS TAB ===== */}
           {activeTab === 'promos' && userRole === '3' && (
             <div className="dashboard-card">
@@ -732,33 +781,28 @@ const handleUpdateShowcase = async (e) => {
                 <h2>Promo Codes</h2>
                 <button className="custom-pill-btn-small" onClick={handleOpenAddDiscount}>+ New Code</button>
               </div>
-              {loading ? <p className="text-muted">Loading codes...</p> : (
-                <div className="table-scroll-wrapper">
-                  <Table responsive className="custom-table borderless align-left-table mb-0">
-                    <thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min</th><th>Max</th><th>Uses</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
-                    <tbody>
-                      {discountCodes.length === 0
-                        ? <tr><td colSpan="9" className="text-center text-muted py-4">No codes found.</td></tr>
-                        : discountCodes.map(dc => (
-                          <tr key={dc.id} className="table-row-hover">
-                            <td><strong>{dc.code}</strong></td>
-                            <td>{dc.discount_type === 'percentage' ? '%' : 'L.E.'}</td>
-                            <td>{dc.discount_type === 'percentage' ? `${dc.discount_value}%` : `${Number(dc.discount_value).toFixed(2)} L.E.`}</td>
-                            <td>{dc.min_order_amount ? `${Number(dc.min_order_amount).toFixed(0)} L.E.` : '—'}</td>
-                            <td>{dc.max_order_amount ? `${Number(dc.max_order_amount).toFixed(0)} L.E.` : '—'}</td>
-                            <td>{dc.times_used ?? 0}{dc.max_uses ? ` / ${dc.max_uses}` : ' / ∞'}</td>
-                            <td>{dc.expires_at ? new Date(dc.expires_at).toLocaleDateString() : '—'}</td>
-                            <td><Badge bg={dc.is_active ? 'success' : 'secondary'} className="custom-badge">{dc.is_active ? 'Active' : 'Off'}</Badge></td>
-                            <td className="d-flex gap-2">
-                              <button className={dc.is_active ? 'btn-action-danger' : 'btn-action'} onClick={() => handleToggleDiscount(dc.id, dc.is_active)}>{dc.is_active ? 'Disable' : 'Enable'}</button>
-                              <button className="btn-action-danger" onClick={() => handleDeleteDiscount(dc.id)}>Delete</button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </Table>
-                </div>
-              )}
+              <div className="table-scroll-wrapper">
+                <Table responsive className="custom-table borderless align-left-table mb-0">
+                  <thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min</th><th>Max</th><th>Uses</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    {discountCodes.map(dc => (
+                      <tr key={dc.id} className="table-row-hover">
+                        <td><strong>{dc.code}</strong></td><td>{dc.discount_type === 'percentage' ? '%' : 'L.E.'}</td>
+                        <td>{dc.discount_type === 'percentage' ? `${dc.discount_value}%` : `${Number(dc.discount_value).toFixed(2)} L.E.`}</td>
+                        <td>{dc.min_order_amount ? `${Number(dc.min_order_amount).toFixed(0)} L.E.` : '—'}</td>
+                        <td>{dc.max_order_amount ? `${Number(dc.max_order_amount).toFixed(0)} L.E.` : '—'}</td>
+                        <td>{dc.times_used ?? 0}{dc.max_uses ? ` / ${dc.max_uses}` : ' / ∞'}</td>
+                        <td>{dc.expires_at ? new Date(dc.expires_at).toLocaleDateString() : '—'}</td>
+                        <td><Badge bg={dc.is_active ? 'success' : 'secondary'} className="custom-badge">{dc.is_active ? 'Active' : 'Off'}</Badge></td>
+                        <td className="d-flex gap-2">
+                          <button className={dc.is_active ? 'btn-action-danger' : 'btn-action'} onClick={() => handleToggleDiscount(dc.id, dc.is_active)}>{dc.is_active ? 'Disable' : 'Enable'}</button>
+                          <button className="btn-action-danger" onClick={() => handleDeleteDiscount(dc.id)}>Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
             </div>
           )}
 
@@ -766,64 +810,41 @@ const handleUpdateShowcase = async (e) => {
           {activeTab === 'messages' && (
             <div className="dashboard-card">
               <div className="card-header-flex"><h2>Customer Messages</h2></div>
-              {loading ? <p className="text-muted">Loading messages...</p> : (
-                <div className="table-scroll-wrapper">
-                  <Table responsive className="custom-table borderless align-left-table mb-0">
-                    <thead>
-                      <tr><th>Date</th><th>Name</th><th>Email</th><th>Order Ref</th><th>Action</th></tr>
-                    </thead>
-                    <tbody>
-                      {messages.length === 0
-                        ? <tr><td colSpan="5" className="text-center text-muted py-4">No messages.</td></tr>
-                        : messages.map(msg => (
-                          <tr key={msg.id} className="table-row-hover">
-                            <td>{new Date(msg.created_at).toLocaleDateString()}</td>
-                            <td><strong>{msg.name}</strong></td>
-                            <td><a href={`mailto:${msg.email}`} className="text-decoration-none" style={{ color: '#c8a97e' }}>{msg.email}</a></td>
-                            
-                            {/* NEW: Show Order ID Badge if it exists */}
-                            <td>
-                              {msg.order_id 
-                                ? <Badge bg="info" className="custom-badge">#{msg.order_id}</Badge> 
-                                : <span className="text-muted">—</span>
-                              }
-                            </td>
-
-                            <td><button className="btn-action" onClick={() => { setSelectedMessage(msg); setShowViewMessageDialog(true); }}>Read</button></td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </Table>
-                </div>
-              )}
+              <div className="table-scroll-wrapper">
+                <Table responsive className="custom-table borderless align-left-table mb-0">
+                  <thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Order Ref</th><th>Action</th></tr></thead>
+                  <tbody>
+                    {messages.map(msg => (
+                      <tr key={msg.id} className="table-row-hover">
+                        <td>{new Date(msg.created_at).toLocaleDateString()}</td><td><strong>{msg.name}</strong></td><td><a href={`mailto:${msg.email}`} className="text-decoration-none" style={{ color: '#c8a97e' }}>{msg.email}</a></td>
+                        <td>{msg.order_id ? <Badge bg="info" className="custom-badge">#{msg.order_id}</Badge> : <span className="text-muted">—</span>}</td>
+                        <td><button className="btn-action" onClick={() => { setSelectedMessage(msg); setShowViewMessageDialog(true); }}>Read</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
             </div>
           )}
 
           {/* ===== STAFF TAB ===== */}
           {activeTab === 'staff' && userRole === '3' && (
             <div className="dashboard-card">
-              <div className="card-header-flex">
-                <h2>Staff Management</h2>
-                <button className="custom-pill-btn-small" onClick={handleOpenAddStaff}>+ Add Admin</button>
+              <div className="card-header-flex"><h2>Staff Management</h2><button className="custom-pill-btn-small" onClick={handleOpenAddStaff}>+ Add Admin</button></div>
+              <div className="table-scroll-wrapper">
+                <Table responsive className="custom-table borderless align-left-table mb-0">
+                  <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
+                  <tbody>
+                    {staff.map(member => (
+                      <tr key={member.id} className="table-row-hover">
+                        <td>{member.id}</td><td><strong>{member.name}</strong></td><td>{member.email}</td>
+                        <td><Badge bg={member.role_id === 3 ? 'danger' : 'primary'} className="custom-badge">{member.role_id === 3 ? 'Super Admin' : 'Admin'}</Badge></td>
+                        <td>{member.role_id !== 3 && <button className="btn-action-danger" onClick={() => handleRemoveStaff(member.id)}>Remove</button>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
               </div>
-              {loading ? <p className="text-muted">Loading staff...</p> : (
-                <div className="table-scroll-wrapper">
-                  <Table responsive className="custom-table borderless align-left-table mb-0">
-                    <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
-                    <tbody>
-                      {staff.map(member => (
-                        <tr key={member.id} className="table-row-hover">
-                          <td>{member.id}</td>
-                          <td><strong>{member.name}</strong></td>
-                          <td>{member.email}</td>
-                          <td><Badge bg={member.role_id === 3 ? 'danger' : 'primary'} className="custom-badge">{member.role_id === 3 ? 'Super Admin' : 'Admin'}</Badge></td>
-                          <td>{member.role_id !== 3 && <button className="btn-action-danger" onClick={() => handleRemoveStaff(member.id)}>Remove</button>}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </div>
-              )}
             </div>
           )}
 
@@ -834,10 +855,7 @@ const handleUpdateShowcase = async (e) => {
               <p className="text-muted mt-3">Manage your personal admin profile and security.</p>
               <div style={{ padding: '2rem 0', color: '#a89f91' }}>Profile management features coming soon...</div>
               <div className="danger-zone-card mt-4">
-                <div className="danger-text">
-                  <h5>Danger Zone</h5>
-                  <p>Permanently delete your admin account. This cannot be undone.</p>
-                </div>
+                <div className="danger-text"><h5>Danger Zone</h5><p>Permanently delete your admin account.</p></div>
                 <button className="btn-danger-pill" onClick={handleOpenDeleteAccount}>Delete My Account</button>
               </div>
             </div>
@@ -847,131 +865,188 @@ const handleUpdateShowcase = async (e) => {
         <Footer />
       </div>
 
-      {/* --- ADD HERO IMAGE DIALOG --- */}
+      {/* --- ✨ EXACT DESIGN STUDIO MODAL --- */}
+      {showAddShowcaseDialog && (
+        <div className="dialog-overlay" style={{ zIndex: 1050 }}>
+          <div className="dialog-box" style={{ maxWidth: '1200px', width: '95vw', padding: '2rem', height: '85vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="dialog-header">
+              <h3 className="mb-0">Studio: New Featured Look</h3>
+              <button className="close-btn" onClick={() => setShowAddShowcaseDialog(false)}>✕</button>
+            </div>
+
+            <div className='creation' style={{ marginTop: '1rem', flex: 1, minHeight: 0 }}>
+              <div className='candle-div' style={{ height: '100%' }}>
+                {editShowcaseForm.model_url ? (
+                  <CandlePreview3D
+                    modelUrl={editShowcaseForm.model_url}
+                    flatShading={dbModels.find(m => m.model_url === editShowcaseForm.model_url)?.flat_shading}
+                    colorableParts={(() => {
+                      const modelObj = dbModels.find(m => m.model_url === editShowcaseForm.model_url);
+                      if (!modelObj || !modelObj.colorable_parts) return [];
+                      try { return typeof modelObj.colorable_parts === 'string' ? JSON.parse(modelObj.colorable_parts) : modelObj.colorable_parts; }
+                      catch { return []; }
+                    })()}
+                    cupColor={editShowcaseForm.cupColor === 'default' ? 'rgba(255,255,255,0.45)' : editShowcaseForm.cupColor}
+                    waxColor={availableColors.find(c => String(c.id) === String(editShowcaseForm.waxColor))?.hex_code ?? '#ffffff'}
+                    layerColors={editShowcaseForm.layers.map(id => availableColors.find(c => String(c.id) === String(id))?.hex_code || '#ffffff')}
+                    cupSize="medium"
+                  />
+                ) : (
+                  <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+                    <p>Select a shape to begin designing</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className='choices' style={{ overflowY: 'auto', padding: '1rem' }}> 
+                <div className="type-toggle mb-4">
+                  <label className={`radio-label ${editShowcaseForm.type === 'cup' ? 'active-radio' : ''}`}>
+                    <input type="radio" checked={editShowcaseForm.type === 'cup'} onChange={() => setEditShowcaseForm({...editShowcaseForm, type: 'cup', model_url: '', layers: [], cupShape: 'default', moldShape: 'default'})} className="radio-input" />
+                    Cup Candle
+                  </label>
+                  <label className={`radio-label ${editShowcaseForm.type === 'mold' ? 'active-radio' : ''}`}>
+                    <input type="radio" checked={editShowcaseForm.type === 'mold'} onChange={() => setEditShowcaseForm({...editShowcaseForm, type: 'mold', model_url: '', layers: [], cupShape: 'default', moldShape: 'default'})} className="radio-input" />
+                    Mold Candle
+                  </label>
+                </div>
+
+                <div className='selections'>
+                  {editShowcaseForm.type === 'cup' && (
+                    <>
+                      <select value={editShowcaseForm.cupShape} onChange={(e) => {
+                        const shape = availableCups.find(s => String(s.id) === String(e.target.value));
+                        setEditShowcaseForm({...editShowcaseForm, cupShape: e.target.value, cupColor: 'default', model_url: shape?.model_url, layers: ['default']});
+                      }}>
+                        <option value="default">Cup Shape</option>
+                        {availableCups.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+
+                      <select value={editShowcaseForm.cupColor} onChange={(e) => setEditShowcaseForm({...editShowcaseForm, cupColor: e.target.value})}>
+                        <option value="default">Cup Color</option>
+                        {(() => {
+                          const cup = availableCups.find(c => String(c.id) === String(editShowcaseForm.cupShape));
+                          const colors = cup ? (typeof cup.colors === 'string' ? JSON.parse(cup.colors) : cup.colors) : [];
+                          return colors.map((c, i) => <option key={i} value={c.hex_code}>{c.name}</option>);
+                        })()}
+                      </select>
+
+                      <select value={editShowcaseForm.waxColor} onChange={(e) => {
+                        const n = [...editShowcaseForm.layers];
+                        n[0] = e.target.value;
+                        setEditShowcaseForm({...editShowcaseForm, waxColor: e.target.value, layers: n});
+                      }}>
+                        <option value="default">Candle Wax Color</option>
+                        {availableColors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </>
+                  )}
+
+                  {editShowcaseForm.type === 'mold' && (
+                    <>
+                      <select value={editShowcaseForm.moldShape} onChange={(e) => {
+                        const shape = availableMolds.find(m => String(m.id) === String(e.target.value));
+                        setEditShowcaseForm({
+                          ...editShowcaseForm, 
+                          moldShape: e.target.value, 
+                          model_url: shape?.model_url,
+                          layers: Array(shape?.layers || 1).fill("default")
+                        });
+                      }}>
+                        <option value="default">Mold Shape</option>
+                        {availableMolds.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+
+                      {editShowcaseForm.layers.map((val, i) => (
+                        <select key={i} value={val} onChange={(e) => {
+                          const n = [...editShowcaseForm.layers];
+                          n[i] = e.target.value;
+                          setEditShowcaseForm({...editShowcaseForm, layers: n});
+                        }} className="layer-select">
+                          <option value="default">Layer {i+1} Color</option>
+                          {availableColors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      ))}
+                    </>
+                  )}
+
+                  <div className="confirmation-area mt-4">
+                    <button className="confirm w-100" style={{ margin: 0, padding: '15px' }} disabled={!editShowcaseForm.model_url || submitting} onClick={handleCreateShowcase}>
+                      {submitting ? <Spinner size="sm" /> : 'Push to Storefront'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- OTHER MODALS --- */}
       {showAddHeroDialog && (
         <div className="dialog-overlay">
           <div className="dialog-box">
-            <div className="dialog-header">
-              <h3>Upload Hero Image</h3>
-              <button className="close-btn" onClick={() => setShowAddHeroDialog(false)}>&times;</button>
-            </div>
+            <div className="dialog-header"><h3>Add Slide</h3><button className="close-btn" onClick={() => setShowAddHeroDialog(false)}>✕</button></div>
             <Form onSubmit={handleAddHeroImage}>
-              <div className="dialog-body-scroll">
-                {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-                {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-                
-                <Form.Group className="mb-3">
-                  <label className="form-label-enhanced">Image File (Recommended: 1920x1080)</label>
-                  <Form.Control type="file" accept="image/*" className="custom-input" onChange={e => setHeroImageFile(e.target.files[0])} required />
-                </Form.Group>
-              </div>
-              <div className="dialog-footer">
-                <button type="button" className="btn btn-cancel" onClick={() => setShowAddHeroDialog(false)}>Cancel</button>
-                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Upload'}</button>
-              </div>
+              <Form.Control type="file" className="custom-input mb-3" onChange={e => setHeroImageFile(e.target.files[0])} required />
+              <div className="dialog-footer"><button type="button" className="btn btn-cancel" onClick={() => setShowAddHeroDialog(false)}>Cancel</button><button type="submit" className="btn btn-gold-solid">Upload</button></div>
             </Form>
           </div>
         </div>
       )}
 
-{/* ORDER DIALOG */}
       {showOrderDialog && selectedOrder && (
         <div className="dialog-overlay">
           <div className="dialog-box">
-            <div className="dialog-header">
-              <h3>Order #{selectedOrder.id}</h3>
-              <button className="close-btn" onClick={() => setShowOrderDialog(false)}>&times;</button>
-            </div>
+            <div className="dialog-header"><h3>Order #{selectedOrder.id}</h3><button className="close-btn" onClick={() => setShowOrderDialog(false)}>✕</button></div>
             <Form onSubmit={handleUpdateOrderStatus}>
-              {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-              {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-              <div className="order-details-box mb-3">
-                <p className="mb-2"><strong>Customer:</strong> <span className="text-muted">{selectedOrder.customer_name}</span></p>
-                <p className="mb-2"><strong>Date:</strong> <span className="text-muted">{new Date(selectedOrder.created_at).toLocaleDateString()}</span></p>
-                <p className="mb-2"><strong>Total:</strong> <span className="fw-bold text-success">{Number(selectedOrder.total).toFixed(2)} L.E.</span></p>
-                <div className="d-flex align-items-center mt-3">
-                  <strong className="me-2">Status:</strong>
-                  <Badge bg={getStatusBg(selectedOrder.status_id)} className="custom-badge fs-6">{getStatusLabel(selectedOrder.status_id)}</Badge>
-                </div>
+              <div className="mb-4 p-3 bg-light rounded">
+                <p><strong>Customer:</strong> {selectedOrder.customer_name}</p>
+                <p><strong>Total:</strong> {selectedOrder.total} L.E.</p>
+                <Badge bg={getStatusBg(selectedOrder.status_id)}>{getStatusLabel(selectedOrder.status_id)}</Badge>
               </div>
-
-              {/* --- UPDATED ORDER ITEMS SECTION --- */}
-              <div className="mb-4 p-3 rounded" style={{ backgroundColor: '#fdfbf7', border: '1px solid #e0dcd3' }}>
-                <h6 className="fw-bold mb-3" style={{ color: '#4a3728' }}>Order Items</h6>
-                {selectedOrderItems.length === 0 ? <p className="text-muted small mb-0">No items found.</p> : (
-                  <ul className="list-unstyled mb-0" style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '5px' }}>
-                    {selectedOrderItems.map(item => (
-                      <li key={item.order_item_id || item.id} className="d-flex justify-content-between mb-3 pb-3 border-bottom">
-                        <div>
-                          
-                          {/* Item Name & Custom Badge */}
-                          <div>
-                            <span className="fw-bold text-dark">{item.quantity}x</span> {item.item_name}
-                            {item.item_type !== 'prebuilt' && <span className="badge bg-secondary ms-2" style={{ fontSize: '0.65rem' }}>Custom</span>}
-                          </div>
-
-                          {/* Typed-out Components (Scent, Layers, etc.) */}
-                          {item.details && item.details !== 'Standard Pre-built' && item.details !== 'Standard' && (
-                            <div className="text-muted mt-2" style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>
-                              <span className="fw-semibold" style={{ color: '#8c7e70', display: 'block', marginBottom: '2px' }}>Components:</span>
-                              <div style={{ paddingLeft: '8px', borderLeft: '2px solid #e0dcd3' }}>
-                                {item.details}
-                              </div>
-                            </div>
-                          )}
-
-                        </div>
-                        
-                        {/* Price */}
-                        <span className="text-muted fw-semibold">
-                          {(Number(item.unit_price) * item.quantity).toFixed(2)} L.E.
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              {/* --- END UPDATED ORDER ITEMS SECTION --- */}
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Update Status</Form.Label>
-                <Form.Select className="custom-input form-select" value={newStatusId} onChange={e => setNewStatusId(e.target.value)} required>
-                  <option value="1">Processing</option>
-                  <option value="2">Shipped</option>
-                  <option value="3">Delivered</option>
-                </Form.Select>
-              </Form.Group>
-              <div className="dialog-footer">
-                <button type="button" className="btn btn-cancel" onClick={() => setShowOrderDialog(false)}>Close</button>
-                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save'}</button>
-              </div>
+              <ul className="list-unstyled mb-4">
+                {selectedOrderItems.map(item => (
+                  <li key={item.id} className="border-bottom pb-2 mb-2"><strong>{item.quantity}x {item.item_name}</strong> - {item.unit_price} L.E.<br/><small>{item.details}</small></li>
+                ))}
+              </ul>
+              <Form.Select className="custom-input mb-3" value={newStatusId} onChange={e => setNewStatusId(e.target.value)} required>
+                <option value="1">Processing</option><option value="2">Shipped</option><option value="3">Delivered</option>
+              </Form.Select>
+              <div className="dialog-footer"><button type="button" className="btn btn-cancel" onClick={() => setShowOrderDialog(false)}>Close</button><button type="submit" className="btn btn-gold-solid">Save</button></div>
             </Form>
           </div>
         </div>
       )}
-      {/* EDIT PRODUCT DIALOG */}
+
+      {showAddProductDialog && (
+        <div className="dialog-overlay">
+          <div className="dialog-box">
+            <div className="dialog-header"><h3>New Product</h3><button className="close-btn" onClick={() => setShowAddProductDialog(false)}>✕</button></div>
+            <Form onSubmit={handleAddProduct}>
+              <Form.Control type="text" placeholder="Name" className="custom-input mb-2" onChange={e => setProductForm({...productForm, name: e.target.value})} required />
+              <Form.Control type="number" placeholder="Price" className="custom-input mb-2" onChange={e => setProductForm({...productForm, price: e.target.value})} required />
+              <Form.Control type="number" placeholder="Stock" className="custom-input mb-2" onChange={e => setProductForm({...productForm, stock_quantity: e.target.value})} required />
+              <Form.Control type="file" className="custom-input mb-3" onChange={e => setProductForm({...productForm, image: e.target.files[0]})} />
+              <div className="dialog-footer"><button type="button" className="btn btn-cancel" onClick={() => setShowAddProductDialog(false)}>Cancel</button><button type="submit" className="btn btn-gold-solid">Save</button></div>
+            </Form>
+          </div>
+        </div>
+      )}
+
       {showEditProductDialog && (
         <div className="dialog-overlay">
           <div className="dialog-box">
-            <div className="dialog-header">
-              <h3>Edit Product</h3>
-              <button className="close-btn" onClick={() => setShowEditProductDialog(false)}>&times;</button>
-            </div>
+            <div className="dialog-header"><h3>Edit Product</h3><button className="close-btn" onClick={() => setShowEditProductDialog(false)}>✕</button></div>
             <Form onSubmit={handleUpdateProduct}>
-              {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-              {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
-              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Name</Form.Label><Form.Control type="text" className="custom-input" value={editProductForm.name} onChange={e => setEditProductForm({ ...editProductForm, name: e.target.value })} required /></Form.Group>
-              <div className="d-flex gap-3 mb-3">
-                <Form.Group className="flex-fill"><Form.Label className="fw-semibold">Price (L.E.)</Form.Label><Form.Control type="number" className="custom-input" min="0" step="0.01" value={editProductForm.price} onChange={e => setEditProductForm({ ...editProductForm, price: e.target.value })} required /></Form.Group>
-                <Form.Group className="flex-fill"><Form.Label className="fw-semibold">Stock</Form.Label><Form.Control type="number" className="custom-input" min="0" value={editProductForm.stock_quantity} onChange={e => setEditProductForm({ ...editProductForm, stock_quantity: e.target.value.replace(/^0+(?=\d)/, '') })} required /></Form.Group>
-              </div>
-              <Form.Group className="mb-3"><Form.Label className="fw-semibold">Description</Form.Label><Form.Control as="textarea" className="custom-input" rows={2} value={editProductForm.description || ''} onChange={e => setEditProductForm({ ...editProductForm, description: e.target.value })} /></Form.Group>
-              <Form.Group className="mb-4"><Form.Label className="fw-semibold">Image <span className="text-muted fw-normal">(leave blank to keep current)</span></Form.Label><Form.Control type="file" accept="image/*" className="custom-input" onChange={e => setEditProductForm({ ...editProductForm, image: e.target.files[0] })} /></Form.Group>
-              <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
-                <button type="button" className="btn-action-danger" onClick={() => handleDeleteProduct(editProductForm.id)}>Delete Product</button>
+              <Form.Control type="text" className="custom-input mb-2" value={editProductForm.name} onChange={e => setEditProductForm({...editProductForm, name: e.target.value})} />
+              <Form.Control type="number" className="custom-input mb-2" value={editProductForm.price} onChange={e => setEditProductForm({...editProductForm, price: e.target.value})} />
+              <Form.Control type="number" className="custom-input mb-2" value={editProductForm.stock_quantity} onChange={e => setEditProductForm({...editProductForm, stock_quantity: e.target.value})} />
+              <Form.Control type="file" className="custom-input mb-3" onChange={e => setEditProductForm({...editProductForm, image: e.target.files[0]})} />
+              <div className="dialog-footer">
+                <button type="button" className="btn-action-danger" onClick={() => handleDeleteProduct(editProductForm.id)}>Delete</button>
                 <div className="d-flex gap-2">
                   <button type="button" className="btn btn-cancel" onClick={() => setShowEditProductDialog(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save'}</button>
+                  <button type="submit" className="btn btn-gold-solid">Save</button>
                 </div>
               </div>
             </Form>
@@ -979,11 +1054,11 @@ const handleUpdateShowcase = async (e) => {
         </div>
       )}
 
-      {/* ADD STAFF DIALOG */}
+      {/* STAFF / DISCOUNT / DELETE MODALS */}
       {showAddStaffDialog && (
         <div className="dialog-overlay">
           <div className="dialog-box">
-            <div className="dialog-header"><h3>Add New Admin</h3><button className="close-btn" onClick={() => setShowAddStaffDialog(false)}>&times;</button></div>
+            <div className="dialog-header"><h3>Add New Admin</h3><button className="close-btn" onClick={() => setShowAddStaffDialog(false)}>✕</button></div>
             <Form onSubmit={handleAddStaff}>
               {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
               {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
@@ -1001,55 +1076,10 @@ const handleUpdateShowcase = async (e) => {
         </div>
       )}
 
-      {/* ADD PRODUCT DIALOG */}
-      {showAddProductDialog && (
-        <div className="dialog-overlay">
-          <div className="dialog-box">
-            <div className="dialog-header"><h3>Add New Product</h3><button className="close-btn" onClick={() => setShowAddProductDialog(false)}>&times;</button></div>
-            <Form onSubmit={handleAddProduct}>
-              <div className="dialog-body-scroll">
-                {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-                
-                <Form.Group className="mb-3">
-                  <label className="form-label-enhanced">Product Name</label>
-                  <Form.Control type="text" className="custom-input" value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} required />
-                </Form.Group>
-                
-                <div className="dialog-grid-2">
-                  <Form.Group>
-                    <label className="form-label-enhanced">Price (L.E.)</label>
-                    <Form.Control type="number" className="custom-input" min="0" step="0.01" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} required />
-                  </Form.Group>
-                  <Form.Group>
-                    <label className="form-label-enhanced">Initial Stock</label>
-                    <Form.Control type="number" className="custom-input" min="0" value={productForm.stock_quantity} onChange={e => setProductForm({ ...productForm, stock_quantity: e.target.value })} required />
-                  </Form.Group>
-                </div>
-                
-                <Form.Group className="mb-3">
-                  <label className="form-label-enhanced">Description</label>
-                  <Form.Control as="textarea" className="custom-input" rows={3} value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} />
-                </Form.Group>
-                
-                <Form.Group className="mb-2">
-                  <label className="form-label-enhanced">Product Image</label>
-                  <Form.Control type="file" accept="image/*" className="custom-input" onChange={e => setProductForm({ ...productForm, image: e.target.files[0] })} />
-                </Form.Group>
-              </div>
-              <div className="dialog-footer">
-                <button type="button" className="btn btn-cancel" onClick={() => setShowAddProductDialog(false)}>Cancel</button>
-                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save Product'}</button>
-              </div>
-            </Form>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE ACCOUNT DIALOG */}
       {showDeleteAccountDialog && (
         <div className="dialog-overlay">
           <div className="dialog-box" style={{ borderTop: '6px solid #dc3545' }}>
-            <div className="dialog-header"><h3 className="text-danger">Delete Account</h3><button className="close-btn" onClick={() => setShowDeleteAccountDialog(false)}>&times;</button></div>
+            <div className="dialog-header"><h3 className="text-danger">Delete Account</h3><button className="close-btn" onClick={() => setShowDeleteAccountDialog(false)}>✕</button></div>
             <Form onSubmit={handleDeleteAccount}>
               {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
               <Alert variant="warning" className="rounded-4 mb-4"><strong>Warning:</strong> This is permanent.</Alert>
@@ -1063,156 +1093,70 @@ const handleUpdateShowcase = async (e) => {
         </div>
       )}
 
-      {/* PROMO CODE DIALOG */}
       {showAddDiscountDialog && (
         <div className="dialog-overlay">
           <div className="dialog-box">
-            <div className="dialog-header"><h3>Create Promo Code</h3><button className="close-btn" onClick={() => setShowAddDiscountDialog(false)}>&times;</button></div>
+            <div className="dialog-header"><h3>Create Promo Code</h3><button className="close-btn" onClick={() => setShowAddDiscountDialog(false)}>✕</button></div>
             <Form onSubmit={handleAddDiscountCode}>
-              <div className="dialog-body-scroll">
-                {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-                
-                <Form.Group className="mb-3">
-                  <label className="form-label-enhanced">Promo Code</label>
-                  <div className="input-group-flush">
-                    <Form.Control type="text" className="custom-input" value={discountForm.code} onChange={e => setDiscountForm({ ...discountForm, code: e.target.value.toUpperCase() })} required />
-                    <button type="button" className="btn-action" onClick={generateRandomCode}>Generate</button>
-                  </div>
-                </Form.Group>
-
-                <div className="dialog-grid-2">
-                  <Form.Group>
-                    <label className="form-label-enhanced">Discount Type</label>
-                    <Form.Select className="custom-input form-select" value={discountForm.discount_type} onChange={e => setDiscountForm({ ...discountForm, discount_type: e.target.value })}>
-                      <option value="percentage">Percentage (%)</option>
-                      <option value="fixed">Fixed Amount (L.E.)</option>
-                    </Form.Select>
-                  </Form.Group>
-                  <Form.Group>
-                    <label className="form-label-enhanced">Value</label>
-                    <Form.Control type="number" className="custom-input" min="0" value={discountForm.discount_value} onChange={e => setDiscountForm({ ...discountForm, discount_value: e.target.value })} required />
-                  </Form.Group>
+              {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
+              {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold">Code</Form.Label>
+                <div className="d-flex gap-2">
+                  <Form.Control type="text" className="custom-input" value={discountForm.code} onChange={e => setDiscountForm({ ...discountForm, code: e.target.value.toUpperCase() })} required />
+                  <button type="button" className="btn-action" onClick={generateRandomCode}>Random</button>
                 </div>
-
-                <div className="dialog-grid-2">
-                  <Form.Group>
-                    <label className="form-label-enhanced">Min Order (Opt)</label>
-                    <Form.Control type="number" className="custom-input" min="0" placeholder="0.00" value={discountForm.min_order_amount} onChange={e => setDiscountForm({ ...discountForm, min_order_amount: e.target.value })} />
-                  </Form.Group>
-                  <Form.Group>
-                    <label className="form-label-enhanced">Max Order (Opt)</label>
-                    <Form.Control type="number" className="custom-input" min="0" placeholder="No limit" value={discountForm.max_order_amount} onChange={e => setDiscountForm({ ...discountForm, max_order_amount: e.target.value })} />
-                  </Form.Group>
-                </div>
-
-                <div className="dialog-grid-2">
-                  <Form.Group>
-                    <label className="form-label-enhanced">Usage Limit (Opt)</label>
-                    <Form.Control type="number" className="custom-input" min="1" placeholder="Unlimited" value={discountForm.max_uses} onChange={e => setDiscountForm({ ...discountForm, max_uses: e.target.value })} />
-                  </Form.Group>
-                  <Form.Group>
-                    <label className="form-label-enhanced">Expiry Date (Opt)</label>
-                    <Form.Control type="date" className="custom-input" value={discountForm.expires_at} onChange={e => setDiscountForm({ ...discountForm, expires_at: e.target.value })} />
-                  </Form.Group>
-                </div>
+              </Form.Group>
+              <div className="row">
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Type</Form.Label><Form.Select className="custom-input form-select" value={discountForm.discount_type} onChange={e => setDiscountForm({ ...discountForm, discount_type: e.target.value })}><option value="percentage">Percentage (%)</option><option value="fixed">Fixed (L.E.)</option></Form.Select></div>
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Value</Form.Label><Form.Control type="number" className="custom-input" min="0" value={discountForm.discount_value} onChange={e => setDiscountForm({ ...discountForm, discount_value: e.target.value })} required /></div>
+              </div>
+              <div className="row">
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Min Order <span className="text-muted">(opt)</span></Form.Label><Form.Control type="number" className="custom-input" min="0" value={discountForm.min_order_amount} onChange={e => setDiscountForm({ ...discountForm, min_order_amount: e.target.value })} /></div>
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Max Order <span className="text-muted">(opt)</span></Form.Label><Form.Control type="number" className="custom-input" min="0" value={discountForm.max_order_amount} onChange={e => setDiscountForm({ ...discountForm, max_order_amount: e.target.value })} /></div>
+              </div>
+              <div className="row">
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Max Uses <span className="text-muted">(opt)</span></Form.Label><Form.Control type="number" className="custom-input" min="1" value={discountForm.max_uses} onChange={e => setDiscountForm({ ...discountForm, max_uses: e.target.value })} /></div>
+                <div className="col-md-6 mb-3"><Form.Label className="fw-semibold">Expiry <span className="text-muted">(opt)</span></Form.Label><Form.Control type="date" className="custom-input" value={discountForm.expires_at} onChange={e => setDiscountForm({ ...discountForm, expires_at: e.target.value })} /></div>
               </div>
               <div className="dialog-footer">
                 <button type="button" className="btn btn-cancel" onClick={() => setShowAddDiscountDialog(false)}>Cancel</button>
-                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Create Code'}</button>
+                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Create'}</button>
               </div>
             </Form>
           </div>
         </div>
       )}
-  {showEditShowcaseDialog && (
-  <div className="dialog-overlay">
-    <div className="dialog-box">
-      <div className="dialog-header">
-        <h3>Edit Showcase Design</h3>
-        <button className="close-btn" onClick={() => setShowEditShowcaseDialog(false)}>&times;</button>
-      </div>
-      <Form onSubmit={handleUpdateShowcase}>
-        <Form.Group className="mb-3">
-          <Form.Label>Design Name</Form.Label>
-          <Form.Control 
-            type="text" 
-            className="custom-input" 
-            value={editShowcaseForm.name} 
-            onChange={e => setEditShowcaseForm({...editShowcaseForm, name: e.target.value})} 
-            required 
-          />
-        </Form.Group>
-        <Form.Group className="mb-3">
-          <Form.Label>Wax Color (Hex)</Form.Label>
-          <div className="d-flex gap-2">
-            <Form.Control 
-              type="color" 
-              className="form-control-color" 
-              value={editShowcaseForm.hex_color} 
-              onChange={e => setEditShowcaseForm({...editShowcaseForm, hex_color: e.target.value})} 
-            />
-            <Form.Control 
-              type="text" 
-              className="custom-input" 
-              value={editShowcaseForm.hex_color} 
-              onChange={e => setEditShowcaseForm({...editShowcaseForm, hex_color: e.target.value})} 
-            />
-          </div>
-        </Form.Group>
-        <div className="dialog-footer">
-          <button type="button" className="btn btn-cancel" onClick={() => setShowEditShowcaseDialog(false)}>Cancel</button>
-          <button type="submit" className="btn btn-gold-solid">Update Design</button>
-        </div>
-      </Form>
-    </div>
-  </div>
-)}
+
       {/* VIEW MESSAGE DIALOG */}
       {showViewMessageDialog && selectedMessage && (
         <div className="dialog-overlay">
           <div className="dialog-box">
             <div className="dialog-header">
-              <h3>Inbox</h3>
-              <button className="close-btn" onClick={() => setShowViewMessageDialog(false)}>&times;</button>
+              <h3>Message from {selectedMessage.name}</h3>
+              <button className="close-btn" onClick={() => setShowViewMessageDialog(false)}>✕</button>
             </div>
-            
-            <div className="message-read-header">
-              <p><strong>From:</strong> {selectedMessage.name}</p>
-              <p><strong>Email:</strong> <a href={`mailto:${selectedMessage.email}`} className="text-decoration-none" style={{ color: '#c8a97e' }}>{selectedMessage.email}</a></p>
-              <p><strong>Phone:</strong> {selectedMessage.phone ? <a href={`tel:${selectedMessage.phone}`} className="text-decoration-none text-muted">{selectedMessage.phone}</a> : <span className="text-muted">Not provided</span>}</p>
-              <p className="text-muted mt-2" style={{ fontSize: '0.8rem' }}>Received: {new Date(selectedMessage.created_at).toLocaleString()}</p>
-              
+            <div className="p-2 mb-3">
+              <p className="mb-1"><strong>Email:</strong> <a href={`mailto:${selectedMessage.email}`} className="text-decoration-none" style={{ color: '#c8a97e' }}>{selectedMessage.email}</a></p>
+              <p className="mb-1"><strong>Phone:</strong> {selectedMessage.phone ? <a href={`tel:${selectedMessage.phone}`} className="text-decoration-none text-muted">{selectedMessage.phone}</a> : <span className="text-muted">—</span>}</p>
+              <p className="mb-3 text-muted" style={{ fontSize: '0.85rem' }}><strong>Received:</strong> {new Date(selectedMessage.created_at).toLocaleString()}</p>
               {selectedMessage.order_id && (
-                <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#ffffff', borderRadius: '0.5rem', border: '1px solid #c8a97e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fdfbf7', borderRadius: '0.5rem', border: '1px solid #c8a97e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <span style={{ fontSize: '0.8rem', color: '#8c7e70', textTransform: 'uppercase', fontWeight: 'bold', display: 'block' }}>Regarding Order</span>
                     <strong style={{ fontSize: '1.1rem', color: '#2d241c' }}>#{selectedMessage.order_id}</strong>
                   </div>
-                  <button 
-                    className="custom-pill-btn-small" 
-                    style={{ margin: 0 }}
-                    onClick={() => {
-                      const linkedOrder = orders.find(o => o.id === selectedMessage.order_id);
-                      if (linkedOrder) {
-                        setShowViewMessageDialog(false);
-                        handleOpenOrderDialog(linkedOrder);
-                      } else {
-                        error("Order details not found in current memory. It may be too old.");
-                      }
-                    }}
-                  >
-                    View Order Details →
-                  </button>
+                  <button className="custom-pill-btn-small" style={{ margin: 0 }} onClick={() => {
+                    const linkedOrder = orders.find(o => String(o.id) === String(selectedMessage.order_id));
+                    if (linkedOrder) { setShowViewMessageDialog(false); handleOpenOrderDialog(linkedOrder); }
+                    else error("Order not found.");
+                  }}>View Order →</button>
                 </div>
               )}
+              <div className="p-3 bg-light rounded mt-3" style={{ whiteSpace: 'pre-wrap', border: '1px solid #e0dcd3' }}>{selectedMessage.message}</div>
             </div>
-
-            <div className="message-content-box">
-              {selectedMessage.message}
-            </div>
-
             <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
-              <button className="btn-action-danger" onClick={() => handleDeleteMessage(selectedMessage.id)}>Delete Message</button>
+              <button className="btn-action-danger" onClick={() => handleDeleteMessage(selectedMessage.id)}>Delete</button>
               <button className="btn btn-cancel" onClick={() => setShowViewMessageDialog(false)}>Close</button>
             </div>
           </div>

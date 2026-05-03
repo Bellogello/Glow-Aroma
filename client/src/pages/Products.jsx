@@ -48,8 +48,6 @@ const Products = () => {
     <div className="products-container">
       <Navbar />
 
-      {/* Notice we completely removed the "custom-candle-hero" section from here! */}
-
       <div className='AllProducts'>
         
         <h2 className="catalog-title" style={{ textAlign: 'center', marginBottom: '20px', color: '#4a3728' }}>
@@ -81,29 +79,31 @@ const Products = () => {
         {loading ? (
           <h2 style={{ textAlign: 'center', margin: '40px 0' }}>Loading candles...</h2>
         ) : (
-          <div className="product-list">
-            
-            {/* --- 1. THE CUSTOM CANDLE CARD GOES HERE FIRST --- */}
-            {/* It only shows up when they are viewing "All" and haven't typed a search */}
+          <>
+            {/* --- 1. THE CUSTOM CANDLE BANNER --- */}
+            {/* Moved OUTSIDE of the product-list grid so it spans full width! */}
             {activeFilter === 'All' && searchQuery === '' && (
-              <CreateYourOwnCard />
+              <div style={{ marginBottom: '3rem', padding: '0 1rem' }}>
+                <CreateYourOwnCard />
+              </div>
             )}
 
-            {/* --- 2. THE REST OF THE PREBUILT PRODUCTS FOLLOW --- */}
-            {filteredProducts.length === 0 ? (
-              <p style={{ textAlign: 'center', gridColumn: '1 / -1', padding: '40px 0' }}>
-                No products found matching your search.
-              </p>
-            ) : (
-              filteredProducts.map((product) => (
-                <ProductCard 
-                  key={product.id}   
-                  product={product}  
-                />
-              ))
-            )}
-            
-          </div>
+            {/* --- 2. THE STANDARD PRODUCT GRID --- */}
+            <div className="product-list">
+              {filteredProducts.length === 0 ? (
+                <p style={{ textAlign: 'center', gridColumn: '1 / -1', padding: '40px 0' }}>
+                  No products found matching your search.
+                </p>
+              ) : (
+                filteredProducts.map((product) => (
+                  <ProductCard 
+                    key={product.id}   
+                    product={product}  
+                  />
+                ))
+              )}
+            </div>
+          </>
         )}
       </div>
       <Footer />
