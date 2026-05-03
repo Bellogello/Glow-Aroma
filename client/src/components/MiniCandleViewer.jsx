@@ -13,59 +13,55 @@ function Model({ url, layers, waxColor, cupColor, flatShading }) {
 
   const primaryColor = waxColor || activeLayers[0] || '#ffffff';
 
-  useEffect(() => {
-    if (!scene) return;
+useEffect(() => {
+  if (!scene) return;
 
-    scene.traverse((child) => {
-      if (child.isMesh && child.material) {
-        // Clone material to prevent bleeding across different previews
-        child.material = child.material.clone();
-        
-        // APPLY FLAT SHADING
-        child.material.flatShading = !!flatShading;
+  // Collect all wax meshes in order (excluding wick)
+  const waxMeshes = [];
+  scene.traverse((child) => {
+    if (child.isMesh && !child.name.toLowerCase().includes('wick')) {
+      waxMeshes.push(child);
+    }
+  });
 
-        const name = child.name.toLowerCase();
+  scene.traverse((child) => {
+    if (child.isMesh && child.material) {
+      child.material = child.material.clone();
+      child.material.flatShading = !!flatShading;
 
-        // 1. Safeguard Wick
-        if (name.includes('wick')) return;
+      const name = child.name.toLowerCase();
 
-        // 2. STRICT Glass/Cup Detection (Only by explicit name)
-        const isStrictlyGlass = name.includes('glass') || name.includes('cup') || name.includes('jar') || name.includes('cylinder_0');
+      // Skip wick
+      if (name.includes('wick')) return;
 
-        if (isStrictlyGlass) {
-          child.material.transparent = true;
-          child.material.opacity = 0.45;
-          child.material.roughness = 0.05;
-          child.material.metalness = 0.1;
-          child.material.color.set(cupColor && cupColor !== 'default' ? cupColor : '#ffffff');
-        } 
-        
-        // 3. Mold Layers (Layer1, Layer2...)
-        else if (child.name.match(/Layer(\d+)/i)) {
-          const layerMatch = child.name.match(/Layer(\d+)/i);
-          const index = parseInt(layerMatch[1]) - 1;
-          
-          // Ensure it's opaque and has the correct color
-          child.material.transparent = false;
-          child.material.opacity = 1.0;
-          child.material.color.set(activeLayers[index] || primaryColor);
-          child.material.roughness = 0.2;
-        } 
-        
-        // 4. CATCH-ALL (Wax Fill inside Cups, or single-color molds)
-        else {
-          // Ensure it's opaque and has the correct color
-          child.material.transparent = false;
-          child.material.opacity = 1.0;
-          child.material.color.set(primaryColor);
-          child.material.roughness = 0.2;
-        }
-
-        // Force Three.js to recompile the shader
-        child.material.needsUpdate = true;
+      // Glass/Cup detection
+      const isGlass = name.includes('glass') || name.includes('cup') || name.includes('jar') || name.includes('cylinder_0');
+      if (isGlass) {
+        child.material.transparent = true;
+        child.material.opacity = 0.45;
+        child.material.roughness = 0.05;
+        child.material.metalness = 0.1;
+        child.material.color.set(cupColor && cupColor !== 'default' ? cupColor : '#ffffff');
+      } else if (activeLayers.length > 1) {
+        // Multi-layer mold — assign color by position in waxMeshes array
+        const index = waxMeshes.indexOf(child);
+        const color = activeLayers[index] || activeLayers[0] || primaryColor;
+        child.material.transparent = false;
+        child.material.opacity = 1.0;
+        child.material.color.set(color);
+        child.material.roughness = 0.2;
+      } else {
+        // Single color (cup wax or single-layer mold)
+        child.material.transparent = false;
+        child.material.opacity = 1.0;
+        child.material.color.set(primaryColor);
+        child.material.roughness = 0.2;
       }
-    });
-  }, [scene, activeLayers, primaryColor, cupColor, flatShading]);
+
+      child.material.needsUpdate = true;
+    }
+  });
+}, [scene, activeLayers, primaryColor, cupColor, flatShading]);
 
   // Rotates automatically
   useFrame(() => {
