@@ -710,8 +710,11 @@ app.get('/admin/orders/:orderId', (req, res) => {
             oi.id AS order_item_id, 
             oi.quantity, 
             oi.unit_price,
-            oi.item_type,
-            oi.details,
+            CASE 
+                WHEN pc.id IS NOT NULL THEN 'prebuilt'
+                ELSE 'custom'
+            END AS item_type,
+            'Standard Pre-built' AS details,
             CASE 
                 WHEN pc.id IS NOT NULL THEN pc.name 
                 WHEN cc.type = 'cup' THEN CONCAT(COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), ' ', COALESCE(cs.name, 'Cup'), ' (', cc.cup_size, 'ml)')
@@ -733,7 +736,10 @@ app.get('/admin/orders/:orderId', (req, res) => {
         GROUP BY oi.id`;
 
     db.query(sql, [orderId], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            console.error("ORDER DETAILS SQL ERROR:", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.json(results);
     });
 });
