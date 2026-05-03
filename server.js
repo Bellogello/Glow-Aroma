@@ -703,62 +703,66 @@ app.get('/admin/orders/:id/items', (req, res) => {
         res.json(results);
     });
 });
-app.get('/admin/orders/:orderId', (req, res) => {
+app.get('/admin/orders/:orderId', async (req, res) => {
     const { orderId } = req.params;
+    
+    try {
+        // We use EXACTLY the string you said worked, literally copy-pasted.
+        const sql = `
+            SELECT 
+                oi.id AS order_item_id, 
+                oi.quantity, 
+                oi.price_at_time,
+                CASE 
+                    WHEN pc.id IS NOT NULL THEN pc.name 
+                    ELSE CONCAT(
+                        COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), 
+                        ' ', 
+                        COALESCE(cs.name, 'Cup'), 
+                        ' (', cc.cup_size, 'ml)'
+                    )
+                END AS item_name,
+                cc.preview_image AS snapshot,
+                s.name AS scent_name,
+                GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', ') AS wax_layers,
+                pc.id AS prebuilt_id
+            FROM order_items oi
+            LEFT JOIN custom_candles cc ON oi.custom_candle_id = cc.id
+            LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
+            LEFT JOIN scents s ON cc.scent_id = s.id
+            LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
+            LEFT JOIN colors cl ON ccl.color_id = cl.id
+            LEFT JOIN prebuilt_candles pc ON oi.prebuilt_candle_id = pc.id
+            WHERE oi.order_id = ?
+            GROUP BY oi.id`;
 
-    // 1. We use the EXACT SQL string you confirmed works.
-    // We removed all the risky SQL aliases so MySQL won't panic and crash.
-    const sql = `
-        SELECT 
-            oi.id AS order_item_id, 
-            oi.quantity, 
-            oi.price_at_time,
-            CASE 
-                WHEN pc.id IS NOT NULL THEN pc.name 
-                WHEN cc.mold_shape_id IS NOT NULL THEN 'Custom Mold'
-                ELSE CONCAT(
-                    COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), 
-                    ' ', 
-                    COALESCE(cs.name, 'Cup'), 
-                    ' (', cc.cup_size, 'ml)'
-                )
-            END AS item_name,
-            cc.preview_image AS snapshot,
-            s.name AS scent_name,
-            GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', ') AS wax_layers,
-            pc.id AS prebuilt_id
-        FROM order_items oi
-        LEFT JOIN custom_candles cc ON oi.custom_candle_id = cc.id
-        LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
-        LEFT JOIN scents s ON cc.scent_id = s.id
-        LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
-        LEFT JOIN colors cl ON ccl.color_id = cl.id
-        LEFT JOIN prebuilt_candles pc ON oi.prebuilt_candle_id = pc.id
-        WHERE oi.order_id = ?
-        GROUP BY oi.id`;
-
-    db.query(sql, [orderId], (err, results) => {
-        if (err) {
-            console.error("SQL CRASH:", err.message);
-            return res.status(500).json({ error: err.message });
-        }
-
-        // 2. We shape the data here in Node.js instead of SQL.
-        // This guarantees the frontend gets what it needs without throwing a 500 error.
-        const formattedResults = results.map(row => ({
+        // Wait for the query to finish safely
+        const [results] = await db.promise().query(sql, [orderId]);
+        
+        // Format the results safely in JS so the React Dashboard doesn't break
+        const formatted = results.map(row => ({
             order_item_id: row.order_item_id,
             quantity: row.quantity,
-            unit_price: row.price_at_time || 0, // Frontend wants "unit_price"
-            item_type: row.prebuilt_id ? 'prebuilt' : 'custom', // Frontend wants "item_type"
+            unit_price: row.price_at_time || 0, // Bridges old DB schema to new UI
+            item_type: row.prebuilt_id ? 'prebuilt' : 'custom',
             item_name: row.item_name,
             snapshot: row.snapshot,
             scent_name: row.scent_name,
             wax_layers: row.wax_layers,
-            details: 'Standard Pre-built'
+            details: 'Standard'
         }));
 
-        res.json(formattedResults);
-    });
+        res.json(formatted);
+
+    } catch (err) {
+        console.error("SQL CRASH:", err.message);
+        
+        // If it STILL crashes, we send the EXACT MySQL error text back to your browser!
+        // You will see this error message in the React UI alert box or the Network tab.
+        res.status(500).json({ 
+            error: "MySQL Error: " + err.message
+        });
+    }
 });
 app.put('/admin/orders/:id/status', (req, res) => {
     const { status_id } = req.body;
