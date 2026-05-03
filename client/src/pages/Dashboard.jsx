@@ -847,41 +847,30 @@ const Dashboard = () => {
                   <ul className="list-unstyled mb-0" style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '5px' }}>
                     {selectedOrderItems.map(item => (
                       <li key={item.order_item_id || item.id} className="d-flex justify-content-between mb-3 pb-3 border-bottom">
-                        <div className="d-flex gap-3">
+                        <div>
                           
-                          {/* Render Custom 3D Snapshot Thumbnail */}
-                          {item.snapshot && (
-                            <img 
-                              src={item.snapshot} 
-                              alt="candle preview" 
-                              style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e0dcd3', backgroundColor: '#fdfbf7' }} 
-                            />
-                          )}
-                          
+                          {/* Item Name & Custom Badge */}
                           <div>
-                            <div>
-                              <span className="fw-bold text-dark">{item.quantity}x</span> {item.item_name}
-                              {item.item_type !== 'prebuilt' && <span className="badge bg-secondary ms-2" style={{ fontSize: '0.65rem' }}>Custom</span>}
-                            </div>
-
-                            {/* Render Deep Custom Details */}
-                            {item.item_type !== 'prebuilt' ? (
-                              <div className="text-muted mt-1" style={{ fontSize: '0.85rem' }}>
-                                {item.scent_name && <div style={{ marginBottom: '2px' }}><span className="fw-semibold" style={{ color: '#8c7e70' }}>Scent:</span> {item.scent_name}</div>}
-                                {item.wax_layers && <div style={{ marginBottom: '2px' }}><span className="fw-semibold" style={{ color: '#8c7e70' }}>Layers:</span> {item.wax_layers}</div>}
-                                {item.details && item.details !== 'Standard Pre-built' && <div><span className="fw-semibold" style={{ color: '#8c7e70' }}>Notes:</span> {item.details}</div>}
-                              </div>
-                            ) : (
-                              /* Render Prebuilt Details if any exist */
-                              item.details && item.details !== 'Standard Pre-built' && (
-                                <div className="text-muted mt-1" style={{ fontSize: '0.85rem' }}>
-                                  <span className="fw-semibold" style={{ color: '#8c7e70' }}>Notes:</span> {item.details}
-                                </div>
-                              )
-                            )}
+                            <span className="fw-bold text-dark">{item.quantity}x</span> {item.item_name}
+                            {item.item_type !== 'prebuilt' && <span className="badge bg-secondary ms-2" style={{ fontSize: '0.65rem' }}>Custom</span>}
                           </div>
+
+                          {/* Typed-out Components (Scent, Layers, etc.) */}
+                          {item.details && item.details !== 'Standard Pre-built' && item.details !== 'Standard' && (
+                            <div className="text-muted mt-2" style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>
+                              <span className="fw-semibold" style={{ color: '#8c7e70', display: 'block', marginBottom: '2px' }}>Components:</span>
+                              <div style={{ paddingLeft: '8px', borderLeft: '2px solid #e0dcd3' }}>
+                                {item.details}
+                              </div>
+                            </div>
+                          )}
+
                         </div>
-                        <span className="text-muted fw-semibold">{(Number(item.unit_price) * item.quantity).toFixed(2)} L.E.</span>
+                        
+                        {/* Price */}
+                        <span className="text-muted fw-semibold">
+                          {(Number(item.unit_price) * item.quantity).toFixed(2)} L.E.
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -905,7 +894,6 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-      
       {/* EDIT PRODUCT DIALOG */}
       {showEditProductDialog && (
         <div className="dialog-overlay">

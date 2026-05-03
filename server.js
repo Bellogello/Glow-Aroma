@@ -703,66 +703,43 @@ app.get('/admin/orders/:id/items', (req, res) => {
         res.json(results);
     });
 });
-app.get('/admin/orders/:orderId', async (req, res) => {
+app.get('/admin/orders/:orderId', (req, res) => {
     const { orderId } = req.params;
     
-    try {
-        // 1. The exact query, but using 'unit_price' instead of 'price_at_time'
-        const sql = `
-            SELECT 
-                oi.id AS order_item_id, 
-                oi.quantity, 
-                oi.unit_price, /* Updated to match your database */
-                CASE 
-                    WHEN pc.id IS NOT NULL THEN pc.name 
-                    WHEN cc.mold_shape_id IS NOT NULL THEN 'Custom Mold'
-                    ELSE CONCAT(
-                        COALESCE((SELECT name FROM colors WHERE hex_code = cc.cup_color_id LIMIT 1), 'Custom'), 
-                        ' ', 
-                        COALESCE(cs.name, 'Cup'), 
-                        ' (', cc.cup_size, 'ml)'
-                    )
-                END AS item_name,
-                cc.preview_image AS snapshot,
-                s.name AS scent_name,
-                GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', ') AS wax_layers,
-                pc.id AS prebuilt_id
-            FROM order_items oi
-            LEFT JOIN custom_candles cc ON oi.custom_candle_id = cc.id
-            LEFT JOIN cup_shapes cs ON cc.cup_shape_id = cs.id
-            LEFT JOIN scents s ON cc.scent_id = s.id
-            LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
-            LEFT JOIN colors cl ON ccl.color_id = cl.id
-            LEFT JOIN prebuilt_candles pc ON oi.prebuilt_candle_id = pc.id
-            WHERE oi.order_id = ?
-            GROUP BY oi.id`;
+    // We are querying ONLY the columns that actually exist in your table.
+    // No JOINS. No missing IDs. No crashing.
+    const sql = `
+        SELECT 
+            id AS order_item_id, 
+            quantity, 
+            unit_price, 
+            item_type, 
+            item_name, 
+            details 
+        FROM order_items 
+        WHERE order_id = ?`;
 
-        // Wait for the query to finish safely
-        const [results] = await db.promise().query(sql, [orderId]);
+    db.query(sql, [orderId], (err, results) => {
+        if (err) {
+            console.error("SQL CRASH:", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         
-        // 2. Format the results safely in JS so the React Dashboard doesn't break
+        // We ensure the frontend gets a clean object so the Dashboard doesn't break
         const formatted = results.map(row => ({
             order_item_id: row.order_item_id,
             quantity: row.quantity,
-            unit_price: row.unit_price || 0, // Using the correct column
-            item_type: row.prebuilt_id ? 'prebuilt' : 'custom',
-            item_name: row.item_name,
-            snapshot: row.snapshot,
-            scent_name: row.scent_name,
-            wax_layers: row.wax_layers,
-            details: 'Standard'
+            unit_price: row.unit_price || 0,
+            item_type: row.item_type || 'custom',
+            item_name: row.item_name || 'Candle',
+            details: row.details || 'Standard',
+            snapshot: null,    // We can't fetch the 3D image without the IDs
+            scent_name: null,  // Scent and layers are combined inside the 'details' text
+            wax_layers: null 
         }));
 
         res.json(formatted);
-
-    } catch (err) {
-        console.error("SQL CRASH:", err.message);
-        
-        // If it STILL crashes, we send the EXACT MySQL error text back to your browser!
-        res.status(500).json({ 
-            error: "MySQL Error: " + err.message
-        });
-    }
+    });
 });
 app.put('/admin/orders/:id/status', (req, res) => {
     const { status_id } = req.body;
