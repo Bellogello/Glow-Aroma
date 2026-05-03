@@ -283,35 +283,29 @@ const Dashboard = () => {
   };
 
   // --- SHOWCASE HANDLERS ---
-  const handleToggleShowcase = async (e, design) => {
-    e.stopPropagation(); // Stops it from bubbling up to anything else
+const handleToggleShowcase = async (e, design) => {
+  e.stopPropagation(); 
 
-    try {
-      const toggledState = design.is_active ? 0 : 1;
-      
-      // We pass the full existing design details so the PUT endpoint doesn't corrupt them into NULL
-      const updatedDesign = { 
-        name: design.name,
-        hex_color: design.hex_color,
-        is_active: toggledState 
-      };
-      
-      const res = await fetch(`${API_BASE_URL}/admin/showcase/${design.id}/toggle`, {
-        method: 'PATCH', // Changed from PUT
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: toggledState }) // Only send the status
-      });
+  try {
+    const toggledState = design.is_active ? 0 : 1;
+    
+    // Change the URL and Method here
+    const res = await fetch(`${API_BASE_URL}/admin/showcase/${design.id}/toggle`, {
+      method: 'PATCH', // This tells the backend to ONLY update what we send
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: toggledState }) // Only send the status
+    });
 
-      if (res.ok) {
-        setShowcaseDesigns(prev => prev.map(d => d.id === design.id ? { ...d, is_active: toggledState } : d));
-        success(toggledState === 1 ? "Design enabled." : "Design disabled.");
-      } else {
-        error("Failed to toggle design.");
-      }
-    } catch (err) { 
-      error("Network error while toggling."); 
+    if (res.ok) {
+      setShowcaseDesigns(prev => prev.map(d => d.id === design.id ? { ...d, is_active: toggledState } : d));
+      success(toggledState === 1 ? "Design enabled." : "Design disabled.");
+    } else {
+      error("Failed to toggle design.");
     }
-  };
+  } catch (err) { 
+    error("Network error while toggling."); 
+  }
+};
 
   const handleCreateShowcase = async (e) => {
     e.preventDefault();
