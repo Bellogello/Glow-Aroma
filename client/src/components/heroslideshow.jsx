@@ -1,25 +1,38 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom"; // 1. Import useNavigate
-
-import img1 from "../assets/slide1.png"; 
-import img2 from "../assets/slide2.png";
-import img3 from "../assets/slide3.png";
-import img4 from "../assets/slide4.png";
-import img5 from "../assets/slide5.png";
-
-const images = [img1, img2, img3, img4, img5];
+import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config";
 
 export default function HeroSlideshow() {
+  const [images, setImages] = useState([]);
   const [index, setIndex] = useState(0);
-  const navigate = useNavigate(); // 2. Initialize the hook
+  const navigate = useNavigate();
 
+  // 1. Fetch images on load
   useEffect(() => {
+    fetch(`${API_BASE_URL}/hero-images`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          // Map database URLs to full URLs
+          const urls = data.map(img => img.image_url.startsWith('http') ? img.image_url : `${API_BASE_URL}${img.image_url}`);
+          setImages(urls);
+        }
+      })
+      .catch(err => console.error("Failed to load hero images", err));
+  }, []);
+
+  // 2. Start timer only if images exist
+  useEffect(() => {
+    if (images.length === 0) return;
     const timer = setInterval(() => {
       setIndex((prev) => (prev + 1) % images.length);
     }, 6500);
     return () => clearInterval(timer);
-  }, []);
+  }, [images]);
+
+  // Prevent crashing if no images are uploaded yet
+  if (images.length === 0) return <div className="slideshow-wrapper" style={{ backgroundColor: '#2d241c' }}></div>;
 
   return (
     <div className="slideshow-wrapper">
@@ -51,7 +64,6 @@ export default function HeroSlideshow() {
           Make Your Own Candle
         </motion.p>
         
-        {/* 3. Use a standard button with navigate() */}
         <button 
           className="glow-btn" 
           onClick={() => navigate("/products")}

@@ -622,6 +622,39 @@ app.post('/messages', (req, res) => {
 });
 
 // ==========================================
+// --- HERO IMAGES (HOMEPAGE SLIDESHOW) ---
+// ==========================================
+
+// 1. Fetch images for the homepage (Public)
+app.get('/hero-images', (req, res) => {
+    db.query('SELECT * FROM hero_images ORDER BY created_at ASC', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// 2. Upload a new hero image (Admin) - Uses your existing uploadImage middleware
+app.post('/admin/hero-images', uploadImage.single('image'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'Image file is required' });
+    
+    // Cloudinary automatically returns the secure, hosted URL in req.file.path
+    const imageUrl = req.file.path; 
+    
+    db.query('INSERT INTO hero_images (image_url) VALUES (?)', [imageUrl], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ newImage: { id: result.insertId, image_url: imageUrl } });
+    });
+});
+
+// 3. Delete a hero image (Admin)
+app.delete('/admin/hero-images/:id', (req, res) => {
+    db.query('DELETE FROM hero_images WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Image deleted successfully' });
+    });
+});
+
+// ==========================================
 // --- ADMIN DASHBOARD ---
 // ==========================================
 app.get('/admin/orders', (req, res) => {

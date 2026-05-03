@@ -25,7 +25,9 @@ const Dashboard = () => {
   const [discountCodes, setDiscountCodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState([]);
-  const [models, setModels] = useState([]);
+  
+  // Replaced models with heroImages
+  const [heroImages, setHeroImages] = useState([]);
 
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('All');
@@ -38,6 +40,9 @@ const Dashboard = () => {
   const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
   const [showAddDiscountDialog, setShowAddDiscountDialog] = useState(false);
   const [showViewMessageDialog, setShowViewMessageDialog] = useState(false);
+  
+  // New Dialog for Hero Images
+  const [showAddHeroDialog, setShowAddHeroDialog] = useState(false);
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedOrderItems, setSelectedOrderItems] = useState([]);
@@ -48,6 +53,8 @@ const Dashboard = () => {
   const [editProductForm, setEditProductForm] = useState({ id: '', name: '', price: '', stock_quantity: '', description: '', image_url: '', image: null });
   const [newStatusId, setNewStatusId] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
+  const [heroImageFile, setHeroImageFile] = useState(null);
+
   const [discountForm, setDiscountForm] = useState({
     code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_order_amount: '', max_uses: '', expires_at: '',
   });
@@ -69,23 +76,23 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [prodRes, orderRes, staffRes, discountRes, msgRes, modelRes] = await Promise.all([
+      const [prodRes, orderRes, staffRes, discountRes, msgRes, heroRes] = await Promise.all([
         fetch(`${API_BASE_URL}/products`),
         fetch(`${API_BASE_URL}/admin/orders`),
         fetch(`${API_BASE_URL}/admin/staff`),
         fetch(`${API_BASE_URL}/admin/discount-codes`),
         fetch(`${API_BASE_URL}/admin/messages`),
-        fetch(`${API_BASE_URL}/admin/models`),
+        fetch(`${API_BASE_URL}/hero-images`), // Fetching Hero Images instead of Models
       ]);
-      const [prodData, orderData, staffData, discountData, msgData, modelData] = await Promise.all([
-        prodRes.json(), orderRes.json(), staffRes.json(), discountRes.json(), msgRes.json(), modelRes.json(),
+      const [prodData, orderData, staffData, discountData, msgData, heroData] = await Promise.all([
+        prodRes.json(), orderRes.json(), staffRes.json(), discountRes.json(), msgRes.json(), heroRes.json(),
       ]);
       setProducts(Array.isArray(prodData) ? prodData : []);
       setOrders(Array.isArray(orderData) ? orderData : []);
       setStaff(Array.isArray(staffData) ? staffData : []);
       setDiscountCodes(Array.isArray(discountData) ? discountData : []);
       setMessages(Array.isArray(msgData) ? msgData : []);
-      setModels(Array.isArray(modelData) ? modelData : []);
+      setHeroImages(Array.isArray(heroData) ? heroData : []);
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
       error("Failed to sync dashboard data.");
@@ -201,6 +208,41 @@ const Dashboard = () => {
     } catch (err) { error(err.message); }
   };
 
+  // --- HERO IMAGES HANDLERS ---
+  const handleAddHeroImage = async (e) => {
+    e.preventDefault();
+    if (!heroImageFile) return setDialogError('Please select an image file.');
+    setSubmitting(true); setDialogError(''); setDialogSuccess('');
+    
+    const formData = new FormData();
+    formData.append('image', heroImageFile);
+    
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/hero-images`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to upload image.');
+      setDialogSuccess('Image added to slideshow!');
+      setHeroImages(prev => [...prev, data.newImage]);
+      setTimeout(() => { setShowAddHeroDialog(false); setHeroImageFile(null); }, 1500);
+    } catch (err) {
+      setDialogError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteHeroImage = async (id) => {
+    if (!window.confirm('Remove this image from the homepage slideshow?')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/hero-images/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete image');
+      setHeroImages(prev => prev.filter(img => img.id !== id));
+      success('Image removed from slideshow.');
+    } catch (err) {
+      error(err.message);
+    }
+  };
+
   // --- ORDERS ---
   const handleOpenOrderDialog = async (order) => {
     setSelectedOrder(order);
@@ -290,7 +332,7 @@ const Dashboard = () => {
     { id: 'overview', label: '📊 Overview' },
     { id: 'orders', label: '📦 Orders' },
     { id: 'products', label: '🕯️ Products' },
-    { id: 'models', label: '🧊 3D Models' },
+    { id: 'hero', label: '🖼️ Hero Images' }, // Replaced 'models' with 'hero'
     ...(userRole === '3' ? [{ id: 'promos', label: '🎟️ Promos' }] : []),
     { id: 'messages', label: '💬 Messages' },
     ...(userRole === '3' ? [{ id: 'staff', label: '👥 Staff' }] : []),
@@ -538,30 +580,35 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* ===== 3D MODELS TAB ===== */}
-          {activeTab === 'models' && (
+          {/* ===== HERO IMAGES TAB (Replaces 3D Models) ===== */}
+          {activeTab === 'hero' && (
             <div className="dashboard-card">
               <div className="card-header-flex">
-                <h2>🧊 3D Models</h2>
-                <Link to="/inventory" className="custom-pill-btn-small" style={{ textDecoration: 'none' }} onClick={() => localStorage.setItem('inv_tab', 'models')}>Manage Models</Link>
+                <h2>🖼️ Homepage Slideshow Images</h2>
+                <button className="custom-pill-btn-small" onClick={() => { setHeroImageFile(null); resetDialogState(); setShowAddHeroDialog(true); }}>
+                  + Add Image
+                </button>
               </div>
-              {loading ? <p className="text-muted">Loading models...</p> : (
+              {loading ? <p className="text-muted">Loading images...</p> : (
                 <div className="table-scroll-wrapper">
                   <Table responsive className="custom-table borderless align-left-table mb-0">
-                    <thead><tr><th>Name</th><th>Type</th><th>Layers</th><th>Flat Shading</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Preview</th><th>ID</th><th>Action</th></tr></thead>
                     <tbody>
-                      {models.length === 0
-                        ? <tr><td colSpan="5" className="text-center text-muted py-4">No models uploaded yet. <Link to="/inventory">Upload one →</Link></td></tr>
-                        : models.map(m => (
-                          <tr key={m.id} className="table-row-hover">
+                      {heroImages.length === 0
+                        ? <tr><td colSpan="3" className="text-center text-muted py-4">No hero images uploaded yet. The homepage will be blank until you add one!</td></tr>
+                        : heroImages.map(img => (
+                          <tr key={img.id} className="table-row-hover">
                             <td>
-                              {m.thumbnail_url && <img src={m.thumbnail_url} alt={m.name} style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', marginRight: 8 }} />}
-                              <strong>{m.name}</strong>
+                              <img 
+                                src={img.image_url.startsWith('http') ? img.image_url : `${API_BASE_URL}${img.image_url}`} 
+                                alt="hero slide" 
+                                style={{ width: '120px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e0dcd3' }} 
+                              />
                             </td>
-                            <td><Badge bg={m.type === 'cup' ? 'primary' : 'warning'} className="custom-badge">{m.type}</Badge></td>
-                            <td>{m.layers || 1}</td>
-                            <td>{m.flat_shading ? '✓ On' : '— Off'}</td>
-                            <td><Badge bg={m.is_available ? 'success' : 'secondary'} className="custom-badge">{m.is_available ? 'Active' : 'Hidden'}</Badge></td>
+                            <td><strong>#{img.id}</strong></td>
+                            <td>
+                              <button className="btn-action-danger" onClick={() => handleDeleteHeroImage(img.id)}>Delete</button>
+                            </td>
                           </tr>
                         ))}
                     </tbody>
@@ -693,6 +740,33 @@ const Dashboard = () => {
         <Footer />
       </div>
 
+      {/* --- ADD HERO IMAGE DIALOG --- */}
+      {showAddHeroDialog && (
+        <div className="dialog-overlay">
+          <div className="dialog-box">
+            <div className="dialog-header">
+              <h3>Upload Hero Image</h3>
+              <button className="close-btn" onClick={() => setShowAddHeroDialog(false)}>&times;</button>
+            </div>
+            <Form onSubmit={handleAddHeroImage}>
+              <div className="dialog-body-scroll">
+                {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
+                {dialogSuccess && <Alert variant="success" className="rounded-4">{dialogSuccess}</Alert>}
+                
+                <Form.Group className="mb-3">
+                  <label className="form-label-enhanced">Image File (Recommended: 1920x1080)</label>
+                  <Form.Control type="file" accept="image/*" className="custom-input" onChange={e => setHeroImageFile(e.target.files[0])} required />
+                </Form.Group>
+              </div>
+              <div className="dialog-footer">
+                <button type="button" className="btn btn-cancel" onClick={() => setShowAddHeroDialog(false)}>Cancel</button>
+                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Upload'}</button>
+              </div>
+            </Form>
+          </div>
+        </div>
+      )}
+
       {/* ORDER DIALOG */}
       {showOrderDialog && selectedOrder && (
         <div className="dialog-overlay">
@@ -806,49 +880,49 @@ const Dashboard = () => {
         </div>
       )}
 
-{/* ADD PRODUCT DIALOG */}
-{showAddProductDialog && (
-  <div className="dialog-overlay">
-    <div className="dialog-box">
-      <div className="dialog-header"><h3>Add New Product</h3><button className="close-btn" onClick={() => setShowAddProductDialog(false)}>&times;</button></div>
-      <Form onSubmit={handleAddProduct}>
-        <div className="dialog-body-scroll">
-          {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-          
-          <Form.Group className="mb-3">
-            <label className="form-label-enhanced">Product Name</label>
-            <Form.Control type="text" className="custom-input" value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} required />
-          </Form.Group>
-          
-          <div className="dialog-grid-2">
-            <Form.Group>
-              <label className="form-label-enhanced">Price (L.E.)</label>
-              <Form.Control type="number" className="custom-input" min="0" step="0.01" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} required />
-            </Form.Group>
-            <Form.Group>
-              <label className="form-label-enhanced">Initial Stock</label>
-              <Form.Control type="number" className="custom-input" min="0" value={productForm.stock_quantity} onChange={e => setProductForm({ ...productForm, stock_quantity: e.target.value })} required />
-            </Form.Group>
+      {/* ADD PRODUCT DIALOG */}
+      {showAddProductDialog && (
+        <div className="dialog-overlay">
+          <div className="dialog-box">
+            <div className="dialog-header"><h3>Add New Product</h3><button className="close-btn" onClick={() => setShowAddProductDialog(false)}>&times;</button></div>
+            <Form onSubmit={handleAddProduct}>
+              <div className="dialog-body-scroll">
+                {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
+                
+                <Form.Group className="mb-3">
+                  <label className="form-label-enhanced">Product Name</label>
+                  <Form.Control type="text" className="custom-input" value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} required />
+                </Form.Group>
+                
+                <div className="dialog-grid-2">
+                  <Form.Group>
+                    <label className="form-label-enhanced">Price (L.E.)</label>
+                    <Form.Control type="number" className="custom-input" min="0" step="0.01" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} required />
+                  </Form.Group>
+                  <Form.Group>
+                    <label className="form-label-enhanced">Initial Stock</label>
+                    <Form.Control type="number" className="custom-input" min="0" value={productForm.stock_quantity} onChange={e => setProductForm({ ...productForm, stock_quantity: e.target.value })} required />
+                  </Form.Group>
+                </div>
+                
+                <Form.Group className="mb-3">
+                  <label className="form-label-enhanced">Description</label>
+                  <Form.Control as="textarea" className="custom-input" rows={3} value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} />
+                </Form.Group>
+                
+                <Form.Group className="mb-2">
+                  <label className="form-label-enhanced">Product Image</label>
+                  <Form.Control type="file" accept="image/*" className="custom-input" onChange={e => setProductForm({ ...productForm, image: e.target.files[0] })} />
+                </Form.Group>
+              </div>
+              <div className="dialog-footer">
+                <button type="button" className="btn btn-cancel" onClick={() => setShowAddProductDialog(false)}>Cancel</button>
+                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save Product'}</button>
+              </div>
+            </Form>
           </div>
-          
-          <Form.Group className="mb-3">
-            <label className="form-label-enhanced">Description</label>
-            <Form.Control as="textarea" className="custom-input" rows={3} value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} />
-          </Form.Group>
-          
-          <Form.Group className="mb-2">
-            <label className="form-label-enhanced">Product Image</label>
-            <Form.Control type="file" accept="image/*" className="custom-input" onChange={e => setProductForm({ ...productForm, image: e.target.files[0] })} />
-          </Form.Group>
         </div>
-        <div className="dialog-footer">
-          <button type="button" className="btn btn-cancel" onClick={() => setShowAddProductDialog(false)}>Cancel</button>
-          <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Save Product'}</button>
-        </div>
-      </Form>
-    </div>
-  </div>
-)}
+      )}
 
       {/* DELETE ACCOUNT DIALOG */}
       {showDeleteAccountDialog && (
@@ -868,121 +942,119 @@ const Dashboard = () => {
         </div>
       )}
 
-{/* PROMO CODE DIALOG */}
-{showAddDiscountDialog && (
-  <div className="dialog-overlay">
-    <div className="dialog-box">
-      <div className="dialog-header"><h3>Create Promo Code</h3><button className="close-btn" onClick={() => setShowAddDiscountDialog(false)}>&times;</button></div>
-      <Form onSubmit={handleAddDiscountCode}>
-        <div className="dialog-body-scroll">
-          {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
-          
-          <Form.Group className="mb-3">
-            <label className="form-label-enhanced">Promo Code</label>
-            <div className="input-group-flush">
-              <Form.Control type="text" className="custom-input" value={discountForm.code} onChange={e => setDiscountForm({ ...discountForm, code: e.target.value.toUpperCase() })} required />
-              <button type="button" className="btn-action" onClick={generateRandomCode}>Generate</button>
-            </div>
-          </Form.Group>
+      {/* PROMO CODE DIALOG */}
+      {showAddDiscountDialog && (
+        <div className="dialog-overlay">
+          <div className="dialog-box">
+            <div className="dialog-header"><h3>Create Promo Code</h3><button className="close-btn" onClick={() => setShowAddDiscountDialog(false)}>&times;</button></div>
+            <Form onSubmit={handleAddDiscountCode}>
+              <div className="dialog-body-scroll">
+                {dialogError && <Alert variant="danger" className="rounded-4">{dialogError}</Alert>}
+                
+                <Form.Group className="mb-3">
+                  <label className="form-label-enhanced">Promo Code</label>
+                  <div className="input-group-flush">
+                    <Form.Control type="text" className="custom-input" value={discountForm.code} onChange={e => setDiscountForm({ ...discountForm, code: e.target.value.toUpperCase() })} required />
+                    <button type="button" className="btn-action" onClick={generateRandomCode}>Generate</button>
+                  </div>
+                </Form.Group>
 
-          <div className="dialog-grid-2">
-            <Form.Group>
-              <label className="form-label-enhanced">Discount Type</label>
-              <Form.Select className="custom-input form-select" value={discountForm.discount_type} onChange={e => setDiscountForm({ ...discountForm, discount_type: e.target.value })}>
-                <option value="percentage">Percentage (%)</option>
-                <option value="fixed">Fixed Amount (L.E.)</option>
-              </Form.Select>
-            </Form.Group>
-            <Form.Group>
-              <label className="form-label-enhanced">Value</label>
-              <Form.Control type="number" className="custom-input" min="0" value={discountForm.discount_value} onChange={e => setDiscountForm({ ...discountForm, discount_value: e.target.value })} required />
-            </Form.Group>
-          </div>
+                <div className="dialog-grid-2">
+                  <Form.Group>
+                    <label className="form-label-enhanced">Discount Type</label>
+                    <Form.Select className="custom-input form-select" value={discountForm.discount_type} onChange={e => setDiscountForm({ ...discountForm, discount_type: e.target.value })}>
+                      <option value="percentage">Percentage (%)</option>
+                      <option value="fixed">Fixed Amount (L.E.)</option>
+                    </Form.Select>
+                  </Form.Group>
+                  <Form.Group>
+                    <label className="form-label-enhanced">Value</label>
+                    <Form.Control type="number" className="custom-input" min="0" value={discountForm.discount_value} onChange={e => setDiscountForm({ ...discountForm, discount_value: e.target.value })} required />
+                  </Form.Group>
+                </div>
 
-          <div className="dialog-grid-2">
-            <Form.Group>
-              <label className="form-label-enhanced">Min Order (Opt)</label>
-              <Form.Control type="number" className="custom-input" min="0" placeholder="0.00" value={discountForm.min_order_amount} onChange={e => setDiscountForm({ ...discountForm, min_order_amount: e.target.value })} />
-            </Form.Group>
-            <Form.Group>
-              <label className="form-label-enhanced">Max Order (Opt)</label>
-              <Form.Control type="number" className="custom-input" min="0" placeholder="No limit" value={discountForm.max_order_amount} onChange={e => setDiscountForm({ ...discountForm, max_order_amount: e.target.value })} />
-            </Form.Group>
-          </div>
+                <div className="dialog-grid-2">
+                  <Form.Group>
+                    <label className="form-label-enhanced">Min Order (Opt)</label>
+                    <Form.Control type="number" className="custom-input" min="0" placeholder="0.00" value={discountForm.min_order_amount} onChange={e => setDiscountForm({ ...discountForm, min_order_amount: e.target.value })} />
+                  </Form.Group>
+                  <Form.Group>
+                    <label className="form-label-enhanced">Max Order (Opt)</label>
+                    <Form.Control type="number" className="custom-input" min="0" placeholder="No limit" value={discountForm.max_order_amount} onChange={e => setDiscountForm({ ...discountForm, max_order_amount: e.target.value })} />
+                  </Form.Group>
+                </div>
 
-          <div className="dialog-grid-2">
-            <Form.Group>
-              <label className="form-label-enhanced">Usage Limit (Opt)</label>
-              <Form.Control type="number" className="custom-input" min="1" placeholder="Unlimited" value={discountForm.max_uses} onChange={e => setDiscountForm({ ...discountForm, max_uses: e.target.value })} />
-            </Form.Group>
-            <Form.Group>
-              <label className="form-label-enhanced">Expiry Date (Opt)</label>
-              <Form.Control type="date" className="custom-input" value={discountForm.expires_at} onChange={e => setDiscountForm({ ...discountForm, expires_at: e.target.value })} />
-            </Form.Group>
+                <div className="dialog-grid-2">
+                  <Form.Group>
+                    <label className="form-label-enhanced">Usage Limit (Opt)</label>
+                    <Form.Control type="number" className="custom-input" min="1" placeholder="Unlimited" value={discountForm.max_uses} onChange={e => setDiscountForm({ ...discountForm, max_uses: e.target.value })} />
+                  </Form.Group>
+                  <Form.Group>
+                    <label className="form-label-enhanced">Expiry Date (Opt)</label>
+                    <Form.Control type="date" className="custom-input" value={discountForm.expires_at} onChange={e => setDiscountForm({ ...discountForm, expires_at: e.target.value })} />
+                  </Form.Group>
+                </div>
+              </div>
+              <div className="dialog-footer">
+                <button type="button" className="btn btn-cancel" onClick={() => setShowAddDiscountDialog(false)}>Cancel</button>
+                <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Create Code'}</button>
+              </div>
+            </Form>
           </div>
         </div>
-        <div className="dialog-footer">
-          <button type="button" className="btn btn-cancel" onClick={() => setShowAddDiscountDialog(false)}>Cancel</button>
-          <button type="submit" className="btn btn-gold-solid" disabled={submitting}>{submitting ? <Spinner animation="border" size="sm" /> : 'Create Code'}</button>
-        </div>
-      </Form>
-    </div>
-  </div>
-)}
+      )}
 
-{/* VIEW MESSAGE DIALOG */}
-{showViewMessageDialog && selectedMessage && (
-  <div className="dialog-overlay">
-    <div className="dialog-box">
-      <div className="dialog-header">
-        <h3>Inbox</h3>
-        <button className="close-btn" onClick={() => setShowViewMessageDialog(false)}>&times;</button>
-      </div>
-      
-      <div className="message-read-header">
-        <p><strong>From:</strong> {selectedMessage.name}</p>
-        <p><strong>Email:</strong> <a href={`mailto:${selectedMessage.email}`} className="text-decoration-none" style={{ color: '#c8a97e' }}>{selectedMessage.email}</a></p>
-        <p><strong>Phone:</strong> {selectedMessage.phone ? <a href={`tel:${selectedMessage.phone}`} className="text-decoration-none text-muted">{selectedMessage.phone}</a> : <span className="text-muted">Not provided</span>}</p>
-        <p className="text-muted mt-2" style={{ fontSize: '0.8rem' }}>Received: {new Date(selectedMessage.created_at).toLocaleString()}</p>
-        
-        {/* NEW: Attached Order UI Block */}
-        {selectedMessage.order_id && (
-          <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#ffffff', borderRadius: '0.5rem', border: '1px solid #c8a97e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <span style={{ fontSize: '0.8rem', color: '#8c7e70', textTransform: 'uppercase', fontWeight: 'bold', display: 'block' }}>Regarding Order</span>
-              <strong style={{ fontSize: '1.1rem', color: '#2d241c' }}>#{selectedMessage.order_id}</strong>
+      {/* VIEW MESSAGE DIALOG */}
+      {showViewMessageDialog && selectedMessage && (
+        <div className="dialog-overlay">
+          <div className="dialog-box">
+            <div className="dialog-header">
+              <h3>Inbox</h3>
+              <button className="close-btn" onClick={() => setShowViewMessageDialog(false)}>&times;</button>
             </div>
-            <button 
-              className="custom-pill-btn-small" 
-              style={{ margin: 0 }}
-              onClick={() => {
-                // Find the order in our dashboard state
-                const linkedOrder = orders.find(o => o.id === selectedMessage.order_id);
-                if (linkedOrder) {
-                  setShowViewMessageDialog(false); // Close message
-                  handleOpenOrderDialog(linkedOrder); // Open order details!
-                } else {
-                  error("Order details not found in current memory. It may be too old.");
-                }
-              }}
-            >
-              View Order Details →
-            </button>
+            
+            <div className="message-read-header">
+              <p><strong>From:</strong> {selectedMessage.name}</p>
+              <p><strong>Email:</strong> <a href={`mailto:${selectedMessage.email}`} className="text-decoration-none" style={{ color: '#c8a97e' }}>{selectedMessage.email}</a></p>
+              <p><strong>Phone:</strong> {selectedMessage.phone ? <a href={`tel:${selectedMessage.phone}`} className="text-decoration-none text-muted">{selectedMessage.phone}</a> : <span className="text-muted">Not provided</span>}</p>
+              <p className="text-muted mt-2" style={{ fontSize: '0.8rem' }}>Received: {new Date(selectedMessage.created_at).toLocaleString()}</p>
+              
+              {selectedMessage.order_id && (
+                <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#ffffff', borderRadius: '0.5rem', border: '1px solid #c8a97e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '0.8rem', color: '#8c7e70', textTransform: 'uppercase', fontWeight: 'bold', display: 'block' }}>Regarding Order</span>
+                    <strong style={{ fontSize: '1.1rem', color: '#2d241c' }}>#{selectedMessage.order_id}</strong>
+                  </div>
+                  <button 
+                    className="custom-pill-btn-small" 
+                    style={{ margin: 0 }}
+                    onClick={() => {
+                      const linkedOrder = orders.find(o => o.id === selectedMessage.order_id);
+                      if (linkedOrder) {
+                        setShowViewMessageDialog(false);
+                        handleOpenOrderDialog(linkedOrder);
+                      } else {
+                        error("Order details not found in current memory. It may be too old.");
+                      }
+                    }}
+                  >
+                    View Order Details →
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="message-content-box">
+              {selectedMessage.message}
+            </div>
+
+            <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
+              <button className="btn-action-danger" onClick={() => handleDeleteMessage(selectedMessage.id)}>Delete Message</button>
+              <button className="btn btn-cancel" onClick={() => setShowViewMessageDialog(false)}>Close</button>
+            </div>
           </div>
-        )}
-      </div>
-
-      <div className="message-content-box">
-        {selectedMessage.message}
-      </div>
-
-      <div className="dialog-footer" style={{ justifyContent: 'space-between' }}>
-        <button className="btn-action-danger" onClick={() => handleDeleteMessage(selectedMessage.id)}>Delete Message</button>
-        <button className="btn btn-cancel" onClick={() => setShowViewMessageDialog(false)}>Close</button>
-      </div>
-    </div>
-  </div>
-)}
+        </div>
+      )}
     </>
   );
 };
