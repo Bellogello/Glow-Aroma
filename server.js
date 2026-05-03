@@ -866,12 +866,20 @@ app.delete('/admin/delete-account', (req, res) => {
 });
 
 app.post('/admin/showcase', (req, res) => {
-    const { name, model_url, type, layers } = req.body;
-    const layersJson = JSON.stringify(layers); // Save array as string
+    // 1. Extract all fields sent by the frontend
+    const { name, model_url, hex_color, layers_json, type, cup_color } = req.body;
     
-    const sql = 'INSERT INTO showcase_designs (name, model_url, type, layers_json) VALUES (?, ?, ?, ?)';
-    db.query(sql, [name, model_url, type, layersJson], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+    // 2. Update the SQL to include all 6 columns
+    const sql = `
+        INSERT INTO showcase_designs 
+        (name, model_url, hex_color, layers_json, type, cup_color, is_active) 
+        VALUES (?, ?, ?, ?, ?, ?, 1)`;
+
+    db.query(sql, [name, model_url, hex_color, layers_json, type, cup_color], (err, result) => {
+        if (err) {
+            console.error("SHOWCASE POST ERROR:", err);
+            return res.status(500).json({ error: err.message });
+        }
         res.json({ message: 'Success', id: result.insertId });
     });
 });
