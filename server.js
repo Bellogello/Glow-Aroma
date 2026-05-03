@@ -908,15 +908,25 @@ app.put('/admin/showcase/:id', (req, res) => {
         }
     );
 });
-app.patch('/admin/showcase/:id/toggle', async (req, res) => {
-    try {
-        const { is_active } = req.body;
-        // Use db.promise() just like your other async routes
-        await db.promise().query('UPDATE showcase_designs SET is_active = ? WHERE id = ?', [is_active, req.params.id]);
-        res.json({ message: 'Design status toggled successfully' });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
+app.patch('/admin/showcase/:id/toggle', (req, res) => {
+    const { is_active } = req.body;
+    const { id } = req.params;
+
+    const sql = "UPDATE showcase_designs SET is_active = ? WHERE id = ?";
+    
+    db.query(sql, [is_active, id], (err, result) => {
+        if (err) {
+            console.error("TOGGLE ERROR:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: 'Status updated' });
+    });
+});
+app.get('/admin/showcase', (req, res) => {
+  db.query('SELECT * FROM showcase_designs ORDER BY id DESC', (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
 });
 
 // ==========================================

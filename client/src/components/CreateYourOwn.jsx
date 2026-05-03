@@ -62,9 +62,9 @@ const CreateYourOwnCard = () => {
               key={active.id} 
               modelUrl={active.model_url} 
               waxColor={active.hex_color}
-              layers={active.layers_json}
+              layers={active.layers_json ? (typeof active.layers_json === 'string' ? JSON.parse(active.layers_json) : active.layers_json) : []}
               cupColor={active.cup_color}
-              flatShading={needsFlatShading} // Passed the verified boolean here
+              flatShading={needsFlatShading}
             />
           ) : (
             <div className="loading-studio">Loading Studio...</div>

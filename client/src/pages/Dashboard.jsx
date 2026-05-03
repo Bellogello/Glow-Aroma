@@ -99,7 +99,7 @@ const Dashboard = () => {
       const [prodRes, orderRes, showcaseRes, heroRes, msgRes, staffRes, discRes, cupRes, moldRes, colorRes, modelRes] = await Promise.all([
         fetch(`${API_BASE_URL}/products`),
         fetch(`${API_BASE_URL}/admin/orders`),
-        fetch(`${API_BASE_URL}/showcase`),
+        fetch(`${API_BASE_URL}/admin/showcase`),
         fetch(`${API_BASE_URL}/admin/hero-images`),
         fetch(`${API_BASE_URL}/admin/messages`),
         fetch(`${API_BASE_URL}/admin/staff`),
@@ -285,19 +285,14 @@ const Dashboard = () => {
   // --- SHOWCASE HANDLERS ---
 const handleToggleShowcase = async (e, design) => {
   e.stopPropagation(); 
-
   try {
     const toggledState = design.is_active ? 0 : 1;
-    
-    // Switch to the specific /toggle endpoint using PATCH
     const res = await fetch(`${API_BASE_URL}/admin/showcase/${design.id}/toggle`, {
       method: 'PATCH', 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: toggledState }) 
     });
-
     if (res.ok) {
-      // Update local state so the UI reflects the change immediately
       setShowcaseDesigns(prev => prev.map(d => 
         d.id === design.id ? { ...d, is_active: toggledState } : d
       ));
