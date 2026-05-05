@@ -22,15 +22,17 @@ const Home = () => {
   const [bestSellers, setBestSellers] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
-  // Fetch real products from DB
+
   useEffect(() => {
     fetch(`${API_BASE_URL}/products`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          // Show up to 6 products, sorted by id descending (newest first)
-          // Once you add times_ordered column, change sort to: data.sort((a,b) => b.times_ordered - a.times_ordered)
-          setBestSellers(data.slice(0, 6));
+          // 1. Sort the data from highest sales to lowest
+          const sortedData = data.sort((a, b) => (b.total_sold || 0) - (a.total_sold || 0));
+          
+          // 2. Grab the top 6 for the carousel
+          setBestSellers(sortedData.slice(0, 6));
         }
       })
       .catch(err => console.error("Failed to fetch products:", err))

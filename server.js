@@ -964,8 +964,9 @@ app.post('/checkout', async (req, res) => {
                 const pId = i.prebuilt_candle_id || i.id; 
                 stockUpdatePromises.push(
                     db.promise().query(
-                        'UPDATE prebuilt_candles SET stock_quantity = stock_quantity - ? WHERE id = ?',
-                        [parseInt(i.quantity), pId]
+                        // UPGRADED: Now deducts stock AND adds to total_sold simultaneously
+                        'UPDATE prebuilt_candles SET stock_quantity = stock_quantity - ?, total_sold = total_sold + ? WHERE id = ?',
+                        [parseInt(i.quantity), parseInt(i.quantity), pId]
                     )
                 );
             }

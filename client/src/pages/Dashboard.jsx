@@ -1037,9 +1037,13 @@ const handleCreateShowcase = async (e) => {
           <div className="dialog-box">
             <div className="dialog-header"><h3>New Product</h3><button className="close-btn" onClick={() => setShowAddProductDialog(false)}>✕</button></div>
             <Form onSubmit={handleAddProduct}>
-              <Form.Control type="text" placeholder="Name" className="custom-input mb-2" onChange={e => setProductForm({...productForm, name: e.target.value})} required />
-              <Form.Control type="number" placeholder="Price" className="custom-input mb-2" onChange={e => setProductForm({...productForm, price: e.target.value})} required />
-              <Form.Control type="number" placeholder="Stock" className="custom-input mb-2" onChange={e => setProductForm({...productForm, stock_quantity: e.target.value})} required />
+              <Form.Control type="text" placeholder="Name" className="custom-input mb-2" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} required />
+              <Form.Control type="number" placeholder="Price" className="custom-input mb-2" value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} required />
+              <Form.Control type="number" placeholder="Stock" className="custom-input mb-2" value={productForm.stock_quantity} onChange={e => setProductForm({...productForm, stock_quantity: e.target.value})} required />
+
+              {/* ADDED: Product Description Textarea */}
+              <Form.Control as="textarea" rows={3} placeholder="Product Description" className="custom-input mb-2" value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} required />
+
               <Form.Control type="file" className="custom-input mb-3" onChange={e => setProductForm({...productForm, image: e.target.files[0]})} />
               <div className="dialog-footer"><button type="button" className="btn btn-cancel" onClick={() => setShowAddProductDialog(false)}>Cancel</button><button type="submit" className="btn btn-gold-solid">Save</button></div>
             </Form>
@@ -1050,12 +1054,28 @@ const handleCreateShowcase = async (e) => {
       {showEditProductDialog && (
         <div className="dialog-overlay">
           <div className="dialog-box">
-            <div className="dialog-header"><h3>Edit Product</h3><button className="close-btn" onClick={() => setShowEditProductDialog(false)}>✕</button></div>
+            <div className="dialog-header">
+              <h3>Edit Product</h3>
+              <button className="close-btn" onClick={() => setShowEditProductDialog(false)}>✕</button>
+            </div>
             <Form onSubmit={handleUpdateProduct}>
-              <Form.Control type="text" className="custom-input mb-2" value={editProductForm.name} onChange={e => setEditProductForm({...editProductForm, name: e.target.value})} />
-              <Form.Control type="number" className="custom-input mb-2" value={editProductForm.price} onChange={e => setEditProductForm({...editProductForm, price: e.target.value})} />
-              <Form.Control type="number" className="custom-input mb-2" value={editProductForm.stock_quantity} onChange={e => setEditProductForm({...editProductForm, stock_quantity: e.target.value})} />
-              <Form.Control type="file" className="custom-input mb-3" onChange={e => setEditProductForm({...editProductForm, image: e.target.files[0]})} />
+              <Form.Control type="text" placeholder="Name" className="custom-input mb-2" value={editProductForm.name} onChange={e => setEditProductForm({...editProductForm, name: e.target.value})} />
+              <Form.Control type="number" placeholder="Price" className="custom-input mb-2" value={editProductForm.price} onChange={e => setEditProductForm({...editProductForm, price: e.target.value})} />
+              <Form.Control type="number" placeholder="Stock" className="custom-input mb-2" value={editProductForm.stock_quantity} onChange={e => setEditProductForm({...editProductForm, stock_quantity: e.target.value})} />
+              
+              {/* THIS IS THE DESCRIPTION BOX */}
+              <Form.Control 
+                as="textarea" 
+                rows={3} 
+                placeholder="Product Description" 
+                className="custom-input mb-3" 
+                value={editProductForm.description || ''} 
+                onChange={e => setEditProductForm({...editProductForm, description: e.target.value})} 
+                required 
+              />
+              
+              <Form.Control type="file" className="custom-input mb-4" onChange={e => setEditProductForm({...editProductForm, image: e.target.files[0]})} />
+              
               <div className="dialog-footer">
                 <button type="button" className="btn-action-danger" onClick={() => handleDeleteProduct(editProductForm.id)}>Delete</button>
                 <div className="d-flex gap-2">
