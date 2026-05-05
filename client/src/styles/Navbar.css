@@ -1,21 +1,24 @@
 /* =========================================
-   1. GLOBAL STYLES (Applies to all screens)
+   GLOBAL STYLES
    ========================================= */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
 
-/* Main Navbar Background */
 .custom-navbar {
   background-color: #D2C9B8 !important;
   width: 100%;
   padding: 10px 0;
+  position: relative;
 }
 
-/* Logo */
 .logo {
   width: 160px;
   height: auto;
 }
 
-/* Text Links */
 .custom-navbar .nav-link {
   color: #5a4a3a !important; 
   font-family: 'Poppins', sans-serif; 
@@ -25,22 +28,19 @@
   transition: color 0.3s ease;
 }
 
-/* Hover effect for standard links */
 .custom-navbar .nav-link:hover {
   color: #3d3126 !important;
 }
 
-/* --- THE NEW ADMIN DASHBOARD LINK --- */
 .custom-navbar .dashboard-link {
-  color: #d4af37 !important; /* Premium Gold */
-  font-weight: 700 !important; /* Bold to stand out */
+  color: #d4af37 !important;
+  font-weight: 700 !important;
 }
 
 .custom-navbar .dashboard-link:hover {
-  color: #b5952f !important; /* Slightly darker gold on hover */
+  color: #b5952f !important;
 }
 
-/* Cart and Profile Icons - FIXED SIZES */
 .cart, .profile {
   height: 45px !important; 
   width: 45px !important;
@@ -54,7 +54,6 @@
   transition: transform 0.2s ease;
 }
 
-/* Little bounce effect on hover for icons */
 .cart:hover, .profile:hover {
   transform: scale(1.05);
 }
@@ -62,21 +61,82 @@
 .cart { background-image: url('../assets/cart.png'); }
 .profile { background-image: url('../assets/profile.png'); }
 
-/* Remove white gaps around the edges */
-html, body {
-  margin: 0 !important;
-  padding: 0 !important;
-  box-sizing: border-box;
+/* =========================================
+   LINK ANIMATIONS
+   ========================================= */
+.custom-navbar .nav-link:not(.cart):not(.profile) {
+  color: #4a3728 !important;
+  margin: 0 15px;
+  font-weight: 500;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.custom-navbar .nav-link:not(.cart):not(.profile)::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background-color: #8c725a;
+  transition: width 0.3s ease-in-out;
+}
+
+.custom-navbar .nav-link:not(.cart):not(.profile):hover {
+  color: #8c725a !important;
+  transform: translateY(-2px);
+}
+
+.custom-navbar .nav-link:not(.cart):not(.profile):hover::after {
+  width: 100%;
+}
+
+.icon-group .nav-link:hover {
+  transform: scale(1.1);
+  filter: brightness(1.1);
+  transition: transform 0.3s ease;
 }
 
 /* =========================================
-   2. DESKTOP LAYOUT (992px and up)
+   CART BADGE
+   ========================================= */
+.cart-icon-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cart-badge {
+  position: absolute;
+  bottom: -2px; 
+  right: -8px;
+  background-color: #c8a97e; 
+  color: #ffffff;
+  font-size: 0.7rem; 
+  font-weight: 700;
+  line-height: 1; 
+  min-width: 18px; 
+  height: 18px;
+  border-radius: 20px; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px; 
+  border: 2px solid #D2C9B8; 
+  box-shadow: 0 2px 4px rgba(90, 74, 58, 0.15); 
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* =========================================
+   DESKTOP LAYOUT (992px and up)
    ========================================= */
 @media (min-width: 992px) {
-  /* Hide the toggle button completely on Desktop */
-  .navbar-toggler {
-    display: none !important;
-  }
+  .mobile-icons { display: none !important; }
+  .desktop-icons { display: flex !important; }
+  .navbar-toggler { display: none !important; }
 
   .custom-navbar .container {
     display: flex !important;
@@ -100,7 +160,6 @@ html, body {
     margin: 0 !important;
   }
   
-  /* Desktop icon spacing */
   .icon-group {
     display: flex;
     flex-direction: row;
@@ -111,16 +170,25 @@ html, body {
 }
 
 /* =========================================
-   3. MOBILE LAYOUT & ANIMATION (Under 992px)
+   MOBILE LAYOUT & ANIMATION (Under 992px)
    ========================================= */
 @media (max-width: 991px) {
+  .desktop-icons { display: none !important; }
   
-  /* --- A. Layout Fixes --- */
+  .mobile-icons { 
+    display: flex !important; 
+    width: auto !important; 
+    margin: 0 15px 0 auto !important; 
+    gap: 15px !important; 
+    align-items: center !important;
+  }
+
   .logo { width: 130px; }
 
   .custom-navbar .container {
     display: flex !important;
     justify-content: space-between !important;
+    align-items: center !important;
     flex-wrap: wrap !important;
     width: 100% !important;
   }
@@ -130,7 +198,7 @@ html, body {
     background-color: transparent !important; 
     box-shadow: none !important; 
     padding: 5px !important;
-    margin-left: auto !important;
+    margin: 0 !important;
   }
 
   .custom-navbar .navbar-toggler-icon {
@@ -138,44 +206,28 @@ html, body {
     width: 35px !important;
     height: 35px !important;
     display: inline-block !important;
-    margin: 10px;
   }
 
-  /* --- B. Override Bootstrap's collapse behaviour --- */
   .custom-navbar .navbar-collapse {
     display: block !important;       
     flex-basis: 100% !important;
     width: 100% !important;
     overflow: hidden !important;
-
-    /* Start collapsed */
     max-height: 0 !important;
     opacity: 0;
     transform: translateY(-10px);
     pointer-events: none;
-
-    transition:
-      max-height 0.35s ease,
-      opacity 0.3s ease,
-      transform 0.3s ease !important;
+    transition: max-height 0.35s ease, opacity 0.3s ease, transform 0.3s ease !important;
   }
 
-  /* Open state */
-  .custom-navbar .navbar-collapse.show {
+  .custom-navbar .navbar-collapse.show,
+  .custom-navbar.nav-expanded .navbar-collapse.collapsing {
     max-height: 500px !important;    
     opacity: 1 !important;
     transform: translateY(0) !important;
     pointer-events: auto !important;
   }
 
-  .custom-navbar.nav-expanded .navbar-collapse.collapsing {
-    max-height: 500px !important;
-    opacity: 1 !important;
-    transform: translateY(0) !important;
-    pointer-events: auto !important;
-  }
-
-  /* Closing */
   .custom-navbar:not(.nav-expanded) .navbar-collapse.collapsing {
     max-height: 0 !important;
     opacity: 0 !important;
@@ -183,7 +235,6 @@ html, body {
     pointer-events: none !important;
   }
 
-  /* --- C. Internal Styling --- */
   .custom-navbar .navbar-nav {
     display: flex !important;
     flex-direction: column !important; 
@@ -200,91 +251,15 @@ html, body {
     padding: 10px 20px !important; 
   }
 
-  .icon-group {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 30px !important;
-    justify-content: center !important;
-    align-items: center !important;
-    margin-top: 10px;
-    width: 100% !important;
+  .mobile-icons .cart, 
+  .mobile-icons .profile {
+    height: 38px !important; 
+    width: 38px !important;
+    min-width: 38px !important;
   }
-}/* 1. Only animate the text links */
-.custom-navbar .nav-link:not(.cart):not(.profile) {
-    color: #4a3728 !important;
-    margin: 0 15px;
-    font-weight: 500;
-    position: relative;
-    transition: all 0.3s ease;
-}
 
-/* The sliding underline - only for text links */
-.custom-navbar .nav-link:not(.cart):not(.profile)::after {
-    content: '';
-    position: absolute;
-    width: 0;
-    height: 2px;
-    bottom: -2px; /* Moves line slightly below text */
-    left: 0;
-    background-color: #8c725a;
-    transition: width 0.3s ease-in-out;
-}
-
-/* Hover state for text links only */
-.custom-navbar .nav-link:not(.cart):not(.profile):hover {
-    color: #8c725a !important;
-    transform: translateY(-2px);
-}
-
-.custom-navbar .nav-link:not(.cart):not(.profile):hover::after {
-    width: 100%;
-}
-
-/* 2. Separate styling for the Icons (No underline, just a soft pop) */
-.icon-group .nav-link:hover {
-    transform: scale(1.1); /* Icons grow but won't have a line */
-    filter: brightness(1.1);
-    transition: transform 0.3s ease;
-}
-
-/* =========================================
-   PREMIUM CART NOTIFICATION BADGE
-   ========================================= */
-.cart-icon-wrapper {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.cart-badge {
-  position: absolute;
-  bottom: -2px; 
-  right: -8px;
-  
-  /* 1. Perfect Color Match: Your exact soft Glow Aroma Gold */
-  background-color: #c8a97e; 
-  color: #ffffff;
-  
-  font-size: 0.7rem; 
-  font-weight: 700;
-  line-height: 1; 
-  
-  /* 2. Keeps the crisp, perfect circle shape */
-  min-width: 18px; 
-  height: 18px;
-  border-radius: 20px; 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 5px; 
-  
-  /* 3. True Cutout: Matches your navbar exactly */
-  border: 2px solid #D2C9B8; 
-  
-  /* 4. Softer Shadow: A very subtle, warm shadow that doesn't look muddy */
-  box-shadow: 0 2px 4px rgba(90, 74, 58, 0.15); 
-  
-  z-index: 10;
-  pointer-events: none;
+  .mobile-icons .cart-badge {
+    bottom: -4px;
+    right: -4px;
+  }
 }
