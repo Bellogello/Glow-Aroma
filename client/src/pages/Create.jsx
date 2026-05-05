@@ -135,7 +135,9 @@ const Create = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (res.ok) success("Added to cart!");
+      if (res.ok){
+        success("Added to cart!");
+        window.dispatchEvent(new Event('cartUpdated'));}
       else {
         const data = await res.json();
         error(data.error || "Failed to add.");

@@ -119,6 +119,8 @@ useEffect(() => {
       if (response.ok) {
         success(`${quantity}x ${product.name} added to your cart! 🛒`);
         navigate('/cart'); 
+        window.dispatchEvent(new Event('cartUpdated'));
+        
       } else {
         error("Wait: " + data.error); 
       }
