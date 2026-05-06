@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import useTitle from '../components/useTitles';
 import { API_BASE_URL } from '../config';
 import { useNotification } from '../components/NotificationContext';
+import FallbackCandle from '../assets/candle.png'; // <-- Added Fallback Import
 
 const Cart = () => {
   useTitle("Cart");
@@ -103,37 +104,42 @@ const Cart = () => {
         ) : (
           <div className="cart-list">
             <h1 className="cart-page-title">Shopping Cart</h1>
-{cartItems.map(item => (
-  <div key={item.cart_item_id} className="cart-item">
-    
-    <div className="cart-item-image">
-      {item.is_custom ? (
-        <img src={item.image} alt="Custom candle" />
-      ) : (
-        <img src={item.image.startsWith('http') ? item.image : `${API_BASE_URL}${item.image}`} alt={item.name} />
-      )}
-    </div>
+            {cartItems.map(item => (
+              <div key={item.cart_item_id} className="cart-item">
+                
+                <div className="cart-item-image">
+                  {/* Safely handles null, http links, local URLs, and custom snapshot base-64 data! */}
+                  <img 
+                    src={
+                      item.image 
+                        ? (item.image.startsWith('http') || item.image.startsWith('data:') 
+                            ? item.image 
+                            : `${API_BASE_URL}${item.image}`) 
+                        : FallbackCandle
+                    } 
+                    alt={item.name || 'Candle'} 
+                  />
+                </div>
 
-    <div className="cart-item-details">
-      <h3>{item.name}</h3>
-        <div className="custom-specs">
-          {item.wax_colors && <p><span>Wax:</span> {item.wax_colors}</p>}
-          {item.scent && <p><span>Scent:</span> {item.scent}</p>}
-        </div>
-      <p className="cart-item-price">{Number(item.price).toFixed(2)} L.E.</p>
-    </div>
+                <div className="cart-item-details">
+                  <h3>{item.name}</h3>
+                    <div className="custom-specs">
+                      {item.wax_colors && <p><span>Wax:</span> {item.wax_colors}</p>}
+                      {item.scent && <p><span>Scent:</span> {item.scent}</p>}
+                    </div>
+                  <p className="cart-item-price">{Number(item.price).toFixed(2)} L.E.</p>
+                </div>
 
-    {/* This will now naturally sit right after the details because of flex-grow: 0 */}
-    <div className="cart-item-actions">
-      <div className="quantity-controls">
-        <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'decrease')}>−</button>
-        <span className="qty-amount">{item.quantity}</span>
-        <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'increase')}>+</button>
-      </div>
-      <button className="btn-remove-text" onClick={() => handleRemove(item.cart_item_id)}>Remove</button>
-    </div>
-  </div>
-))}
+                <div className="cart-item-actions">
+                  <div className="quantity-controls">
+                    <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'decrease')}>−</button>
+                    <span className="qty-amount">{item.quantity}</span>
+                    <button className="btn-qty" onClick={() => handleQuantityChange(item.cart_item_id, 'increase')}>+</button>
+                  </div>
+                  <button className="btn-remove-text" onClick={() => handleRemove(item.cart_item_id)}>Remove</button>
+                </div>
+              </div>
+            ))}
 
             <div className="cart-summary">
               <h2>Total: {cartTotal.toFixed(2)} L.E.</h2>

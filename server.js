@@ -491,53 +491,57 @@ else if (type === 'cup') {
 
 app.get('/cart/:userId', (req, res) => {
     const { userId } = req.params;
-const sql = `
-    SELECT 
-        ci.id AS cart_item_id, 
-        ci.quantity,
-        CASE 
-            WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.name 
-            WHEN cc.type = 'cup' THEN CONCAT(
-                COALESCE(cup_shape.name, 'Glass Jar'), 
-                ' (', cc.cup_size, 'ml)'
-            )
-            ELSE CONCAT(COALESCE(ms.name, 'Custom'), ' Mold')
-        END AS name,
-        cc.cup_color_id AS cup_color_hex,
-        cup_shape.colors AS cup_shape_colors,
-        CASE 
-            WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.price 
-            ELSE cc.total_price 
-        END AS price,
-        CASE 
-            WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.image_url 
-            ELSE cc.preview_image 
-        END AS image,
-        CASE 
-            WHEN ci.prebuilt_candle_id IS NOT NULL THEN FALSE 
-            ELSE TRUE 
-        END AS is_custom,
-        COALESCE(s.name, '') AS scent,
-        COALESCE(GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', '), '') AS wax_colors,
-        pc.stock_quantity AS max_stock
-    FROM cart_items ci
-    LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
-    LEFT JOIN cup_shapes cup_shape ON cc.cup_shape_id = cup_shape.id
-    LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
-    LEFT JOIN scents s ON cc.scent_id = s.id
-    LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
-    LEFT JOIN colors cl ON ccl.color_id = cl.id
-    LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
-    JOIN carts ct ON ci.cart_id = ct.id
-    WHERE ct.user_id = ?
-    GROUP BY ci.id;
-`;
+    const sql = `
+        SELECT 
+            ci.id AS cart_item_id, 
+            ci.prebuilt_candle_id, 
+            ci.quantity,
+            CASE 
+                WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.name 
+                WHEN cc.type = 'cup' THEN CONCAT(
+                    COALESCE(cup_shape.name, 'Glass Jar'), 
+                    ' (', cc.cup_size, 'ml)'
+                )
+                ELSE CONCAT(COALESCE(ms.name, 'Custom'), ' Mold')
+            END AS name,
+            cc.cup_color_id AS cup_color_hex,
+            cup_shape.colors AS cup_shape_colors,
+            CASE 
+                WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.price 
+                ELSE cc.total_price 
+            END AS price,
+            CASE 
+                WHEN ci.prebuilt_candle_id IS NOT NULL THEN pc.image_url 
+                ELSE cc.preview_image 
+            END AS image,
+            CASE 
+                WHEN ci.prebuilt_candle_id IS NOT NULL THEN FALSE 
+                ELSE TRUE 
+            END AS is_custom,
+            COALESCE(s.name, '') AS scent,
+            COALESCE(GROUP_CONCAT(cl.name ORDER BY ccl.layer_index ASC SEPARATOR ', '), '') AS wax_colors,
+            pc.stock_quantity AS max_stock
+        FROM cart_items ci
+        LEFT JOIN custom_candles cc ON ci.custom_candle_id = cc.id
+        LEFT JOIN cup_shapes cup_shape ON cc.cup_shape_id = cup_shape.id
+        LEFT JOIN mold_shapes ms ON cc.mold_shape_id = ms.id
+        LEFT JOIN scents s ON cc.scent_id = s.id
+        LEFT JOIN custom_candle_layers ccl ON cc.id = ccl.custom_candle_id
+        LEFT JOIN colors cl ON ccl.color_id = cl.id
+        LEFT JOIN prebuilt_candles pc ON ci.prebuilt_candle_id = pc.id
+        JOIN carts ct ON ci.cart_id = ct.id
+        WHERE ct.user_id = ?
+        GROUP BY ci.id;
+    `;
 
 db.query(sql, [userId], (err, results) => {
-    if (err) {
-        console.error('CART QUERY ERROR:', err.message);
-        return res.status(500).json({ error: err.message });
-    }
+        if (err) {
+            console.error("Error fetching cart items:", err);
+            return res.status(500).json({ error: "Failed to fetch cart items." });
+        }
+        res.json(results);
+    });
+});
 
     const formattedCart = results.map(item => {
         // Resolve cup color name from the JSON colors array
