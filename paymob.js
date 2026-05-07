@@ -39,16 +39,24 @@ async function getPaymentKey(authToken, paymobOrderId, amountCents, billingData)
 }
 
 // Verify HMAC on Paymob's callback (security!)
+// Verify HMAC on Paymob's callback (security!)
 function verifyHmac(data, receivedHmac) {
   const fields = [
     'amount_cents', 'created_at', 'currency', 'error_occured',
     'has_parent_transaction', 'id', 'integration_id', 'is_3d_secure',
     'is_auth', 'is_capture', 'is_refunded', 'is_standalone_payment',
-    'is_voided', 'order', 'owner', 'pending', 'source_data.pan',
-    'source_data.sub_type', 'source_data.type', 'success'
+    'is_voided', 'order.id', /* ⬅️ CHANGED THIS FROM 'order' */ 
+    'owner', 'pending', 'source_data.pan', 'source_data.sub_type', 
+    'source_data.type', 'success'
   ];
+
   const str = fields.map(f => {
-    const val = f.split('.').reduce((obj, k) => obj?.[k], data);
+    let val = f.split('.').reduce((obj, k) => obj?.[k], data);
+    
+    // Paymob strictly expects lowercase string representations of booleans
+    if (val === true) return 'true';
+    if (val === false) return 'false';
+    
     return val ?? '';
   }).join('');
 
