@@ -4,6 +4,38 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { API_BASE_URL } from '../config';
 
+// --- UNIVERSAL COLOR PARSERS ---
+// This guarantees Three.js never crashes or ignores a color, whether it's Hex, RGB, RGBA, or an object.
+const getThreeColor = (col, fallback = '#ffffff') => {
+  if (!col) return new THREE.Color(fallback);
+  let val = col;
+  if (typeof col === 'object') {
+    val = col.hex_code || col.hex || col.rgba || col.value || fallback;
+  }
+  if (typeof val === 'string' && val.startsWith('rgba')) {
+    const parts = val.replace('rgba(', '').replace(')', '').split(',');
+    return new THREE.Color(`rgb(${parts[0].trim()}, ${parts[1].trim()}, ${parts[2].trim()})`);
+  }
+  try {
+    return new THREE.Color(val);
+  } catch(e) {
+    return new THREE.Color(fallback);
+  }
+};
+
+const getOpacity = (col) => {
+  if (!col) return 1.0;
+  let val = col;
+  if (typeof col === 'object') {
+    val = col.rgba || col.hex_code || col.hex || col.value || '';
+  }
+  if (typeof val === 'string' && val.startsWith('rgba')) {
+    const parts = val.replace('rgba(', '').replace(')', '').split(',');
+    return parts[3] ? parseFloat(parts[3]) : 1.0;
+  }
+  return 1.0;
+};
+
 const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupSize, modelUrl, colorableParts, flatShading }, ref) => {
   const canvasRef = useRef(null);
   const meshesRef = useRef({ cup: [], wax: [], wick: [], moldLayers: [] });
@@ -11,42 +43,34 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
   const sceneRef = useRef(null);
   const cameraRef = useRef(null); 
 
-useImperativeHandle(ref, () => ({
-  getSnapshot: () => {
-    const renderer = rendererRef.current;
-    const scene = sceneRef.current;
-    const canvas = canvasRef.current;
-    const mainCamera = cameraRef.current;
+  useImperativeHandle(ref, () => ({
+    getSnapshot: () => {
+      const renderer = rendererRef.current;
+      const scene = sceneRef.current;
+      const canvas = canvasRef.current;
+      const mainCamera = cameraRef.current;
 
-    if (!renderer || !scene || !canvas || !mainCamera) return null;
+      if (!renderer || !scene || !canvas || !mainCamera) return null;
 
-    const isMobile = window.innerWidth < 768;
+      const isMobile = window.innerWidth < 768;
 
-    // 1. High-Res Camera (Square Aspect Ratio)
-    const photoCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-    const dist = isMobile ? 6.2 : 4.6;
-    const height = 5.5; 
-    photoCamera.position.set(dist, height, dist); 
-    photoCamera.lookAt(0, 1.0, 0); 
+      const photoCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+      const dist = isMobile ? 6.2 : 4.6;
+      const height = 5.5; 
+      photoCamera.position.set(dist, height, dist); 
+      photoCamera.lookAt(0, 1.0, 0); 
 
-    // 2. THE SECRET FOR HIGH-RES:
-    // We manually trigger a high-resolution render before capturing.
-    // This forces Three.js to use every single pixel available on the GPU.
-    renderer.setPixelRatio(window.devicePixelRatio > 2 ? window.devicePixelRatio : 2);
-    renderer.render(scene, photoCamera);
-    
-    // 3. CAPTURE AT 100% QUALITY (1.0)
-    // Using PNG provides lossless quality, but if the file is too big for your DB,
-    // use 'image/jpeg' with 1.0 quality instead.
-    const data = canvas.toDataURL('image/png'); 
+      renderer.setPixelRatio(window.devicePixelRatio > 2 ? window.devicePixelRatio : 2);
+      renderer.render(scene, photoCamera);
+      
+      const data = canvas.toDataURL('image/png'); 
 
-    // 4. RESET: Put the renderer back to normal for the UI
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.render(scene, mainCamera);
-    
-    return data;
-  }
-}));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.render(scene, mainCamera);
+      
+      return data;
+    }
+  }));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -65,18 +89,15 @@ useImperativeHandle(ref, () => ({
       canvas,
       antialias: true,
       powerPreference: 'high-performance',
-      preserveDrawingBuffer: true, // Needed for snapshots
+      preserveDrawingBuffer: true,
       alpha: true
     });
     
     renderer.setSize(size, size);
-    // Keep high resolution: Set pixel ratio to device (2x or 3x)
     renderer.setPixelRatio(window.devicePixelRatio);
-    
     renderer.shadowMap.enabled = !isMobile;
     rendererRef.current = renderer;
 
-    // Premium Lighting Setup
     scene.add(new THREE.AmbientLight(0xfff5e0, 1.5));
     const key = new THREE.DirectionalLight(0xffffff, 2);
     key.position.set(5, 10, 5);
@@ -117,30 +138,51 @@ useImperativeHandle(ref, () => ({
             : (typeof colorableParts === 'string' ? JSON.parse(colorableParts) : []);
         } catch (e) { allowedParts = []; }
 
-        loadedGroup.traverse((obj) => {
+loadedGroup.traverse((obj) => {
           if (obj.isMesh) {
             obj.castShadow = !isMobile;
-            const exactName = obj.name; 
+            
+            const exactName = obj.name || '';
+            const parentName = obj.parent?.name || '';
+            
             const lowerName = exactName.toLowerCase();
-            const layerIndex = allowedParts.indexOf(exactName);
+            const lowerParentName = parentName.toLowerCase();
 
+            let layerIndex = allowedParts.indexOf(exactName);
+            if (layerIndex === -1 && parentName) {
+              layerIndex = allowedParts.indexOf(parentName);
+            }
+
+            // 1. Clone the base material so we don't mutate shared GLTF data
+            obj.material = obj.material.clone();
+            obj.material.flatShading = !!flatShading;
+
+            // 2. INDEPENDENT CHECK: Is it a Mold Layer?
             if (layerIndex !== -1) {
-              obj.material = obj.material.clone();
-              obj.material.flatShading = !!flatShading;
-              obj.material.needsUpdate = true;
+              console.log('✅ Assigned to MOLD LAYER:', exactName || parentName);
               meshesRef.current.moldLayers[layerIndex] = obj;
-              if (layerColors[layerIndex]) obj.material.color.set(layerColors[layerIndex]);
+              if (layerColors[layerIndex]) {
+                 obj.material.color.copy(getThreeColor(layerColors[layerIndex]));
+              }
             } 
-            else if (lowerName.includes('cylinder_0') || lowerName.endsWith('_0')) {
-              const parsedColor = new THREE.Color(cupColor); 
-              const opacity = cupColor.includes('rgba') ? parseFloat(cupColor.split(',')[3]) : 1.0;
+            
+            // 3. INDEPENDENT CHECK: Is it Cup, Wax, or Wick? 
+            // (Notice this is an 'if', not an 'else if', so it can't be hijacked by the mold logic!)
+            if (
+              lowerName.includes('cylinder_0') || lowerName.endsWith('_0') || lowerName.includes('jar') || lowerName.includes('glass') ||
+              lowerParentName.includes('cylinder_0') || lowerParentName.endsWith('_0') || lowerParentName.includes('jar') || lowerParentName.includes('glass')
+            ) {
+              console.log('✅ Assigned to CUP:', exactName || parentName);
+              const pColor = getThreeColor(cupColor);
+              const op = getOpacity(cupColor);
 
+              // Overwrite with premium glass material
               obj.material = new THREE.MeshPhysicalMaterial({
-                color: parsedColor,
+                color: pColor,
                 metalness: 0.1,
                 roughness: 0.05,
-                transmission: opacity < 1 ? 1.0 : 0.0, 
-                opacity: opacity,                      
+                transmission: op < 1 ? 1.0 : 0.0, 
+                opacity: op,                      
                 transparent: true,
                 ior: 1.52,
                 thickness: 0.5,
@@ -149,16 +191,23 @@ useImperativeHandle(ref, () => ({
               });
               meshesRef.current.cup.push(obj);
             }
-            else if (lowerName.includes('cylinder001_1') || lowerName.endsWith('_1') || lowerName.includes('sphere') || lowerName.includes('wax')) {
-              obj.material = obj.material.clone();
-              obj.material.flatShading = !!flatShading;
+            else if (
+              lowerName.includes('cylinder001_1') || lowerName.endsWith('_1') || lowerName.includes('sphere') || lowerName.includes('wax') ||
+              lowerParentName.includes('cylinder001_1') || lowerParentName.endsWith('_1') || lowerParentName.includes('sphere') || lowerParentName.includes('wax')
+            ) {
+              console.log('✅ Assigned to WAX:', exactName || parentName);
+              obj.material.color.copy(getThreeColor(waxColor, '#fdf6f0'));
               meshesRef.current.wax.push(obj);
-              if (waxColor) obj.material.color.set(waxColor);
             }
-            else if (lowerName.includes('cylinder002_2') || lowerName.includes('wick')) {
-              obj.material = obj.material.clone();
+            else if (
+              lowerName.includes('cylinder002_2') || lowerName.includes('wick') ||
+              lowerParentName.includes('cylinder002_2') || lowerParentName.includes('wick')
+            ) {
+              console.log('✅ Assigned to WICK:', exactName || parentName);
               meshesRef.current.wick.push(obj);
             }
+
+            obj.material.needsUpdate = true;
           }
         });
       }
@@ -189,28 +238,32 @@ useImperativeHandle(ref, () => ({
     };
   }, [modelUrl, colorableParts, flatShading]);
 
+  // --- REACTIVE COLOR UPDATES ---
   useEffect(() => {
+    const c = getThreeColor(cupColor);
+    const op = getOpacity(cupColor);
     meshesRef.current.cup.forEach(mesh => {
-      if (cupColor) {
-        mesh.material.color.set(new THREE.Color(cupColor));
-        const opacity = cupColor.includes('rgba') ? parseFloat(cupColor.split(',')[3]) : 1.0;
-        mesh.material.opacity = opacity;
-        mesh.material.transmission = opacity < 1 ? 1.0 : 0.0;
-        mesh.material.transparent = true;
-        mesh.material.needsUpdate = true;
-      }
+      mesh.material.color.copy(c);
+      mesh.material.opacity = op;
+      mesh.material.transmission = op < 1 ? 1.0 : 0.0;
+      mesh.material.needsUpdate = true;
     });
   }, [cupColor]);
 
   useEffect(() => {
+    const c = getThreeColor(waxColor, '#fdf6f0');
     meshesRef.current.wax.forEach(mesh => {
-        if (waxColor) mesh.material.color.set(waxColor);
+        mesh.material.color.copy(c);
+        mesh.material.needsUpdate = true;
     });
   }, [waxColor]);
 
   useEffect(() => {
     meshesRef.current.moldLayers.forEach((mesh, index) => {
-      if (mesh && layerColors[index]) mesh.material.color.set(layerColors[index]);
+      if (mesh && layerColors[index]) {
+        mesh.material.color.copy(getThreeColor(layerColors[index]));
+        mesh.material.needsUpdate = true;
+      }
     });
   }, [layerColors]);
 
