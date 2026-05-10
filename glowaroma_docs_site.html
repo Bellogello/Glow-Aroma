@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GlowAroma — Developer Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Averia+Libre:wght@300;400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ── Reset & base ─────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  background:#f5efe1;
+  font-family:"Averia Libre",system-ui;
+  color:#3a2e24;
+  min-height:100vh;
+}
+
+/* ── CSS Variables ────────────────────────────────────────────── */
+:root{
+  --brand:#4a3728;
+  --brand-light:#76594C;
+  --accent:#C8A97E;
+  --accent-light:#D2C9B8;
+  --cream:#f5efe1;
+  --cream-dark:#ede4d5;
+  --warm-white:#fdfbf7;
+  --text-primary:#3a2e24;
+  --text-secondary:#6b5548;
+  --text-muted:#9a8070;
+  --border:#D2C9B8;
+  --sidebar-w:260px;
+  --topbar-h:64px;
+}
+
+/* ── Top bar ──────────────────────────────────────────────────── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;
+  height:var(--topbar-h);
+  background:#D2C9B8;
+  display:flex;align-items:center;
+  padding:0 24px;
+  gap:16px;
+  z-index:100;
+  border-bottom:1px solid rgba(74,55,40,0.15);
+}
+.topbar-logo{
+  font-family:"Averia Libre",system-ui;
+  font-size:26px;
+  font-weight:700;
+  color:var(--brand);
+  text-decoration:none;
+  letter-spacing:-0.5px;
+}
+.topbar-logo span{
+  font-weight:300;
+  color:var(--brand-light);
+}
+.topbar-tag{
+  background:var(--brand);
+  color:var(--cream);
+  font-size:11px;
+  font-weight:700;
+  padding:3px 9px;
+  border-radius:20px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.topbar-search{
+  margin-left:auto;
+  display:flex;align-items:center;gap:8px;
+}
+.search-box{
+  background:rgba(74,55,40,0.08);
+  border:1px solid rgba(74,55,40,0.2);
+  border-radius:8px;
+  padding:7px 14px;
+  font-family:"Averia Libre",system-ui;
+  font-size:14px;
+  color:var(--brand);
+  width:220px;
+  outline:none;
+  transition:all .2s;
+}
+.search-box::placeholder{color:var(--text-muted)}
+.search-box:focus{
+  background:var(--warm-white);
+  border-color:var(--accent);
+  width:260px;
+}
+.topbar-version{
+  font-size:13px;
+  color:var(--text-secondary);
+}
+
+/* ── Layout ───────────────────────────────────────────────────── */
+.layout{
+  display:flex;
+  padding-top:var(--topbar-h);
+  min-height:100vh;
+}
+
+/* ── Sidebar ──────────────────────────────────────────────────── */
+.sidebar{
+  width:var(--sidebar-w);
+  flex-shrink:0;
+  position:fixed;
+  top:var(--topbar-h);
+  bottom:0;
+  left:0;
+  background:var(--cream-dark);
+  border-right:1px solid var(--border);
+  overflow-y:auto;
+  padding:20px 0 40px;
+}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--accent-light);border-radius:4px}
+
+.nav-group-label{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--text-muted);
+  padding:16px 20px 6px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:8px;
+  width:100%;text-align:left;
+  background:none;border:none;
+  padding:8px 20px;
+  font-family:"Averia Libre",system-ui;
+  font-size:15px;
+  color:var(--text-secondary);
+  cursor:pointer;
+  border-left:3px solid transparent;
+  transition:all .15s;
+  text-decoration:none;
+}
+.nav-item:hover{
+  color:var(--brand);
+  background:rgba(74,55,40,0.06);
+}
+.nav-item.active{
+  color:var(--brand);
+  background:rgba(74,55,40,0.1);
+  border-left:3px solid var(--brand);
+  font-weight:700;
+}
+.nav-icon{font-size:14px;width:16px;text-align:center;opacity:.7}
+
+/* ── Main content ─────────────────────────────────────────────── */
+.main{
+  margin-left:var(--sidebar-w);
+  flex:1;
+  min-width:0;
+}
+
+/* ── Page sections ────────────────────────────────────────────── */
+.page{display:none}
+.page.active{display:block}
+
+/* ── Page hero ────────────────────────────────────────────────── */
+.page-hero{
+  background:var(--brand);
+  padding:48px 56px 40px;
+  position:relative;
+  overflow:hidden;
+}
+.page-hero::before{
+  content:'';
+  position:absolute;top:-40px;right:-40px;
+  width:220px;height:220px;
+  background:rgba(200,169,126,0.12);
+  border-radius:50%;
+}
+.page-hero-tag{
+  display:inline-block;
+  background:rgba(200,169,126,0.25);
+  color:var(--accent);
+  font-size:11px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 12px;border-radius:20px;
+  margin-bottom:14px;
+}
+.page-hero h1{
+  font-family:"Averia Libre",system-ui;
+  font-size:36px;font-weight:700;
+  color:#fdfbf7;
+  margin-bottom:10px;
+  line-height:1.2;
+}
+.page-hero p{
+  font-size:16px;
+  color:rgba(253,251,247,0.7);
+  max-width:560px;
+  line-height:1.6;
+}
+
+/* ── Content body ─────────────────────────────────────────────── */
+.content-body{
+  padding:40px 56px;
+  max-width:900px;
+}
+
+/* ── Typography ───────────────────────────────────────────────── */
+h2{
+  font-family:"Averia Libre",system-ui;
+  font-size:22px;font-weight:700;
+  color:var(--brand);
+  margin:36px 0 12px;
+  padding-bottom:8px;
+  border-bottom:2px solid var(--border);
+}
+h2:first-child{margin-top:0}
+h3{
+  font-size:16px;font-weight:700;
+  color:var(--brand-light);
+  margin:22px 0 8px;
+}
+p{
+  font-size:15px;line-height:1.75;
+  color:var(--text-secondary);
+  margin-bottom:14px;
+}
+
+/* ── Code ─────────────────────────────────────────────────────── */
+code{
+  font-family:"JetBrains Mono",monospace;
+  font-size:12px;
+  background:rgba(74,55,40,0.08);
+  border:1px solid var(--border);
+  border-radius:5px;
+  padding:2px 6px;
+  color:var(--brand);
+}
+pre{
+  font-family:"JetBrains Mono",monospace;
+  font-size:13px;
+  background:var(--brand);
+  color:#f2e9e1;
+  border-radius:12px;
+  padding:20px 24px;
+  overflow-x:auto;
+  margin:12px 0 20px;
+  line-height:1.65;
+}
+pre code{
+  background:none;border:none;padding:0;
+  color:inherit;font-size:inherit;
+}
+.comment{color:rgba(242,233,225,0.4)}
+.key{color:#C8A97E}
+.str{color:#a8d8a8}
+.num{color:#f0c080}
+
+/* ── Cards grid ───────────────────────────────────────────────── */
+.cards-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:12px;
+  margin:20px 0;
+}
+.stat-card{
+  background:var(--warm-white);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:18px 16px;
+}
+.stat-card-label{
+  font-size:11px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text-muted);margin-bottom:6px;
+}
+.stat-card-value{
+  font-size:20px;font-weight:700;
+  color:var(--brand);line-height:1.2;
+}
+.stat-card-sub{
+  font-size:12px;color:var(--text-muted);margin-top:3px;
+}
+
+/* ── Tables ───────────────────────────────────────────────────── */
+.table-wrap{
+  overflow-x:auto;
+  margin:14px 0 24px;
+  border-radius:12px;
+  border:1px solid var(--border);
+}
+table{
+  width:100%;border-collapse:collapse;
+  font-size:14px;
+}
+thead tr{background:var(--brand)}
+th{
+  text-align:left;padding:11px 16px;
+  font-size:12px;font-weight:700;
+  color:#f2e9e1;
+  letter-spacing:.04em;
+  white-space:nowrap;
+}
+td{
+  padding:10px 16px;
+  border-bottom:1px solid var(--border);
+  color:var(--text-secondary);
+  vertical-align:top;
+  line-height:1.5;
+}
+td:first-child{
+  font-family:"JetBrains Mono",monospace;
+  font-size:12px;
+  color:var(--brand);
+  white-space:nowrap;
+}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even){background:rgba(210,201,184,0.15)}
+
+/* ── Badges ───────────────────────────────────────────────────── */
+.badge{
+  display:inline-block;
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;font-weight:700;
+  padding:3px 8px;border-radius:5px;
+  margin-right:6px;white-space:nowrap;
+}
+.badge-get{background:#e6f1fb;color:#0C447C}
+.badge-post{background:#eaf3de;color:#27500A}
+.badge-put{background:#faeeda;color:#633806}
+.badge-delete{background:#fcebeb;color:#791F1F}
+.badge-patch{background:#eeedfe;color:#3C3489}
+
+/* ── Endpoints ────────────────────────────────────────────────── */
+.endpoint{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:11px 0;
+  border-bottom:1px solid var(--border);
+}
+.endpoint:last-child{border-bottom:none}
+.endpoint-path{
+  font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--brand);
+  flex:0 0 280px;
+  padding-top:2px;
+}
+.endpoint-desc{
+  font-size:13px;color:var(--text-secondary);
+  line-height:1.5;flex:1;
+  padding-top:2px;
+}
+
+/* ── Notes / warnings ─────────────────────────────────────────── */
+.note{
+  background:rgba(200,169,126,0.15);
+  border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;
+  padding:12px 16px;
+  margin:14px 0;
+  font-size:14px;
+  color:var(--brand);
+  line-height:1.6;
+}
+.warn{
+  background:rgba(220,53,69,0.08);
+  border-left:4px solid #dc3545;
+  border-radius:0 8px 8px 0;
+  padding:12px 16px;
+  margin:14px 0;
+  font-size:14px;
+  color:#8b1a24;
+  line-height:1.6;
+}
+.info{
+  background:rgba(55,138,221,0.08);
+  border-left:4px solid #378ADD;
+  border-radius:0 8px 8px 0;
+  padding:12px 16px;
+  margin:14px 0;
+  font-size:14px;
+  color:#0C447C;
+  line-height:1.6;
+}
+
+/* ── Tags ─────────────────────────────────────────────────────── */
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.tag{
+  background:var(--warm-white);
+  border:1px solid var(--border);
+  border-radius:20px;
+  font-size:12px;padding:3px 10px;
+  color:var(--text-secondary);
+}
+
+/* ── Section divider ──────────────────────────────────────────── */
+.divider{
+  border:none;
+  border-top:2px dashed var(--border);
+  margin:32px 0;
+}
+
+/* ── Steps list ───────────────────────────────────────────────── */
+.steps{list-style:none;margin:14px 0 20px}
+.steps li{
+  display:flex;align-items:flex-start;gap:14px;
+  padding:12px 0;
+  border-bottom:1px solid var(--border);
+  font-size:14px;color:var(--text-secondary);
+  line-height:1.6;
+}
+.steps li:last-child{border-bottom:none}
+.step-num{
+  flex-shrink:0;
+  width:26px;height:26px;
+  background:var(--brand);
+  color:#f2e9e1;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;
+  margin-top:1px;
+}
+
+/* ── Breadcrumb ───────────────────────────────────────────────── */
+.breadcrumb{
+  font-size:13px;color:var(--text-muted);
+  margin-bottom:4px;
+}
+.breadcrumb span{color:var(--accent)}
+
+/* ── Footer ───────────────────────────────────────────────────── */
+.page-footer{
+  padding:32px 56px;
+  border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:12px;
+}
+.page-footer p{
+  font-size:13px;color:var(--text-muted);margin:0;
+}
+.footer-nav{display:flex;gap:8px}
+.footer-btn{
+  background:none;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:7px 14px;
+  font-family:"Averia Libre",system-ui;
+  font-size:13px;color:var(--text-secondary);
+  cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:6px;
+}
+.footer-btn:hover{
+  background:var(--brand);
+  color:#f2e9e1;
+  border-color:var(--brand);
+}
+
+/* ── Search highlight ─────────────────────────────────────────── */
+.highlight{background:rgba(200,169,126,0.4);border-radius:3px}
+
+/* ── Mobile ───────────────────────────────────────────────────── */
+@media(max-width:768px){
+  :root{--sidebar-w:0px}
+  .sidebar{display:none}
+  .content-body{padding:24px 20px}
+  .page-hero{padding:32px 20px 28px}
+  .page-hero h1{font-size:26px}
+  .endpoint{flex-direction:column;gap:4px}
+  .endpoint-path{flex:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ────────────────────────────────────────────────── -->
+<header class="topbar">
+  <a class="topbar-logo" href="#">Glow<span>Aroma</span></a>
+  <span class="topbar-tag">Docs</span>
+  <span class="topbar-version">v1.0</span>
+  <div class="topbar-search">
+    <input class="search-box" type="text" placeholder="Search docs…" id="searchInput" oninput="handleSearch(this.value)"/>
+  </div>
+</header>
+
+<!-- ── LAYOUT ─────────────────────────────────────────────────── -->
+<div class="layout">
+
+<!-- ── SIDEBAR ────────────────────────────────────────────────── -->
+<nav class="sidebar">
+  <div class="nav-group-label">Getting started</div>
+  <button class="nav-item active" onclick="show('overview',this)"><span class="nav-icon">🕯</span>Overview</button>
+  <button class="nav-item" onclick="show('setup',this)"><span class="nav-icon">⚙</span>Local setup</button>
+  <button class="nav-item" onclick="show('env',this)"><span class="nav-icon">🔑</span>Environment vars</button>
+
+  <div class="nav-group-label">Architecture</div>
+  <button class="nav-item" onclick="show('stack',this)"><span class="nav-icon">🧱</span>Tech stack</button>
+  <button class="nav-item" onclick="show('db',this)"><span class="nav-icon">🗄</span>Database schema</button>
+  <button class="nav-item" onclick="show('auth',this)"><span class="nav-icon">🔒</span>Authentication</button>
+
+  <div class="nav-group-label">API reference</div>
+  <button class="nav-item" onclick="show('api-auth',this)"><span class="nav-icon">👤</span>Auth routes</button>
+  <button class="nav-item" onclick="show('api-builder',this)"><span class="nav-icon">🕯</span>Builder routes</button>
+  <button class="nav-item" onclick="show('api-cart',this)"><span class="nav-icon">🛒</span>Cart routes</button>
+  <button class="nav-item" onclick="show('api-orders',this)"><span class="nav-icon">📦</span>Order routes</button>
+  <button class="nav-item" onclick="show('api-admin',this)"><span class="nav-icon">🛠</span>Admin routes</button>
+
+  <div class="nav-group-label">Frontend</div>
+  <button class="nav-item" onclick="show('pages',this)"><span class="nav-icon">📄</span>Pages</button>
+  <button class="nav-item" onclick="show('components',this)"><span class="nav-icon">🧩</span>Components</button>
+  <button class="nav-item" onclick="show('3d',this)"><span class="nav-icon">🎨</span>3D system</button>
+
+  <div class="nav-group-label">Integrations</div>
+  <button class="nav-item" onclick="show('payment',this)"><span class="nav-icon">💳</span>Paymob</button>
+  <button class="nav-item" onclick="show('realtime',this)"><span class="nav-icon">⚡</span>Socket.io</button>
+  <button class="nav-item" onclick="show('cloudinary',this)"><span class="nav-icon">☁</span>Cloudinary</button>
+
+  <div class="nav-group-label">Deployment</div>
+  <button class="nav-item" onclick="show('deploy',this)"><span class="nav-icon">🚀</span>Deploy guide</button>
+  <button class="nav-item" onclick="show('known',this)"><span class="nav-icon">⚠</span>Known issues</button>
+</nav>
+
+<!-- ── MAIN ───────────────────────────────────────────────────── -->
+<main class="main">
+
+<!-- OVERVIEW -->
+<section id="page-overview" class="page active">
+  <div class="page-hero">
+    <div class="page-hero-tag">Getting started</div>
+    <h1>GlowAroma Developer Docs</h1>
+    <p>Full-stack custom candle e-commerce platform. Customers build 3D-configured candles and pay online. Admins manage everything from a tabbed dashboard.</p>
+  </div>
+  <div class="content-body">
+    <div class="cards-grid">
+      <div class="stat-card"><div class="stat-card-label">Frontend</div><div class="stat-card-value">React 18</div><div class="stat-card-sub">Vite · Vercel</div></div>
+      <div class="stat-card"><div class="stat-card-label">Backend</div><div class="stat-card-value">Express</div><div class="stat-card-sub">Node.js · Railway</div></div>
+      <div class="stat-card"><div class="stat-card-label">Database</div><div class="stat-card-value">MySQL 9.4</div><div class="stat-card-sub">Railway hosted</div></div>
+      <div class="stat-card"><div class="stat-card-label">Payments</div><div class="stat-card-value">Paymob</div><div class="stat-card-sub">EGP card payments</div></div>
+    </div>
+
+    <h2>Repo structure</h2>
+    <pre><span class="comment"># Root</span>
+Glow-Aroma/
+  client/           <span class="comment"># React frontend (Vite)</span>
+    src/
+      pages/        <span class="comment"># Route-level components</span>
+      components/   <span class="comment"># Shared UI components</span>
+      styles/       <span class="comment"># Per-page CSS files</span>
+      config.js     <span class="comment"># API_BASE_URL</span>
+    public/         <span class="comment"># Static assets (candle.glb)</span>
+  server.js         <span class="comment"># Express API entry point</span>
+  cloudinary.js     <span class="comment"># Cloudinary upload helpers</span>
+  .env              <span class="comment"># Environment variables</span></pre>
+
+    <h2>Production URLs</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Service</th><th>URL</th></tr></thead>
+      <tbody>
+        <tr><td>Frontend</td><td>https://glow-aroma.vercel.app</td></tr>
+        <tr><td>Backend API</td><td>https://glow-aroma-production.up.railway.app</td></tr>
+        <tr><td>Database</td><td>monorail.proxy.rlwy.net:22983</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="page-footer">
+    <p>GlowAroma v1.0 · May 2026</p>
+    <div class="footer-nav">
+      <button class="footer-btn" onclick="show('setup',document.querySelector('[onclick*=setup]'))">Next: Local setup →</button>
+    </div>
+  </div>
+</section>
+
+<!-- SETUP -->
+<section id="page-setup" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Getting started</div>
+    <h1>Local setup</h1>
+    <p>Get GlowAroma running on your machine in under 10 minutes.</p>
+  </div>
+  <div class="content-body">
+    <h2>Prerequisites</h2>
+    <div class="tags">
+      <span class="tag">Node.js 18+</span>
+      <span class="tag">npm</span>
+      <span class="tag">MySQL 8+ or MariaDB</span>
+      <span class="tag">Git</span>
+    </div>
+
+    <h2>Install dependencies</h2>
+    <pre><span class="comment"># Backend</span>
+cd Glow-Aroma
+npm install
+
+<span class="comment"># Frontend</span>
+cd client && npm install
+
+<span class="comment"># Required extras</span>
+npm install recharts
+npm install @react-three/fiber @react-three/drei</pre>
+
+    <h2>Database setup</h2>
+    <p>Export from Railway (production) and import locally:</p>
+    <pre><span class="comment"># Export from Railway</span>
+mariadb-dump -h monorail.proxy.rlwy.net -P 22983 \
+  -u root -p --ssl-verify-server-cert=FALSE \
+  railway > glow_aroma_db.sql
+
+<span class="comment"># Create local DB and import</span>
+mysql -u root -p -e <span class="str">"CREATE DATABASE IF NOT EXISTS glow_aroma_db;"</span>
+mysql -u root -p glow_aroma_db &lt; glow_aroma_db.sql</pre>
+
+    <h2>Run locally</h2>
+    <pre><span class="comment"># Terminal 1 — backend on :8080</span>
+node server.js
+
+<span class="comment"># Terminal 2 — frontend on :5173</span>
+cd client && npm run dev</pre>
+
+    <div class="note">Set <code>VITE_API_URL=http://localhost:8080</code> in <code>client/.env</code> so the frontend points to your local backend.</div>
+
+    <h2>Switch between local and production DB</h2>
+    <p>Change these two values in <code>.env</code> to toggle:</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Variable</th><th>Local</th><th>Production</th></tr></thead>
+      <tbody>
+        <tr><td>DB_HOST</td><td>localhost</td><td>monorail.proxy.rlwy.net</td></tr>
+        <tr><td>DB_PORT</td><td>3306</td><td>22983</td></tr>
+        <tr><td>DB_NAME</td><td>glow_aroma_db</td><td>railway</td></tr>
+        <tr><td>NODE_ENV</td><td>development</td><td>production</td></tr>
+      </tbody>
+    </table></div>
+    <div class="info">NODE_ENV controls SSL on the DB connection — disabled locally, enabled on production.</div>
+  </div>
+  <div class="page-footer"><p></p><div class="footer-nav">
+    <button class="footer-btn" onclick="show('overview',document.querySelectorAll('.nav-item')[0])">← Overview</button>
+    <button class="footer-btn" onclick="show('env',document.querySelectorAll('.nav-item')[2])">Next: Env vars →</button>
+  </div></div>
+</section>
+
+<!-- ENV VARS -->
+<section id="page-env" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Getting started</div>
+    <h1>Environment variables</h1>
+    <p>All secrets and config values needed to run GlowAroma.</p>
+  </div>
+  <div class="content-body">
+    <div class="warn">Never commit <code>.env</code> to git. Set all production values directly in Railway and Vercel dashboards.</div>
+
+    <h2>Backend <code>.env</code></h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>DB_HOST</td><td>Database host (Railway or localhost)</td></tr>
+        <tr><td>DB_USER</td><td>Database user</td></tr>
+        <tr><td>DB_PASSWORD</td><td>Database password</td></tr>
+        <tr><td>DB_NAME</td><td>Database name — <code>railway</code> on prod</td></tr>
+        <tr><td>DB_PORT</td><td>Port — 22983 on Railway, 3306 locally</td></tr>
+        <tr><td>JWT_SECRET</td><td>JWT signing secret, minimum 32 characters</td></tr>
+        <tr><td>NODE_ENV</td><td><code>development</code> or <code>production</code> — controls SSL</td></tr>
+        <tr><td>PAYMOB_API_KEY</td><td>Paymob API key (base64 JWT string)</td></tr>
+        <tr><td>PAYMOB_INTEGRATION_ID</td><td>Paymob card integration ID</td></tr>
+        <tr><td>PAYMOB_IFRAME_ID</td><td>Paymob iframe ID</td></tr>
+        <tr><td>PAYMOB_HMAC_SECRET</td><td>HMAC-SHA512 secret for callback verification</td></tr>
+        <tr><td>CLOUDINARY_CLOUD_NAME</td><td>Cloudinary cloud name</td></tr>
+        <tr><td>CLOUDINARY_API_KEY</td><td>Cloudinary API key</td></tr>
+        <tr><td>CLOUDINARY_API_SECRET</td><td>Cloudinary API secret</td></tr>
+        <tr><td>PORT</td><td>Server port — Railway sets this automatically</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2>Frontend <code>client/.env</code></h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>VITE_API_URL</td><td>Backend base URL (e.g. <code>http://localhost:8080</code>)</td></tr>
+        <tr><td>VITE_GOOGLE_CLIENT_ID</td><td>Google OAuth client ID</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2>config.js</h2>
+    <pre><span class="key">export const</span> API_BASE_URL = import.meta.env.VITE_API_URL || <span class="str">'http://localhost:8080'</span>;</pre>
+  </div>
+  <div class="page-footer"><p></p><div class="footer-nav">
+    <button class="footer-btn" onclick="show('setup',document.querySelectorAll('.nav-item')[1])">← Setup</button>
+    <button class="footer-btn" onclick="show('stack',document.querySelectorAll('.nav-item')[3])">Next: Tech stack →</button>
+  </div></div>
+</section>
+
+<!-- STACK -->
+<section id="page-stack" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Architecture</div>
+    <h1>Tech stack</h1>
+    <p>Every technology used across the GlowAroma platform.</p>
+  </div>
+  <div class="content-body">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Layer</th><th>Technology</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Frontend</td><td>React 18 + Vite</td><td>SPA deployed on Vercel</td></tr>
+        <tr><td>Backend</td><td>Node.js + Express</td><td>REST API + Socket.io on Railway</td></tr>
+        <tr><td>Database</td><td>MySQL 9.4</td><td>mysql2 with promise API</td></tr>
+        <tr><td>3D (builder)</td><td>Three.js</td><td>Raw GL in CandlePreview3D</td></tr>
+        <tr><td>3D (display)</td><td>@react-three/fiber</td><td>R3F + drei in MiniCandleViewer</td></tr>
+        <tr><td>Image storage</td><td>Cloudinary</td><td>Products, hero images, GLB models</td></tr>
+        <tr><td>Payments</td><td>Paymob</td><td>EGP card via iframe, 3-step API</td></tr>
+        <tr><td>Auth</td><td>JWT + bcrypt + Google OAuth</td><td>7-day tokens stored in localStorage</td></tr>
+        <tr><td>Real-time</td><td>Socket.io</td><td>Live viewer count per product page</td></tr>
+        <tr><td>Styling</td><td>Custom CSS + React-Bootstrap</td><td>Warm brown palette — Averia Libre font</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- DATABASE -->
+<section id="page-db" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Architecture</div>
+    <h1>Database schema</h1>
+    <p>MySQL 9.4 hosted on Railway. InnoDB engine with foreign key constraints.</p>
+  </div>
+  <div class="content-body">
+    <h2>User tables</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Table</th><th>Key columns</th></tr></thead>
+      <tbody>
+        <tr><td>users</td><td>id, name, email, password_hash, role_id, phone, created_at</td></tr>
+        <tr><td>user_roles</td><td>1 = customer · 2 = admin · 3 = super admin</td></tr>
+        <tr><td>user_addresses</td><td>governorate, area, street, building, floor_apt, notes</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2>Builder tables</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Table</th><th>Key columns / notes</th></tr></thead>
+      <tbody>
+        <tr><td>cup_shapes</td><td>id, name, model_url, price_modifier, is_available, <code>sizes</code> (JSON), <code>colors</code> (JSON)</td></tr>
+        <tr><td>mold_shapes</td><td>id, name, layers (count), price_modifier, model_url, is_available</td></tr>
+        <tr><td>colors</td><td>id, name, hex_code, price_modifier — wax colors for all candles</td></tr>
+        <tr><td>cup_colors</td><td>id, name, hex_code, price_modifier — glass cup colors</td></tr>
+        <tr><td>scents</td><td>id, name, price_modifier, is_available, scent_family_id</td></tr>
+        <tr><td>candle_models</td><td>id, name, type, model_url, thumbnail_url, flat_shading, layers, <code>colorable_parts</code> (JSON)</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2>Cart &amp; order tables</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Table</th><th>Key columns / notes</th></tr></thead>
+      <tbody>
+        <tr><td>carts</td><td>id, user_id (UNIQUE — one cart per user)</td></tr>
+        <tr><td>cart_items</td><td>custom_candle_id OR prebuilt_candle_id — mutually exclusive</td></tr>
+        <tr><td>custom_candles</td><td>type (cup|mold), cup_color_id stores RGBA string, cup_size stores ml value</td></tr>
+        <tr><td>custom_candle_layers</td><td>custom_candle_id, color_id, layer_index</td></tr>
+        <tr><td>orders</td><td>status_id: 1=processing · 2=paid/shipped · 3=delivered · 4=cancelled</td></tr>
+        <tr><td>order_items</td><td>Snapshot at purchase time — read-only record</td></tr>
+        <tr><td>discount_codes</td><td>code, discount_type, value, min/max_order_amount, max_uses, expires_at</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2>Content tables</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>hero_images</td><td>Homepage slideshow — image_url, is_active, sort_order</td></tr>
+        <tr><td>showcase_designs</td><td>Featured 3D designs for the CreateYourOwn card on homepage</td></tr>
+        <tr><td>contact_messages</td><td>Customer contact form submissions</td></tr>
+        <tr><td>prebuilt_candles</td><td>Ready-made products with stock_quantity</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="note"><code>cup_shapes.sizes</code> and <code>cup_shapes.colors</code> are JSON columns, not foreign keys. Parse with <code>JSON.parse()</code> in the frontend, or they may arrive already parsed if MySQL returns them as objects.</div>
+    <div class="warn"><code>custom_candles.cup_color_id</code> stores an RGBA string like <code>rgba(255,255,255,0.51)</code>, not a FK to the cup_colors table. Cart display resolves the color name by parsing the cup_shapes.colors JSON in Node.js.</div>
+  </div>
+</section>
+
+<!-- AUTH -->
+<section id="page-auth" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Architecture</div>
+    <h1>Authentication</h1>
+    <p>JWT-based auth with Google OAuth and role-based access control.</p>
+  </div>
+  <div class="content-body">
+    <h2>JWT flow</h2>
+    <p>On login or register the backend returns a JWT signed with <code>JWT_SECRET</code> (7-day expiry). The frontend stores <code>userId</code>, <code>userName</code>, <code>roleId</code>, and <code>token</code> in localStorage. No Authorization header is used — <code>userId</code> is passed in request bodies.</p>
+
+    <h2>Google OAuth</h2>
+    <p>Frontend uses <code>@react-oauth/google</code>. On success it sends <code>access_token</code> to <code>POST /auth/google</code>. Backend calls Google userinfo API, looks up or creates the user, and returns the same JWT structure as regular login.</p>
+
+    <h2>Role-based access</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>role_id</th><th>Role</th><th>Access</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Customer</td><td>Public routes + own cart, orders, profile, addresses</td></tr>
+        <tr><td>2</td><td>Admin</td><td>Dashboard, orders, products, inventory, messages, store settings</td></tr>
+        <tr><td>3</td><td>Super Admin</td><td>All admin access + staff management + promo code management</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="note">Legacy accounts with plain-text passwords are handled: if <code>password_hash</code> does not start with <code>$2</code> it is compared as plaintext before bcrypt is used.</div>
+
+    <h2>Password hashing</h2>
+    <pre><span class="comment">// Hash on register</span>
+<span class="key">const</span> hashed = <span class="key">await</span> bcrypt.hash(password, <span class="num">10</span>);
+
+<span class="comment">// Verify on login</span>
+<span class="key">const</span> match = <span class="key">await</span> bcrypt.compare(password, user.password_hash);</pre>
+  </div>
+</section>
+
+<!-- API AUTH -->
+<section id="page-api-auth" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">API reference</div>
+    <h1>Auth routes</h1>
+    <p>Base URL: <code style="background:rgba(255,255,255,0.15);color:#f2e9e1;border-color:rgba(255,255,255,0.2)">https://glow-aroma-production.up.railway.app</code></p>
+  </div>
+  <div class="content-body">
+    <h2>User auth</h2>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/users</span><span class="endpoint-desc">Register new customer. Body: name, email, phone, password_hash.</span></div>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/signin</span><span class="endpoint-desc">Login with email + password. Returns token, userId, userName, roleId.</span></div>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/auth/google</span><span class="endpoint-desc">Google OAuth login. Body: <code>access_token</code> from Google Sign-In.</span></div>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/users/:id</span><span class="endpoint-desc">Get user profile (name, email, phone).</span></div>
+    <div class="endpoint"><span class="badge badge-delete">DELETE</span><span class="endpoint-path">/admin/delete-account</span><span class="endpoint-desc">Delete own account. Body: userId, password.</span></div>
+
+    <h2>Address routes</h2>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/addresses/:userId</span><span class="endpoint-desc">Get all saved addresses for user.</span></div>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/addresses/:userId</span><span class="endpoint-desc">Save new address. Body: fullName, phone, governorate, area, street, building, floorApt, notes.</span></div>
+    <div class="endpoint"><span class="badge badge-put">PUT</span><span class="endpoint-path">/addresses/:id</span><span class="endpoint-desc">Update existing address.</span></div>
+    <div class="endpoint"><span class="badge badge-delete">DELETE</span><span class="endpoint-path">/addresses/:id</span><span class="endpoint-desc">Delete address (fails if linked to an order).</span></div>
+  </div>
+</section>
+
+<!-- API BUILDER -->
+<section id="page-api-builder" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">API reference</div>
+    <h1>Builder routes</h1>
+    <p>Endpoints that power the 3D candle configurator.</p>
+  </div>
+  <div class="content-body">
+    <h2>Config assets</h2>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/scents</span><span class="endpoint-desc">All available scents with family name.</span></div>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/colors</span><span class="endpoint-desc">All available wax colors.</span></div>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/cup-shapes</span><span class="endpoint-desc">Cup shapes with model_url, sizes JSON, colors JSON.</span></div>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/cup-sizes</span><span class="endpoint-desc">Cup sizes — id, size_ml, price_modifier.</span></div>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/cup-colors</span><span class="endpoint-desc">Cup colors — id, name, hex_code, price_modifier.</span></div>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/mold-shapes</span><span class="endpoint-desc">Mold shapes with layer count and model_url.</span></div>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/admin/models</span><span class="endpoint-desc">All 3D models with parsed colorable_parts JSON array.</span></div>
+
+    <h2>Showcase designs</h2>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/showcase</span><span class="endpoint-desc">Active designs only (is_active = 1) — used by homepage card.</span></div>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/admin/showcase</span><span class="endpoint-desc">All designs including hidden — used by dashboard.</span></div>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/admin/showcase</span><span class="endpoint-desc">Create design. Body: name, model_url, hex_color, layers_json, type, cup_color.</span></div>
+    <div class="endpoint"><span class="badge badge-put">PUT</span><span class="endpoint-path">/admin/showcase/:id</span><span class="endpoint-desc">Update design name, hex_color, is_active.</span></div>
+    <div class="endpoint"><span class="badge badge-patch">PATCH</span><span class="endpoint-path">/admin/showcase/:id/toggle</span><span class="endpoint-desc">Toggle is_active. Body: <code>{is_active: 0 | 1}</code>.</span></div>
+    <div class="endpoint"><span class="badge badge-delete">DELETE</span><span class="endpoint-path">/admin/showcase/:id</span><span class="endpoint-desc">Delete showcase design.</span></div>
+  </div>
+</section>
+
+<!-- API CART -->
+<section id="page-api-cart" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">API reference</div>
+    <h1>Cart routes</h1>
+    <p>Manage shopping cart items including custom candles with snapshot images.</p>
+  </div>
+  <div class="content-body">
+    <h2>Endpoints</h2>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/cart/add</span><span class="endpoint-desc">Add item to cart. See payloads below.</span></div>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/cart/:userId</span><span class="endpoint-desc">Get cart with formatted names, wax colors, scent, snapshot image.</span></div>
+    <div class="endpoint"><span class="badge badge-put">PUT</span><span class="endpoint-path">/cart/update/:cartItemId</span><span class="endpoint-desc">Body: <code>{action: "increase" | "decrease"}</code>.</span></div>
+    <div class="endpoint"><span class="badge badge-delete">DELETE</span><span class="endpoint-path">/cart/remove/:cartItemId</span><span class="endpoint-desc">Remove item from cart.</span></div>
+
+    <h2>Cup candle payload</h2>
+    <pre>{
+  <span class="key">userId</span>:        <span class="str">"123"</span>,
+  <span class="key">type</span>:          <span class="str">"cup"</span>,
+  <span class="key">scentId</span>:       <span class="num">4</span>,
+  <span class="key">quantity</span>:      <span class="num">1</span>,
+  <span class="key">totalPrice</span>:    <span class="num">250.00</span>,
+  <span class="key">snapshot</span>:      <span class="str">"data:image/png;base64,..."</span>,  <span class="comment">// base64 PNG</span>
+  <span class="key">cupShapeId</span>:    <span class="num">1</span>,
+  <span class="key">cupSize</span>:       <span class="num">400</span>,               <span class="comment">// ml value, not ID</span>
+  <span class="key">cupColor</span>:      <span class="str">"rgba(255,255,255,0.51)"</span>,
+  <span class="key">candleColorId</span>: <span class="num">3</span>
+}</pre>
+
+    <h2>Mold candle payload</h2>
+    <pre>{
+  <span class="key">userId</span>:      <span class="str">"123"</span>,
+  <span class="key">type</span>:        <span class="str">"mold"</span>,
+  <span class="key">scentId</span>:     <span class="num">4</span>,
+  <span class="key">quantity</span>:    <span class="num">1</span>,
+  <span class="key">totalPrice</span>:  <span class="num">310.00</span>,
+  <span class="key">snapshot</span>:    <span class="str">"data:image/png;base64,..."</span>,
+  <span class="key">moldShapeId</span>: <span class="num">3</span>,
+  <span class="key">layers</span>:      [<span class="num">2</span>, <span class="num">5</span>, <span class="num">1</span>]              <span class="comment">// color IDs per layer</span>
+}</pre>
+
+    <div class="note">The express.json limit is set to <code>10mb</code> to accommodate base64 snapshot images. If you get 413 errors, check this limit in server.js.</div>
+
+    <h2>Coupon validation</h2>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/coupons/validate</span><span class="endpoint-desc">Body: <code>{code, orderTotal}</code>. Returns discount_type + discount_value if valid.</span></div>
+  </div>
+</section>
+
+<!-- API ORDERS -->
+<section id="page-api-orders" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">API reference</div>
+    <h1>Order routes</h1>
+    <p>Checkout, Paymob payment flow, and order management.</p>
+  </div>
+  <div class="content-body">
+    <h2>Checkout</h2>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/checkout</span><span class="endpoint-desc">Place order, decrement prebuilt stock, clear cart. Body: userId, total, items, couponCode.</span></div>
+
+    <h2>Paymob payment</h2>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/paymob/initiate</span><span class="endpoint-desc">Get payment token + iframe ID. Body: amountCents, orderId, items, shippingDetails.</span></div>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/paymob/callback</span><span class="endpoint-desc">Paymob webhook. Verifies HMAC-SHA512, updates order status to 2 on success.</span></div>
+
+    <h2>Order history</h2>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/orders/user/:userId</span><span class="endpoint-desc">Customer order history — last 10 orders with item summary.</span></div>
+
+    <h2>Admin order management</h2>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/admin/orders</span><span class="endpoint-desc">All orders with customer name, date, total, status.</span></div>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/admin/orders/:id/items</span><span class="endpoint-desc">Order items by order ID.</span></div>
+    <div class="endpoint"><span class="badge badge-put">PUT</span><span class="endpoint-path">/admin/orders/:id/status</span><span class="endpoint-desc">Update status. Body: <code>{status_id: 1 | 2 | 3}</code>.</span></div>
+
+    <div class="warn">The route <code>/admin/orders/:id/items</code> must be registered BEFORE <code>/admin/orders/:orderId</code> in server.js or Express will treat "items" as an orderId.</div>
+  </div>
+</section>
+
+<!-- API ADMIN -->
+<section id="page-api-admin" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">API reference</div>
+    <h1>Admin routes</h1>
+    <p>Products, inventory, store settings, staff, and promo codes.</p>
+  </div>
+  <div class="content-body">
+    <h2>Products</h2>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/products</span><span class="endpoint-desc">All active prebuilt candles.</span></div>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/admin/products</span><span class="endpoint-desc">Add product. multipart/form-data with optional image.</span></div>
+    <div class="endpoint"><span class="badge badge-put">PUT</span><span class="endpoint-path">/admin/products/:id</span><span class="endpoint-desc">Update product.</span></div>
+    <div class="endpoint"><span class="badge badge-delete">DELETE</span><span class="endpoint-path">/admin/products/:id</span><span class="endpoint-desc">Delete product (fails if linked to an order).</span></div>
+
+    <h2>Inventory — all support GET / POST / PUT / DELETE</h2>
+    <div class="endpoint"><span class="badge badge-get">*</span><span class="endpoint-path">/admin/inventory/scent-families</span><span class="endpoint-desc">CRUD for scent families.</span></div>
+    <div class="endpoint"><span class="badge badge-get">*</span><span class="endpoint-path">/admin/inventory/scents</span><span class="endpoint-desc">Soft-delete if scent is used in existing candles.</span></div>
+    <div class="endpoint"><span class="badge badge-get">*</span><span class="endpoint-path">/admin/inventory/colors</span><span class="endpoint-desc">Soft-delete if color is used in candle layers.</span></div>
+    <div class="endpoint"><span class="badge badge-get">*</span><span class="endpoint-path">/admin/inventory/cup-shapes</span><span class="endpoint-desc">sizes and colors stored as JSON columns.</span></div>
+    <div class="endpoint"><span class="badge badge-get">*</span><span class="endpoint-path">/admin/inventory/cup-sizes</span><span class="endpoint-desc">Cup sizes in ml.</span></div>
+    <div class="endpoint"><span class="badge badge-get">*</span><span class="endpoint-path">/admin/inventory/mold-shapes</span><span class="endpoint-desc">Includes layer count and model_url.</span></div>
+    <div class="endpoint"><span class="badge badge-get">*</span><span class="endpoint-path">/admin/models</span><span class="endpoint-desc">3D model registry with colorable_parts JSON.</span></div>
+
+    <h2>Store settings</h2>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/admin/hero-images</span><span class="endpoint-desc">All homepage slideshow images.</span></div>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/admin/hero-images</span><span class="endpoint-desc">Upload new hero image to Cloudinary.</span></div>
+    <div class="endpoint"><span class="badge badge-delete">DELETE</span><span class="endpoint-path">/admin/hero-images/:id</span><span class="endpoint-desc">Delete hero image.</span></div>
+    <div class="endpoint"><span class="badge badge-patch">PATCH</span><span class="endpoint-path">/admin/hero-images/:id/toggle</span><span class="endpoint-desc">Toggle active/hidden.</span></div>
+    <div class="endpoint"><span class="badge badge-put">PUT</span><span class="endpoint-path">/admin/hero-images/reorder</span><span class="endpoint-desc">Body: <code>{orderedIds: [1,3,2,...]}</code>.</span></div>
+
+    <h2>Staff &amp; promos (Super Admin only)</h2>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/admin/staff</span><span class="endpoint-desc">All users with role_id 2 or 3.</span></div>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/admin/add-staff</span><span class="endpoint-desc">Add admin. Body: name, email, phone, password, role_id.</span></div>
+    <div class="endpoint"><span class="badge badge-delete">DELETE</span><span class="endpoint-path">/admin/staff/:id</span><span class="endpoint-desc">Remove admin (cannot remove Super Admin).</span></div>
+    <div class="endpoint"><span class="badge badge-get">GET</span><span class="endpoint-path">/admin/discount-codes</span><span class="endpoint-desc">All promo codes.</span></div>
+    <div class="endpoint"><span class="badge badge-post">POST</span><span class="endpoint-path">/admin/discount-codes</span><span class="endpoint-desc">Create code with type, value, limits, expiry.</span></div>
+    <div class="endpoint"><span class="badge badge-patch">PATCH</span><span class="endpoint-path">/admin/discount-codes/:id</span><span class="endpoint-desc">Toggle is_active.</span></div>
+    <div class="endpoint"><span class="badge badge-delete">DELETE</span><span class="endpoint-path">/admin/discount-codes/:id</span><span class="endpoint-desc">Delete promo code.</span></div>
+  </div>
+</section>
+
+<!-- PAGES -->
+<section id="page-pages" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Frontend</div>
+    <h1>Pages</h1>
+    <p>All client-side routes and their React components.</p>
+  </div>
+  <div class="content-body">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Route</th><th>Component</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>/</td><td>Home.jsx</td><td>Hero slideshow, featured products, CreateYourOwn card</td></tr>
+        <tr><td>/products</td><td>Products.jsx</td><td>Product catalog grid</td></tr>
+        <tr><td>/product/:id</td><td>ProductDetails.jsx</td><td>Single product with live viewer count badge (Socket.io)</td></tr>
+        <tr><td>/create</td><td>Create.jsx</td><td>3D candle builder with live preview and snapshot</td></tr>
+        <tr><td>/cart</td><td>Cart.jsx</td><td>Cart with snapshot images and quantity controls</td></tr>
+        <tr><td>/checkout</td><td>Checkout.jsx</td><td>Address form + Paymob iframe</td></tr>
+        <tr><td>/signin</td><td>SignIn.jsx</td><td>Email login + Google OAuth button</td></tr>
+        <tr><td>/signup</td><td>SignUp.jsx</td><td>Registration form</td></tr>
+        <tr><td>/profile</td><td>Profile.jsx</td><td>Order history + address book</td></tr>
+        <tr><td>/dashboard</td><td>Dashboard.jsx</td><td>Admin dashboard — role 2 or 3 only</td></tr>
+        <tr><td>/inventory</td><td>Inventory.jsx</td><td>Admin inventory management (tabbed)</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- COMPONENTS -->
+<section id="page-components" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Frontend</div>
+    <h1>Components</h1>
+    <p>Shared components used across multiple pages.</p>
+  </div>
+  <div class="content-body">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Component</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>CandlePreview3D</td><td>Full 3D configurator using raw Three.js + OrbitControls. forwardRef exposes <code>getSnapshot()</code> for PNG capture.</td></tr>
+        <tr><td>MiniCandleViewer</td><td>Lightweight display viewer using @react-three/fiber + drei. Auto-rotates. Used for showcase card and product pages.</td></tr>
+        <tr><td>CreateYourOwnCard</td><td>Homepage card cycling showcase designs with 5.5s interval + 500ms CSS fade.</td></tr>
+        <tr><td>Navbar</td><td>Top navigation with cart icon, profile dropdown, admin link for role 2+.</td></tr>
+        <tr><td>NotificationContext</td><td>Toast notification system. Exports <code>success()</code>, <code>error()</code>, <code>warning()</code>.</td></tr>
+        <tr><td>Footer</td><td>Site footer.</td></tr>
+        <tr><td>useTitles</td><td>Custom hook — sets <code>document.title</code> per page.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2>NotificationContext usage</h2>
+    <pre><span class="key">import</span> { useNotification } <span class="key">from</span> <span class="str">'../components/NotificationContext'</span>;
+
+<span class="key">const</span> { success, error, warning } = useNotification();
+
+success(<span class="str">"Added to cart!"</span>);
+error(<span class="str">"Failed to load products."</span>);
+warning(<span class="str">"Please complete all selections."</span>);</pre>
+  </div>
+</section>
+
+<!-- 3D -->
+<section id="page-3d" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Frontend</div>
+    <h1>3D rendering system</h1>
+    <p>Two separate renderers for different use cases — a full configurator and a lightweight display viewer.</p>
+  </div>
+  <div class="content-body">
+    <h2>CandlePreview3D props</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Prop</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>modelUrl</td><td>string</td><td>URL to .glb file. Falls back to /candle.glb if not set.</td></tr>
+        <tr><td>cupColor</td><td>string</td><td>RGBA or hex color for glass cup mesh.</td></tr>
+        <tr><td>waxColor</td><td>string</td><td>Hex color for wax fill mesh.</td></tr>
+        <tr><td>layerColors</td><td>string[]</td><td>Hex colors for mold layer meshes.</td></tr>
+        <tr><td>cupSize</td><td>string</td><td>small / medium / large — scales entire model.</td></tr>
+        <tr><td>colorableParts</td><td>string[] or JSON string</td><td>Mesh names for mold layers from <code>candle_models.colorable_parts</code>.</td></tr>
+        <tr><td>flatShading</td><td>boolean</td><td>Enables flat shading on all materials.</td></tr>
+        <tr><td>ref</td><td>forwardRef</td><td>Exposes <code>getSnapshot()</code> → base64 PNG string.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2>Mesh detection — CandlePreview3D</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Mesh name pattern</th><th>Treated as</th></tr></thead>
+      <tbody>
+        <tr><td>ends with _0 or includes cylinder_0</td><td>Glass cup — MeshPhysicalMaterial, transparent</td></tr>
+        <tr><td>ends with _1, includes wax or sphere</td><td>Wax fill</td></tr>
+        <tr><td>ends with _2, includes wick</td><td>Wick — no color change</td></tr>
+        <tr><td>name in colorable_parts array</td><td>Mold layer at that array index</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2>Mesh detection — MiniCandleViewer</h2>
+    <p>Collects all non-wick, non-glass meshes in traversal order. Assigns <code>layers[index]</code> by position — so <code>Wax_Bottom</code> gets <code>layers[0]</code>, <code>Wax_Middle</code> gets <code>layers[1]</code>, <code>Wax_Top</code> gets <code>layers[2]</code>.</p>
+
+    <h2>Model requirements</h2>
+    <ul class="steps">
+      <li><span class="step-num">1</span>Model in Blender. Name meshes clearly — <code>Wax_Bottom</code>, <code>Wax_Middle</code>, <code>Wax_Top</code> for molds.</li>
+      <li><span class="step-num">2</span>Export as glTF Binary (.glb).</li>
+      <li><span class="step-num">3</span>Upload via Dashboard → 3D Models. Stored on Cloudinary as <code>resource_type: "raw"</code>.</li>
+      <li><span class="step-num">4</span>Set <code>colorable_parts</code> JSON array of mesh names in layer order for mold models.</li>
+    </ul>
+
+    <div class="warn">If <code>colorable_parts</code> is empty or null for a mold model, all layers will receive the same primary color. Always set this field in the inventory for mold type models.</div>
+  </div>
+</section>
+
+<!-- PAYMOB -->
+<section id="page-payment" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Integrations</div>
+    <h1>Paymob integration</h1>
+    <p>Three-step API flow for EGP card payments via iframe.</p>
+  </div>
+  <div class="content-body">
+    <h2>Payment flow</h2>
+    <ul class="steps">
+      <li><span class="step-num">1</span><strong>Auth token</strong> — POST to Paymob <code>/auth/tokens</code> with <code>PAYMOB_API_KEY</code> → returns <code>authToken</code>.</li>
+      <li><span class="step-num">2</span><strong>Register order</strong> — POST to Paymob <code>/ecommerce/orders</code> with amount, merchant_order_id → returns <code>paymobOrderId</code>.</li>
+      <li><span class="step-num">3</span><strong>Payment key</strong> — POST to Paymob <code>/acceptance/payment_keys</code> with billing data → returns <code>paymentToken</code>.</li>
+      <li><span class="step-num">4</span><strong>Show iframe</strong> — Frontend renders <code>https://accept.paymob.com/api/acceptance/iframes/{iframeId}?payment_token={paymentToken}</code>.</li>
+      <li><span class="step-num">5</span><strong>Callback</strong> — Paymob POSTs to <code>/paymob/callback</code>. Backend verifies HMAC-SHA512 → updates order <code>status_id = 2</code>.</li>
+    </ul>
+
+    <h2>HMAC verification</h2>
+    <p>18 fields concatenated in a fixed order, then signed with HMAC-SHA512 using <code>PAYMOB_HMAC_SECRET</code>. If <code>data.success !== true</code> or HMAC fails, the order is NOT updated.</p>
+    <pre><span class="key">const</span> fields = [
+  <span class="str">'amount_cents'</span>, <span class="str">'created_at'</span>, <span class="str">'currency'</span>, <span class="str">'error_occured'</span>,
+  <span class="str">'has_parent_transaction'</span>, <span class="str">'id'</span>, <span class="str">'integration_id'</span>, <span class="str">'is_3d_secure'</span>,
+  <span class="str">'is_auth'</span>, <span class="str">'is_capture'</span>, <span class="str">'is_refunded'</span>, <span class="str">'is_standalone_payment'</span>,
+  <span class="str">'is_voided'</span>, <span class="str">'order'</span>, <span class="str">'owner'</span>, <span class="str">'pending'</span>,
+  <span class="str">'source_data.pan'</span>, <span class="str">'source_data.sub_type'</span>,
+  <span class="str">'source_data.type'</span>, <span class="str">'success'</span>
+];</pre>
+  </div>
+</section>
+
+<!-- SOCKET.IO -->
+<section id="page-realtime" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Integrations</div>
+    <h1>Socket.io — live viewers</h1>
+    <p>Real-time viewer count per product page. Badge appears when count ≥ 2.</p>
+  </div>
+  <div class="content-body">
+    <h2>Events</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Event</th><th>Direction</th><th>Payload</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>join_product</td><td>Client → Server</td><td>productId (string)</td><td>Join room, increment count</td></tr>
+        <tr><td>leave_product</td><td>Client → Server</td><td>productId (string)</td><td>Leave room, decrement count</td></tr>
+        <tr><td>update_viewers</td><td>Server → Client</td><td>count (number)</td><td>Broadcast new count to room</td></tr>
+        <tr><td>disconnect</td><td>Auto</td><td>—</td><td>Server decrements via socketRooms map</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2>Server state</h2>
+    <pre><span class="key">const</span> viewersCount = {};  <span class="comment">// { "5": 3, "12": 1 }</span>
+<span class="key">const</span> socketRooms  = {};  <span class="comment">// { "socket_abc": "5" }</span></pre>
+
+    <div class="note"><code>socketRooms</code> is needed because <code>socket.rooms</code> is cleared before the disconnect handler fires — without it you can't decrement the correct product's count on disconnect.</div>
+
+    <h2>Frontend pattern</h2>
+    <pre><span class="key">useEffect</span>(() => {
+  <span class="key">const</span> socket = io(API_BASE_URL);
+  socket.emit(<span class="str">'join_product'</span>, String(id));
+
+  socket.on(<span class="str">'update_viewers'</span>, (count) => setViewers(count));
+
+  <span class="key">return</span> () => {
+    socket.emit(<span class="str">'leave_product'</span>, String(id));
+    socket.disconnect();
+  };
+}, [id]);</pre>
+  </div>
+</section>
+
+<!-- CLOUDINARY -->
+<section id="page-cloudinary" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Integrations</div>
+    <h1>Cloudinary</h1>
+    <p>All uploaded assets are stored on Cloudinary. GLB models require raw resource type.</p>
+  </div>
+  <div class="content-body">
+    <h2>What is stored</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Asset type</th><th>Cloudinary folder</th><th>resource_type</th></tr></thead>
+      <tbody>
+        <tr><td>Product images</td><td>glow-aroma/products</td><td>image</td></tr>
+        <tr><td>Hero slideshow images</td><td>glow-aroma/hero</td><td>image</td></tr>
+        <tr><td>Model thumbnails</td><td>glow-aroma/thumbnails</td><td>image</td></tr>
+        <tr><td>3D GLB models</td><td>glow-aroma/models</td><td>raw</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="warn">GLB models must be uploaded as <code>resource_type: "raw"</code>. Using <code>image</code> will corrupt the binary file and the model will fail to load in Three.js.</div>
+
+    <h2>Upload helpers (cloudinary.js)</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Export</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td>uploadImage</td><td>multer + Cloudinary middleware for product and hero images</td></tr>
+        <tr><td>uploadModelWithThumbnail</td><td>multer for model file (raw) + optional thumbnail (image)</td></tr>
+        <tr><td>uploadToCloudinary</td><td>Direct buffer upload with custom options</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- DEPLOY -->
+<section id="page-deploy" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Deployment</div>
+    <h1>Deploy guide</h1>
+    <p>Frontend on Vercel, backend + database on Railway.</p>
+  </div>
+  <div class="content-body">
+    <h2>Frontend — Vercel</h2>
+    <ul class="steps">
+      <li><span class="step-num">1</span>Connect your GitHub repo to Vercel.</li>
+      <li><span class="step-num">2</span>Set root directory to <code>client</code>, build command <code>npm run build</code>, output <code>dist</code>.</li>
+      <li><span class="step-num">3</span>Add environment variables in Vercel dashboard: <code>VITE_API_URL</code> and <code>VITE_GOOGLE_CLIENT_ID</code>.</li>
+    </ul>
+
+    <h2>Backend — Railway</h2>
+    <ul class="steps">
+      <li><span class="step-num">1</span>Connect GitHub repo to Railway.</li>
+      <li><span class="step-num">2</span>Set start command to <code>node server.js</code>.</li>
+      <li><span class="step-num">3</span>Add all backend env variables in Railway Variables panel.</li>
+      <li><span class="step-num">4</span>Set <code>NODE_ENV=production</code> to enable DB SSL.</li>
+    </ul>
+
+    <div class="note">Railway sets PORT automatically. The server must bind to <code>0.0.0.0</code> not <code>localhost</code>.</div>
+
+    <pre><span class="comment">// server.js — correct binding</span>
+server.listen(PORT, <span class="str">'0.0.0.0'</span>, () => {
+  console.log(<span class="str">`Server listening on port ${PORT}`</span>);
+});</pre>
+
+    <h2>DB SSL config</h2>
+    <pre><span class="key">const</span> db = mysql.createConnection({
+  host:     process.env.DB_HOST,
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port:     process.env.DB_PORT || <span class="num">3306</span>,
+  ssl: process.env.NODE_ENV === <span class="str">'production'</span>
+    ? { rejectUnauthorized: <span class="key">false</span> }
+    : <span class="key">false</span>
+});</pre>
+  </div>
+</section>
+
+<!-- KNOWN ISSUES -->
+<section id="page-known" class="page">
+  <div class="page-hero">
+    <div class="page-hero-tag">Deployment</div>
+    <h1>Known issues</h1>
+    <p>Gotchas and quirks to be aware of when working on GlowAroma.</p>
+  </div>
+  <div class="content-body">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Area</th><th>Issue</th></tr></thead>
+      <tbody>
+        <tr><td>cup_color_id</td><td>Stores RGBA string — not a FK to cup_colors. Cart name resolved by parsing cup_shapes.colors JSON in Node.js.</td></tr>
+        <tr><td>cup_size</td><td>Stores ml integer directly — not a FK to cup_sizes table.</td></tr>
+        <tr><td>Snapshot storage</td><td>Base64 PNG stored in LONGTEXT. Consider compressing to JPEG 0.6 to reduce payload and DB size.</td></tr>
+        <tr><td>colorable_parts</td><td>Must be set manually per mold model in inventory. If empty, all mold layers receive the same primary color.</td></tr>
+        <tr><td>Route order</td><td>/admin/orders/:id/items MUST be registered before /admin/orders/:orderId in server.js.</td></tr>
+        <tr><td>Admin showcase fetch</td><td>fetchDashboardData uses /showcase (public — only active). Use /admin/showcase to show hidden designs in admin view.</td></tr>
+        <tr><td>MiniCandleViewer layers</td><td>layers prop must be a parsed array, not raw JSON string. CreateYourOwnCard parses layers_json before passing.</td></tr>
+        <tr><td>Paymob status</td><td>Callback sets status_id = 2. Currently no dedicated "Paid" status — Shipped and Paid share the same value.</td></tr>
+        <tr><td>express.json limit</td><td>Set to 10mb for snapshot payloads. Increase if large images cause 413 errors.</td></tr>
+        <tr><td>Server timeout</td><td>server.timeout set to 120000ms. Large snapshot uploads or slow Railway cold starts may still time out.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="page-footer">
+    <p>GlowAroma v1.0 · May 2026</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
+  if (btn) btn.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function handleSearch(val) {
+  if (!val.trim()) return;
+  const pages = document.querySelectorAll('.page');
+  let bestPage = null, bestCount = 0;
+  pages.forEach(page => {
+    const text = page.textContent.toLowerCase();
+    const count = (text.match(new RegExp(val.toLowerCase(), 'g')) || []).length;
+    if (count > bestCount) { bestCount = count; bestPage = page; }
+  });
+  if (bestPage && bestCount > 0) {
+    const id = bestPage.id.replace('page-', '');
+    const navBtn = document.querySelector(`[onclick*="'${id}'"]`);
+    show(id, navBtn);
+  }
+}
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleSearch(e.target.value);
+});
+</script>
+</body>
+</html>
