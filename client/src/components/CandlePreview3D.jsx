@@ -73,6 +73,7 @@ const CandlePreview3D = forwardRef(({ cupColor, waxColor, layerColors = [], cupS
   }));
 
   useEffect(() => {
+      if (!modelUrl) return;
     const canvas = canvasRef.current;
     const isMobile = window.innerWidth < 768;
     const size = isMobile ? 280 : 400;
@@ -267,25 +268,43 @@ loadedGroup.traverse((obj) => {
     });
   }, [layerColors]);
 
-  useEffect(() => {
-    const scales = { small: 0.75, medium: 1.0, large: 1.3 };
-    const s = scales[cupSize] || 1.0;
-    Object.values(meshesRef.current).flat().forEach((node) => {
-      if (node) node.scale.set(s, s, s);
-    });
-  }, [cupSize]);
 
+if (!modelUrl) {
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        width: '100%',
-        height: '100%',
-        borderRadius: '16px',
-        cursor: 'grab',
-      }}
-    />
+    <div style={{
+      width: '100%',
+      height: '100%',
+      borderRadius: '16px',
+      background: '#fdf6f0',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '12px',
+      color: '#a08070',
+      fontFamily: 'inherit',
+    }}>
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <path d="M24 4L44 36H4L24 4Z" stroke="#c4a882" strokeWidth="2" fill="none"/>
+        <circle cx="24" cy="38" r="6" stroke="#c4a882" strokeWidth="2" fill="none"/>
+      </svg>
+      <p style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Choose a model to start</p>
+      <p style={{ margin: 0, fontSize: '13px', opacity: 0.6 }}>Select a cup shape above</p>
+    </div>
   );
+}
+
+return (
+  <canvas
+    ref={canvasRef}
+    style={{
+      width: '100%',
+      height: '100%',
+      borderRadius: '16px',
+      cursor: 'grab',
+    }}
+  />
+);
 });
 
 export default CandlePreview3D;
