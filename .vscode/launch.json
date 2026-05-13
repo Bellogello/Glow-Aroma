@@ -8,7 +8,11 @@
             "type": "chrome",
             "request": "launch",
             "name": "Open glowaroma-docs.html",
+<<<<<<< HEAD
             "file": "c:\\Users\\bello\\OneDrive\\Documents\\GitHub\\Glow-Aroma\\Documentations\\glowaroma-docs.html"
+=======
+            "file": "/home/belloo/Desktop/GlowAroma/Glow-Aroma/glowaroma-docs.html"
+>>>>>>> 7ff4e2b (added a readme)
         }
     ]
 }

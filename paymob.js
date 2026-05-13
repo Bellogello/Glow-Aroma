@@ -39,7 +39,6 @@ async function getPaymentKey(authToken, paymobOrderId, amountCents, billingData)
 }
 
 // Verify HMAC on Paymob's callback (security!)
-// Verify HMAC on Paymob's callback (security!)
 function verifyHmac(data, receivedHmac) {
   const fields = [
     'amount_cents', 'created_at', 'currency', 'error_occured',

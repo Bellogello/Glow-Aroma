@@ -496,4 +496,8 @@ This project is private. All rights reserved © GlowAroma 2026.
   <a href="https://glow-aroma.vercel.app">🌐 Live Site</a> ·
   <a href="https://glow-aroma-production.up.railway.app">📡 API</a> ·
   <a href="https://github.com/Bellogello/Glow-Aroma">📁 GitHub</a>
+<<<<<<< HEAD
 </div>
+=======
+</div>
+>>>>>>> 7ff4e2b (added a readme)
