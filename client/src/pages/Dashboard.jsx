@@ -16,7 +16,7 @@ const Dashboard = () => {
 
   useTitle("Dashboard");
   const navigate = useNavigate();
-  usePushNotifications(isAuthorized);
+
   const { success, error } = useNotification();
 
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -24,6 +24,8 @@ const Dashboard = () => {
   const [userId, setUserId] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
 
+  usePushNotifications(isAuthorized);
+  
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [staff, setStaff] = useState([]);
