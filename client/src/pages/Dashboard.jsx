@@ -13,10 +13,10 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import CandlePreview3D from '../components/CandlePreview3D';
 
 const Dashboard = () => {
-  usePushNotifications(isAuthorized);
-  
+
   useTitle("Dashboard");
   const navigate = useNavigate();
+  usePushNotifications(isAuthorized);
   const { success, error } = useNotification();
 
   const [isAuthorized, setIsAuthorized] = useState(false);
