@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 const http = require('http');
 const { Server } = require('socket.io');
+const webpush = require('web-push');
 
 require('dotenv').config();
 
@@ -40,6 +41,9 @@ const db = mysql.createConnection({
     port:     process.env.DB_PORT || 3306,
     ssl:      { rejectUnauthorized: false }
 });
+
+
+
 
 db.connect((err) => {
     if (err) console.error("Critical Database Error:", err.message);
@@ -82,6 +86,45 @@ function paymobVerifyHmac(data, receivedHmac) {
 // --- HEALTH CHECK ---
 // ==========================================
 app.get('/', (req, res) => res.status(200).send('Glow Aroma Production API Active'));
+
+
+// ==========================================
+// --- PUSH NOTIFICATIONS ---
+// ==========================================
+
+webpush.setVapidDetails(
+  process.env.VAPID_EMAIL,
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
+
+const pushSubscriptions = [];
+
+app.post('/admin/push-subscribe', (req, res) => {
+  const subscription = req.body;
+  if (!subscription || !subscription.endpoint) {
+    return res.status(400).json({ error: 'Invalid subscription' });
+  }
+  // Avoid duplicates
+  const exists = pushSubscriptions.find(s => s.endpoint === subscription.endpoint);
+  if (!exists) pushSubscriptions.push(subscription);
+  res.status(201).json({ message: 'Subscribed to push notifications' });
+});
+
+// Helper — call this whenever you want to notify all admins
+function notifyAdmins(title, body, url = '/dashboard') {
+  const payload = JSON.stringify({ title, body, url });
+  pushSubscriptions.forEach((sub, i) => {
+    webpush.sendNotification(sub, payload).catch(err => {
+      console.error('Push failed:', err.statusCode);
+      // Remove dead subscriptions (410 = unsubscribed)
+      if (err.statusCode === 410) {
+        pushSubscriptions.splice(i, 1);
+      }
+    });
+  });
+}
+
 
 // ==========================================
 // --- CANDLE BUILDER ASSETS ---
@@ -641,6 +684,11 @@ app.post('/messages', (req, res) => {
             res.status(201).json({ message: 'Message sent successfully!' });
         }
     );
+    notifyAdmins(
+        '💬 New Message',
+        `${name} sent a message`,
+        '/dashboard'
+    );
 });
 
 // ==========================================
@@ -1028,6 +1076,25 @@ app.post('/checkout', async (req, res) => {
         console.error("CHECKOUT ERROR:", err.message);
         res.status(500).json({ error: 'Checkout failed: ' + err.message });
     }
+    notifyAdmins(
+        '🕯️ New Order!',
+        `Order #${newOrderId} — ${Number(numericTotal).toFixed(2)} L.E.`,
+        '/dashboard'
+    );
+    db.query(
+        'SELECT name, stock_quantity FROM prebuilt_candles WHERE stock_quantity <= 5 AND stock_quantity > 0',
+        (err, lowItems) => {
+            if (!err && lowItems.length > 0) {
+            lowItems.forEach(item => {
+                notifyAdmins(
+                '⚠️ Low Stock',
+                `${item.name} has only ${item.stock_quantity} left`,
+                '/dashboard'
+                );
+            });
+            }
+    }
+);
 });
 
 // ==========================================

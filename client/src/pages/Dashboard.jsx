@@ -9,10 +9,12 @@ import useTitle from '../components/useTitles';
 import Footer from '../components/Footer';
 import { API_BASE_URL } from '../config';
 import { useNotification } from '../components/NotificationContext';
-// IMPORT THE PREVIEW COMPONENT
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import CandlePreview3D from '../components/CandlePreview3D';
 
 const Dashboard = () => {
+  usePushNotifications(isAuthorized);
+  
   useTitle("Dashboard");
   const navigate = useNavigate();
   const { success, error } = useNotification();
