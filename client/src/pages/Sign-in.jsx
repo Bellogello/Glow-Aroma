@@ -17,7 +17,7 @@ const Signin = () => {
   const { success, error, warning } = useNotification();
   
   // SAFE URL LOGIC: This prevents the "/undefined/signin" error on Windows
-  const SAFE_API_BASE_URL = import.meta.env.VITE_API_URL || 'https://glow-aroma-production.up.railway.app';
+  const SAFE_API_BASE_URL = import.meta.env.VITE_API_URL || 'https://glow-aroma-production-ee20.up.railway.app';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
