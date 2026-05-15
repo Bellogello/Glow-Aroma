@@ -33,13 +33,23 @@ const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 app.use('/uploads', express.static(uploadDir));
 
-const db = mysql.createConnection({
-    host:     process.env.DB_HOST,
-    user:     process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port:     process.env.DB_PORT || 3306,
-    ssl:      { rejectUnauthorized: false }
+const db = mysql.createPool({
+    host:              process.env.DB_HOST,
+    user:              process.env.DB_USER,
+    password:          process.env.DB_PASSWORD,
+    database:          process.env.DB_NAME,
+    port:              process.env.DB_PORT || 3306,
+    ssl:               { rejectUnauthorized: false },
+    waitForConnections: true,
+    connectionLimit:   10,
+    queueLimit:        0,
+    enableKeepAlive:   true,
+    keepAliveInitialDelay: 0
+});
+
+db.query('SELECT 1', (err) => {
+    if (err) console.error("Critical Database Error:", err.message);
+    else console.log("Database connected successfully to " + process.env.DB_NAME);
 });
 
 
