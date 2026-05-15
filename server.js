@@ -55,7 +55,7 @@ db.query('SELECT 1', (err) => {
 
 
 
-db.connect((err) => {
+db.query('SELECT 1', (err) => {
     if (err) console.error("Critical Database Error:", err.message);
     else console.log("Database connected successfully to " + process.env.DB_NAME);
 });
