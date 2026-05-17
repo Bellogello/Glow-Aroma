@@ -884,121 +884,253 @@ const handleCreateShowcase = async (e) => {
       </div>
 
       {/* --- ✨ EXACT DESIGN STUDIO MODAL --- */}
-      {showAddShowcaseDialog && (
-        <div className="dialog-overlay" style={{ zIndex: 1050 }}>
-          <div className="dialog-box" style={{ maxWidth: '1200px', width: '95vw', padding: '2rem', height: '85vh', display: 'flex', flexDirection: 'column' }}>
-            <div className="dialog-header">
-              <h3 className="mb-0">Studio: New Featured Look</h3>
-              <button className="close-btn" onClick={() => setShowAddShowcaseDialog(false)}>✕</button>
+{showAddShowcaseDialog && (
+  <div className="dialog-overlay" style={{ zIndex: 1050 }}>
+    <div className="dialog-box" style={{ maxWidth: '1200px', width: '95vw', padding: '2rem', height: '85vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="dialog-header">
+        <h3 className="mb-0">Studio: New Featured Look</h3>
+        <button className="close-btn" onClick={() => setShowAddShowcaseDialog(false)}>✕</button>
+      </div>
+
+      <div className='creation' style={{ marginTop: '1rem', flex: 1, minHeight: 0 }}>
+        <div className='candle-div' style={{ height: '100%' }}>
+          {editShowcaseForm.model_url ? (
+            <CandlePreview3D
+              key={editShowcaseForm.model_url} // remount when model changes
+              modelUrl={editShowcaseForm.model_url}
+              flatShading={dbModels.find(m => m.model_url === editShowcaseForm.model_url)?.flat_shading}
+              colorableParts={(() => {
+                const modelObj = dbModels.find(m => m.model_url === editShowcaseForm.model_url);
+                if (!modelObj || !modelObj.colorable_parts) return [];
+                try { return typeof modelObj.colorable_parts === 'string' ? JSON.parse(modelObj.colorable_parts) : modelObj.colorable_parts; }
+                catch { return []; }
+              })()}
+              cupColor={editShowcaseForm.cupColor === 'default' ? null : editShowcaseForm.cupColor}
+              waxColor={availableColors.find(c => String(c.id) === String(editShowcaseForm.waxColor))?.hex_code ?? '#ffffff'}
+              layerColors={editShowcaseForm.layers.map(id => availableColors.find(c => String(c.id) === String(id))?.hex_code || '#ffffff')}
+              cupSize="medium"
+            />
+          ) : (
+            <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#888', flexDirection: 'column', gap: 12 }}>
+              <span style={{ fontSize: 48 }}>🕯️</span>
+              <p>Select a shape to begin designing</p>
             </div>
+          )}
+        </div>
 
-            <div className='creation' style={{ marginTop: '1rem', flex: 1, minHeight: 0 }}>
-              <div className='candle-div' style={{ height: '100%' }}>
-                {editShowcaseForm.model_url ? (
-                  <CandlePreview3D
-                    modelUrl={editShowcaseForm.model_url}
-                    flatShading={dbModels.find(m => m.model_url === editShowcaseForm.model_url)?.flat_shading}
-                    colorableParts={(() => {
-                      const modelObj = dbModels.find(m => m.model_url === editShowcaseForm.model_url);
-                      if (!modelObj || !modelObj.colorable_parts) return [];
-                      try { return typeof modelObj.colorable_parts === 'string' ? JSON.parse(modelObj.colorable_parts) : modelObj.colorable_parts; }
-                      catch { return []; }
-                    })()}
-                    cupColor={editShowcaseForm.cupColor === 'default' ? 'rgba(255,255,255,0.45)' : editShowcaseForm.cupColor}
-                    waxColor={availableColors.find(c => String(c.id) === String(editShowcaseForm.waxColor))?.hex_code ?? '#ffffff'}
-                    layerColors={editShowcaseForm.layers.map(id => availableColors.find(c => String(c.id) === String(id))?.hex_code || '#ffffff')}
-                    cupSize="medium"
-                  />
-                ) : (
-                  <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-                    <p>Select a shape to begin designing</p>
+        <div className='choices' style={{ overflowY: 'auto', padding: '1rem' }}>
+          {/* TYPE TOGGLE */}
+          <div className="type-toggle mb-4">
+            <label className={`radio-label ${editShowcaseForm.type === 'cup' ? 'active-radio' : ''}`}>
+              <input type="radio" checked={editShowcaseForm.type === 'cup'}
+                onChange={() => setEditShowcaseForm({ ...editShowcaseForm, type: 'cup', model_url: '', layers: [], cupShape: 'default', moldShape: 'default', waxColor: 'default', cupColor: 'default' })}
+                className="radio-input" />
+              Cup Candle
+            </label>
+            <label className={`radio-label ${editShowcaseForm.type === 'mold' ? 'active-radio' : ''}`}>
+              <input type="radio" checked={editShowcaseForm.type === 'mold'}
+                onChange={() => setEditShowcaseForm({ ...editShowcaseForm, type: 'mold', model_url: '', layers: [], cupShape: 'default', moldShape: 'default', cupColor: 'default' })}
+                className="radio-input" />
+              Mold Candle
+            </label>
+          </div>
+
+          <div className='selections'>
+            {editShowcaseForm.type === 'cup' && (
+              <>
+                {/* CUP SHAPE */}
+                <select value={editShowcaseForm.cupShape} onChange={(e) => {
+                  const shape = availableCups.find(s => String(s.id) === String(e.target.value));
+                  setEditShowcaseForm({ ...editShowcaseForm, cupShape: e.target.value, cupColor: 'default', model_url: shape?.model_url || '', layers: ['default'] });
+                }}>
+                  <option value="default">Cup Shape</option>
+                  {availableCups.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+
+                {/* CUP COLOR — visual swatches */}
+                {editShowcaseForm.cupShape !== 'default' && (() => {
+                  const cup = availableCups.find(c => String(c.id) === String(editShowcaseForm.cupShape));
+                  const colors = cup ? (typeof cup.colors === 'string' ? JSON.parse(cup.colors || '[]') : (cup.colors || [])) : [];
+                  if (colors.length === 0) return null;
+                  return (
+                    <div>
+                      <p style={{ fontSize: 13, color: '#8c7e70', marginBottom: 8, fontWeight: 600 }}>Cup Color</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                        {colors.map((c, i) => {
+                          const isSelected = editShowcaseForm.cupColor === c.hex_code;
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              title={c.name}
+                              onClick={() => setEditShowcaseForm({ ...editShowcaseForm, cupColor: c.hex_code })}
+                              style={{
+                                width: 36, height: 36,
+                                borderRadius: '50%',
+                                background: c.hex_code,
+                                border: isSelected ? '3px solid #4a3728' : '2px solid #d2c9b8',
+                                cursor: 'pointer',
+                                outline: isSelected ? '2px solid #c8a97e' : 'none',
+                                outlineOffset: 2,
+                                transition: 'all 0.15s',
+                                boxShadow: isSelected ? '0 0 0 3px rgba(74,55,40,0.2)' : 'none',
+                              }}
+                            />
+                          );
+                        })}
+                        {/* "No color / texture only" option */}
+                        <button
+                          type="button"
+                          title="Original texture"
+                          onClick={() => setEditShowcaseForm({ ...editShowcaseForm, cupColor: 'default' })}
+                          style={{
+                            width: 36, height: 36,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #fff 50%, #eee 50%)',
+                            border: editShowcaseForm.cupColor === 'default' ? '3px solid #4a3728' : '2px solid #d2c9b8',
+                            cursor: 'pointer',
+                            outline: editShowcaseForm.cupColor === 'default' ? '2px solid #c8a97e' : 'none',
+                            outlineOffset: 2,
+                            fontSize: 14,
+                            transition: 'all 0.15s',
+                          }}
+                          title="Original texture (no tint)"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      {editShowcaseForm.cupColor !== 'default' && (
+                        <p style={{ fontSize: 12, color: '#8c7e70', marginTop: -6, marginBottom: 8 }}>
+                          Selected: {colors.find(c => c.hex_code === editShowcaseForm.cupColor)?.name || editShowcaseForm.cupColor}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* WAX COLOR — swatches */}
+                <div>
+                  <p style={{ fontSize: 13, color: '#8c7e70', marginBottom: 8, fontWeight: 600 }}>Candle Wax Color</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    {availableColors.map(c => {
+                      const isSelected = String(editShowcaseForm.waxColor) === String(c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          title={c.name}
+                          onClick={() => {
+                            const n = [...editShowcaseForm.layers];
+                            n[0] = String(c.id);
+                            setEditShowcaseForm({ ...editShowcaseForm, waxColor: String(c.id), layers: n });
+                          }}
+                          style={{
+                            width: 36, height: 36,
+                            borderRadius: '50%',
+                            background: c.hex_code || '#fff',
+                            border: isSelected ? '3px solid #4a3728' : '2px solid #d2c9b8',
+                            cursor: 'pointer',
+                            outline: isSelected ? '2px solid #c8a97e' : 'none',
+                            outlineOffset: 2,
+                            transition: 'all 0.15s',
+                            boxShadow: isSelected ? '0 0 0 3px rgba(74,55,40,0.2)' : 'none',
+                          }}
+                        />
+                      );
+                    })}
                   </div>
-                )}
-              </div>
-              
-              <div className='choices' style={{ overflowY: 'auto', padding: '1rem' }}> 
-                <div className="type-toggle mb-4">
-                  <label className={`radio-label ${editShowcaseForm.type === 'cup' ? 'active-radio' : ''}`}>
-                    <input type="radio" checked={editShowcaseForm.type === 'cup'} onChange={() => setEditShowcaseForm({...editShowcaseForm, type: 'cup', model_url: '', layers: [], cupShape: 'default', moldShape: 'default', waxColor: 'default'})} className="radio-input" />
-                    Cup Candle
-                  </label>
-                  <label className={`radio-label ${editShowcaseForm.type === 'mold' ? 'active-radio' : ''}`}>
-                    <input type="radio" checked={editShowcaseForm.type === 'mold'} onChange={() => setEditShowcaseForm({...editShowcaseForm, type: 'mold', model_url: '', layers: [], cupShape: 'default', moldShape: 'default'})} className="radio-input" />
-                    Mold Candle
-                  </label>
+                  {editShowcaseForm.waxColor !== 'default' && (
+                    <p style={{ fontSize: 12, color: '#8c7e70', marginTop: -6, marginBottom: 8 }}>
+                      Selected: {availableColors.find(c => String(c.id) === String(editShowcaseForm.waxColor))?.name}
+                    </p>
+                  )}
                 </div>
+              </>
+            )}
 
-                <div className='selections'>
-                  {editShowcaseForm.type === 'cup' && (
-                    <>
-                      <select value={editShowcaseForm.cupShape} onChange={(e) => {
-                        const shape = availableCups.find(s => String(s.id) === String(e.target.value));
-                        setEditShowcaseForm({...editShowcaseForm, cupShape: e.target.value, cupColor: 'default', model_url: shape?.model_url, layers: ['default']});
-                      }}>
-                        <option value="default">Cup Shape</option>
-                        {availableCups.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                      </select>
+            {editShowcaseForm.type === 'mold' && (
+              <>
+                {/* MOLD SHAPE */}
+                <select value={editShowcaseForm.moldShape} onChange={(e) => {
+                  const shape = availableMolds.find(m => String(m.id) === String(e.target.value));
+                  setEditShowcaseForm({
+                    ...editShowcaseForm,
+                    moldShape: e.target.value,
+                    model_url: shape?.model_url || '',
+                    layers: Array(shape?.layers || 1).fill('default')
+                  });
+                }}>
+                  <option value="default">Mold Shape</option>
+                  {availableMolds.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
 
-                      <select value={editShowcaseForm.cupColor} onChange={(e) => setEditShowcaseForm({...editShowcaseForm, cupColor: e.target.value})}>
-                        <option value="default">Cup Color</option>
-                        {(() => {
-                          const cup = availableCups.find(c => String(c.id) === String(editShowcaseForm.cupShape));
-                          const colors = cup ? (typeof cup.colors === 'string' ? JSON.parse(cup.colors) : cup.colors) : [];
-                          return colors.map((c, i) => <option key={i} value={c.hex_code}>{c.name}</option>);
-                        })()}
-                      </select>
-
-                      <select value={editShowcaseForm.waxColor} onChange={(e) => {
-                        const n = [...editShowcaseForm.layers];
-                        n[0] = e.target.value;
-                        setEditShowcaseForm({...editShowcaseForm, waxColor: e.target.value, layers: n});
-                      }}>
-                        <option value="default">Candle Wax Color</option>
-                        {availableColors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                    </>
-                  )}
-
-                  {editShowcaseForm.type === 'mold' && (
-                    <>
-                      <select value={editShowcaseForm.moldShape} onChange={(e) => {
-                        const shape = availableMolds.find(m => String(m.id) === String(e.target.value));
-                        setEditShowcaseForm({
-                          ...editShowcaseForm, 
-                          moldShape: e.target.value, 
-                          model_url: shape?.model_url,
-                          layers: Array(shape?.layers || 1).fill("default")
-                        });
-                      }}>
-                        <option value="default">Mold Shape</option>
-                        {availableMolds.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                      </select>
-
-                      {editShowcaseForm.layers.map((val, i) => (
-                        <select key={i} value={val} onChange={(e) => {
-                          const n = [...editShowcaseForm.layers];
-                          n[i] = e.target.value;
-                          setEditShowcaseForm({...editShowcaseForm, layers: n});
-                        }} className="layer-select">
-                          <option value="default">Layer {i+1} Color</option>
-                          {availableColors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                      ))}
-                    </>
-                  )}
-
-                  <div className="confirmation-area mt-4">
-                    <button className="confirm w-100" style={{ margin: 0, padding: '15px' }} disabled={!editShowcaseForm.model_url || submitting} onClick={handleCreateShowcase}>
-                      {submitting ? <Spinner size="sm" /> : 'Push to Storefront'}
-                    </button>
+                {/* MOLD LAYER COLORS — swatches per layer */}
+                {editShowcaseForm.layers.map((val, i) => (
+                  <div key={i}>
+                    <p style={{ fontSize: 13, color: '#8c7e70', marginBottom: 8, fontWeight: 600 }}>Layer {i + 1} Color</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                      {availableColors.map(c => {
+                        const isSelected = String(val) === String(c.id);
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            title={c.name}
+                            onClick={() => {
+                              const n = [...editShowcaseForm.layers];
+                              n[i] = String(c.id);
+                              setEditShowcaseForm({ ...editShowcaseForm, layers: n });
+                            }}
+                            style={{
+                              width: 32, height: 32,
+                              borderRadius: '50%',
+                              background: c.hex_code || '#fff',
+                              border: isSelected ? '3px solid #4a3728' : '2px solid #d2c9b8',
+                              cursor: 'pointer',
+                              outline: isSelected ? '2px solid #c8a97e' : 'none',
+                              outlineOffset: 2,
+                              transition: 'all 0.15s',
+                              boxShadow: isSelected ? '0 0 0 3px rgba(74,55,40,0.2)' : 'none',
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                    {val !== 'default' && (
+                      <p style={{ fontSize: 12, color: '#8c7e70', marginTop: -6, marginBottom: 8 }}>
+                        Selected: {availableColors.find(c => String(c.id) === String(val))?.name}
+                      </p>
+                    )}
                   </div>
-                </div>
-              </div>
+                ))}
+              </>
+            )}
+
+            {/* SCENT (optional for showcase) */}
+            <select
+              value={editShowcaseForm.scentId || 'default'}
+              onChange={(e) => setEditShowcaseForm({ ...editShowcaseForm, scentId: e.target.value })}
+            >
+              <option value="default">Scent (optional)</option>
+              {/* availableScents if you fetch them, otherwise omit */}
+            </select>
+
+            <div className="confirmation-area mt-4">
+              <button
+                className="confirm w-100"
+                style={{ margin: 0, padding: '15px' }}
+                disabled={!editShowcaseForm.model_url || submitting}
+                onClick={handleCreateShowcase}
+              >
+                {submitting ? <Spinner size="sm" /> : 'Push to Storefront ✨'}
+              </button>
             </div>
           </div>
         </div>
-      )}
-
+      </div>
+    </div>
+  </div>
+)}
       {/* --- OTHER MODALS --- */}
       {showAddHeroDialog && (
         <div className="dialog-overlay">
