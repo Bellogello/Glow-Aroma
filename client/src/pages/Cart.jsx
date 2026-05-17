@@ -27,7 +27,9 @@ const Cart = () => {
             console.error("Backend Error:", data.error); 
             setCartItems([]); 
         } else {
+          console.log("Cart item keys:", data[0]); //
             setCartItems(data);
+            
         }
         setLoading(false);
       })
@@ -107,19 +109,18 @@ const Cart = () => {
             {cartItems.map(item => (
               <div key={item.cart_item_id} className="cart-item">
                 
-                <div className="cart-item-image">
-                  {/* Safely handles null, http links, local URLs, and custom snapshot base-64 data! */}
-                  <img 
-                    src={
-                      item.image 
-                        ? (item.image.startsWith('http') || item.image.startsWith('data:') 
-                            ? item.image 
-                            : `${API_BASE_URL}${item.image}`) 
-                        : FallbackCandle
-                    } 
-                    alt={item.name || 'Candle'} 
-                  />
-                </div>
+              <div className="cart-item-image">
+                <img 
+                  src={
+                    item.image 
+                      ? (item.image.startsWith('http') || item.image.startsWith('data:') 
+                          ? item.image 
+                          : `${API_BASE_URL}${item.image}`) 
+                      : FallbackCandle
+                  } 
+                  alt={item.name || 'Candle'} 
+                />
+              </div>
 
                 <div className="cart-item-details">
                   <h3>{item.name}</h3>
