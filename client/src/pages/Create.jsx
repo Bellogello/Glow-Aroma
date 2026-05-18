@@ -62,6 +62,21 @@ const Create = () => {
     ? (selectedSize?.model_url || activeCup?.model_url)
     : moldShapes.find(s => String(s.id) === String(selectedMoldShape))?.model_url;
 
+  // ── Auto-select: cup color if only one option; reset on model change ────────
+  useEffect(() => {
+    if (availableCupColors.length === 1) {
+      setSelectedCupColor(availableCupColors[0].hex_code);
+    } else {
+      setSelectedCupColor("default");
+    }
+  }, [selectedCupShape, selectedCupSizeIdx]);
+
+  // ── Auto-select: wax color if only one option ───────────────────────────────
+  useEffect(() => {
+    if (waxColors.length === 1) {
+      setSelectedCandleColor(String(waxColors[0].id));
+    }
+  }, [waxColors]);
 
   useEffect(() => {
     if (selectedMoldShape !== "default") {
@@ -160,6 +175,7 @@ const Create = () => {
         <div className='candle-div'>
           <CandlePreview3D
             ref={previewRef}
+            candleType={candleType}
             modelUrl={currentModelUrl}
             flatShading={dbModels.find(m => m.model_url === currentModelUrl)?.flat_shading}
             colorableParts={(() => {
@@ -173,7 +189,14 @@ const Create = () => {
             })()}
             cupColor={selectedCupColor === 'default' ? 'rgba(255,255,255,0.45)' : selectedCupColor}
             waxColor={waxColors.find(c => String(c.id) === String(selectedCandleColor))?.hex_code ?? '#ffffff'}
-            layerColors={moldLayers.map(id => waxColors.find(c => String(c.id) === String(id))?.hex_code || '#ffffff')}
+            layerColors={
+              // Stable reference — only changes when actual color values change,
+              // not on every render. Prevents the mold layer useEffect from firing constantly.
+              React.useMemo(
+                () => moldLayers.map(id => waxColors.find(c => String(c.id) === String(id))?.hex_code || '#ffffff'),
+                [moldLayers, waxColors]
+              )
+            }
             cupSize={selectedSize ? `${activeCup?.name} (${selectedSize.ml}ml)` : 'medium'}
           />
         </div>
@@ -200,7 +223,7 @@ const Create = () => {
                     const [shapeId, sizeIdx] = e.target.value.split('__');
                     setSelectedCupShape(shapeId);
                     setSelectedCupSizeIdx(sizeIdx === 'default' ? 'default' : Number(sizeIdx));
-                    setSelectedCupColor("default");
+                    // Cup color reset is handled by the useEffect watching selectedCupShape
                   }}
                 >
                   <option value="default__default">Cup Shape & Size</option>
