@@ -5,3 +5,4 @@ dist/
 uploads/
 client/.env
 client/.env.production
+.env.production
